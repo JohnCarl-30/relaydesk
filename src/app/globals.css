@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f3eee4;
+  --ink: #1c1915;
+  --muted: #6b6459;
+  --forest: #1b3d31;
+  --forest-2: #2d5a48;
+  --copper: #b4532a;
+  --line: #ddd4c4;
+  --card: #fbf8f2;
+  --admin: #121613;
+  --admin-panel: #1a1f1c;
+  --admin-line: #2c342f;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-forest: var(--forest);
+  --color-forest-2: var(--forest-2);
+  --color-copper: var(--copper);
+  --color-line: var(--line);
+  --color-card: var(--card);
+  --font-sans: var(--font-outfit);
+  --font-serif: var(--font-newsreader);
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+::selection {
+  background: #cfe0d4;
+}
