@@ -44,7 +44,17 @@ function tokenize(text: string): string[] {
     .filter((w) => w.length > 2 && !STOP.has(w));
 }
 
-export function retrieve(question: string, k = 3): { article: Article; score: number }[] {
+export type RetrieveOptions = {
+  k?: number;
+  titleWeight?: number;
+};
+
+export function retrieve(
+  question: string,
+  options: RetrieveOptions = {},
+): { article: Article; score: number }[] {
+  const k = options.k ?? 3;
+  const titleWeight = options.titleWeight ?? 4;
   const q = tokenize(question);
   if (q.length === 0) return [];
   const scored = ARTICLES.map((article) => {
@@ -52,7 +62,7 @@ export function retrieve(question: string, k = 3): { article: Article; score: nu
     const bodyToks = tokenize(article.body);
     let score = 0;
     for (const term of q) {
-      if (titleToks.includes(term)) score += 4;
+      if (titleToks.includes(term)) score += titleWeight;
       score += bodyToks.filter((t) => t === term).length;
     }
     return { article, score };
@@ -63,7 +73,10 @@ export function retrieve(question: string, k = 3): { article: Article; score: nu
     .slice(0, k);
 }
 
-function extractiveAnswer(question: string, hits: { article: Article; score: number }[]): RagResult {
+export function extractiveAnswer(
+  question: string,
+  hits: { article: Article; score: number }[],
+): RagResult {
   if (hits.length === 0) {
     return {
       answer:
@@ -86,71 +99,9 @@ function extractiveAnswer(question: string, hits: { article: Article; score: num
   });
   const picked = ranked.slice(0, 2).join(" ");
   return {
-    answer: `${picked}\n\nThat's from “${top.article.title}”. If this isn't the case you're in, talk to a person.`,
+    answer: `${picked}\n\nThat's from "${top.article.title}". If this isn't the case you're in, talk to a person.`,
     citations: hits.map((h) => ({ slug: h.article.slug, title: h.article.title })),
     confident: top.score >= 6,
     usedLlm: false,
   };
-}
-
-async function llmAnswer(question: string, hits: { article: Article; score: number }[]): Promise<RagResult> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return extractiveAnswer(question, hits);
-  if (hits.length === 0) return extractiveAnswer(question, hits);
-
-  const context = hits
-    .map(
-      (h, i) =>
-        `[${i + 1}] ${h.article.title}\n${h.article.body}`,
-    )
-    .join("\n\n");
-
-  const base = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1").replace(/\/$/, "");
-  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
-
-  const response = await fetch(`${base}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are the Nimbus support assistant on a customer site. Answer only from the provided help articles. Be short. If the articles do not contain the answer, say you are unsure and suggest talking to a human. Mention article titles naturally. Do not invent policies, prices, or product behavior.",
-        },
-        {
-          role: "user",
-          content: `Question: ${question}\n\nHelp articles:\n${context}`,
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) return extractiveAnswer(question, hits);
-  const payload = (await response.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const text = payload.choices?.[0]?.message?.content?.trim();
-  if (!text) return extractiveAnswer(question, hits);
-
-  return {
-    answer: text,
-    citations: hits.map((h) => ({ slug: h.article.slug, title: h.article.title })),
-    confident: true,
-    usedLlm: true,
-  };
-}
-
-export async function answerQuestion(question: string): Promise<RagResult> {
-  const hits = retrieve(question);
-  try {
-    return await llmAnswer(question, hits);
-  } catch {
-    return extractiveAnswer(question, hits);
-  }
 }
