@@ -1,0 +1,47 @@
+name: nimbus-eval
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  recall-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install rag-eval-harness
+        run: pip install "git+https://github.com/JohnCarl-30/rag-eval-harness.git@v0.1.0"
+      - name: Start Relaydesk
+        run: |
+          npm run dev -- --port 3000 --hostname 127.0.0.1 &
+          for i in $(seq 1 60); do
+            if curl -sf -X POST http://127.0.0.1:3000/api/eval \
+              -H 'content-type: application/json' \
+              -d '{"question":"How does Nimbus billing work?"}' >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "timeout waiting for /api/eval" >&2
+          exit 1
+      - name: Score vs committed baseline
+        run: |
+          rag-eval eval eval/golden.csv \
+            --sut-url http://127.0.0.1:3000/api/eval \
+            --evaluator lexical \
+            --label ci \
+            -o /tmp/nimbus-head.json
+          rag-eval regress \
+            --baseline eval/baseline.json \
+            --head /tmp/nimbus-head.json \
+            --threshold 0.05
