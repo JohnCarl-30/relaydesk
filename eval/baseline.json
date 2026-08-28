@@ -1,0 +1,8 @@
+{
+  "means": {
+    "faithfulness": 0.777192,
+    "answer_relevancy": 0.638128,
+    "context_precision": 0.063435,
+    "context_recall": 0.879878
+  }
+}

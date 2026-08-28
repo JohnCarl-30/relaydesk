@@ -1,13 +1,10 @@
 # Relaydesk
 
-AI customer support as a widget plus an inbox — a product a support team would actually open.
+A support widget and a staff inbox. Nimbus is the fake analytics company they sit on.
 
-This is a **separate folder** from the eval harness:
+This folder is separate from the eval harness in `~/Documents/agentic-system` ([JohnCarl-30/rag-eval-harness](https://github.com/JohnCarl-30/rag-eval-harness)).
 
-- Harness (already on GitHub): `~/Documents/agentic-system` → [JohnCarl-30/rag-eval-harness](https://github.com/JohnCarl-30/rag-eval-harness)
-- This product: `~/Documents/relaydesk`
-
-Nimbus is a seeded fictional analytics SaaS. The chat answers from its help center (with citations), and “This didn’t help” creates a ticket staff can reply to.
+The widget answers from `/help` and cites the article. "This didn't help" opens a ticket. Staff reply from `/inbox`.
 
 ## Run
 
@@ -20,17 +17,28 @@ npm run dev
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
-- Customer site + widget: `/`
-- Help center (the corpus): `/help`
-- Staff inbox: `/inbox` — password `nimbus-demo`
+- `/` customer site and widget
+- `/help` the articles the widget searches
+- `/inbox` staff inbox, password `nimbus-demo`
 
-Without an API key the bot still answers by quoting the best matching article. With `OPENAI_API_KEY` (and optional `OPENAI_BASE_URL`) it writes a short grounded reply.
+Answers go through a LangGraph loop. Retrieve help articles, write a reply, rewrite the query and search again if the first pass is weak. No API key still quotes the best matching article. Set `OPENAI_API_KEY` (and optional `OPENAI_BASE_URL`) if you want the generate and rewrite nodes to call the model.
 
-## What a buyer sees
+## Demo path
 
-1. A visitor asks about seats, SSO, API keys, or empty funnels.
-2. The widget cites a help article.
-3. If that is wrong, they leave an email; a ticket lands in the inbox with the transcript.
-4. Staff replies from `/inbox`.
+1. Ask the widget about seats, SSO, API keys, or empty funnels.
+2. It cites a help article.
+3. If that's wrong, leave an email. The transcript becomes a ticket.
+4. Reply from `/inbox`.
 
-Two tickets are seeded so the inbox is not empty on first open.
+Two tickets are already in the inbox so it isn't empty on first open.
+
+## Quality gate
+
+CI scores `POST /api/eval` with [rag-eval-harness](https://github.com/JohnCarl-30/rag-eval-harness) (`--evaluator lexical`) against [`eval/golden.csv`](eval/golden.csv). A drop of more than 0.05 vs [`eval/baseline.json`](eval/baseline.json) fails the PR.
+
+```bash
+# with the app running on :3000
+rag-eval eval eval/golden.csv --sut-url http://127.0.0.1:3000/api/eval \
+  --evaluator lexical -o /tmp/head.json
+rag-eval regress --baseline eval/baseline.json --head /tmp/head.json --threshold 0.05
+```
