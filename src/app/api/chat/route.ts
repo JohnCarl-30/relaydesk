@@ -2,11 +2,20 @@ import { NextResponse } from "next/server";
 import {
   addMessage,
   createConversation,
+  createTicket,
   getConversation,
   getTicketByConversation,
   listMessages,
 } from "@/lib/db";
-import { answerQuestion } from "@/lib/rag";
+import { PENDING_TICKET_EMAIL } from "@/lib/escalate";
+import { answerQuestion } from "@/lib/graph";
+
+function ticketEmail(bodyEmail: string | undefined, visitorEmail: string | null): string {
+  const fromBody = bodyEmail?.trim().toLowerCase();
+  if (fromBody?.includes("@")) return fromBody;
+  if (visitorEmail?.includes("@")) return visitorEmail;
+  return PENDING_TICKET_EMAIL;
+}
 
 function serializeMessages(conversationId: string) {
   return listMessages(conversationId).map((m) => ({
@@ -51,19 +60,35 @@ export async function POST(request: Request) {
 
   addMessage(conversationId, "visitor", text);
   const rag = await answerQuestion(text);
+  const conversation = getConversation(conversationId);
+  let ticket = getTicketByConversation(conversationId);
+  let reply = rag.answer;
+  if (rag.escalated) {
+    if (!ticket) {
+      ticket = createTicket(
+        conversationId,
+        ticketEmail(body.email, conversation?.visitor_email ?? null),
+      );
+    }
+    if (ticket) {
+      reply = `${rag.answer}\n\nTicket ${ticket.id} is in the staff inbox.`;
+    }
+  }
   addMessage(
     conversationId,
     "assistant",
-    rag.answer,
+    reply,
     rag.citations.map((c) => c.title),
   );
 
   return NextResponse.json({
     conversationId,
-    reply: rag.answer,
+    reply,
     citations: rag.citations,
     confident: rag.confident,
     usedLlm: rag.usedLlm,
+    escalated: rag.escalated,
+    ticketId: ticket?.id ?? null,
     messages: serializeMessages(conversationId),
   });
 }

@@ -1,0 +1,3 @@
+support.answer     18.8ms  question=what is nimbus usedLlm=false attempts=1 confident=false graph.next=END citation_count=3
+  retrieve            0.3ms  retrieve.query=what is nimbus retrieve.hit_count=3 retrieve.top_slug=workspaces retrieve.top_score=5 retrieve.slugs=workspaces,billing-seats-events,sso
+  generate            0.2ms  generate.attempts=1 llm.stub=false generate.used_llm=false generate.confident=false graph.next=END

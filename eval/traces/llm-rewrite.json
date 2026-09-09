@@ -1,0 +1,99 @@
+{
+  "capturedAt": "2026-08-28",
+  "question": "what is nimbus",
+  "mode": "llm",
+  "stub": true,
+  "usedLlm": true,
+  "confident": true,
+  "tree": "support.answer      3.4ms  question=what is nimbus usedLlm=true attempts=2 confident=true graph.next=END citation_count=3\n  retrieve            0.1ms  retrieve.query=what is nimbus retrieve.hit_count=3 retrieve.top_slug=workspaces retrieve.top_score=5 retrieve.slugs=workspaces,billing-seats-events,sso\n  generate            0.1ms  generate.attempts=1 llm.stub=true llm.input_tokens=48 llm.output_tokens=32 generate.used_llm=true generate.confident=false graph.next=rewrite\n  rewrite               0ms  llm.stub=true llm.input_tokens=48 llm.output_tokens=32 rewrite.query=nimbus workspace definition graph.next=retrieve\n  retrieve            0.1ms  retrieve.query=nimbus workspace definition retrieve.hit_count=3 retrieve.top_slug=workspaces retrieve.top_score=14 retrieve.slugs=workspaces,billing-seats-events,sso\n  generate              0ms  generate.attempts=2 llm.stub=true llm.input_tokens=48 llm.output_tokens=32 generate.used_llm=true generate.confident=true graph.next=END",
+  "spans": [
+    {
+      "name": "retrieve",
+      "traceId": "adbc5f7f683fecef5b18a53db919bd14",
+      "spanId": "dd0f867e71366e2a",
+      "parentSpanId": "a010f13bb278e420",
+      "durationMs": 0.1,
+      "attributes": {
+        "retrieve.query": "what is nimbus",
+        "retrieve.hit_count": 3,
+        "retrieve.top_slug": "workspaces",
+        "retrieve.top_score": 5,
+        "retrieve.slugs": "workspaces,billing-seats-events,sso"
+      }
+    },
+    {
+      "name": "generate",
+      "traceId": "adbc5f7f683fecef5b18a53db919bd14",
+      "spanId": "ffefaea796d67230",
+      "parentSpanId": "a010f13bb278e420",
+      "durationMs": 0.1,
+      "attributes": {
+        "generate.attempts": 1,
+        "llm.stub": true,
+        "llm.input_tokens": 48,
+        "llm.output_tokens": 32,
+        "generate.used_llm": true,
+        "generate.confident": false,
+        "graph.next": "rewrite"
+      }
+    },
+    {
+      "name": "rewrite",
+      "traceId": "adbc5f7f683fecef5b18a53db919bd14",
+      "spanId": "0ddd48c9cfaa14a9",
+      "parentSpanId": "a010f13bb278e420",
+      "durationMs": 0,
+      "attributes": {
+        "llm.stub": true,
+        "llm.input_tokens": 48,
+        "llm.output_tokens": 32,
+        "rewrite.query": "nimbus workspace definition",
+        "graph.next": "retrieve"
+      }
+    },
+    {
+      "name": "retrieve",
+      "traceId": "adbc5f7f683fecef5b18a53db919bd14",
+      "spanId": "bbdbe6f39a8a1fdd",
+      "parentSpanId": "a010f13bb278e420",
+      "durationMs": 0.1,
+      "attributes": {
+        "retrieve.query": "nimbus workspace definition",
+        "retrieve.hit_count": 3,
+        "retrieve.top_slug": "workspaces",
+        "retrieve.top_score": 14,
+        "retrieve.slugs": "workspaces,billing-seats-events,sso"
+      }
+    },
+    {
+      "name": "generate",
+      "traceId": "adbc5f7f683fecef5b18a53db919bd14",
+      "spanId": "16d74e6fb1d5e87b",
+      "parentSpanId": "a010f13bb278e420",
+      "durationMs": 0,
+      "attributes": {
+        "generate.attempts": 2,
+        "llm.stub": true,
+        "llm.input_tokens": 48,
+        "llm.output_tokens": 32,
+        "generate.used_llm": true,
+        "generate.confident": true,
+        "graph.next": "END"
+      }
+    },
+    {
+      "name": "support.answer",
+      "traceId": "adbc5f7f683fecef5b18a53db919bd14",
+      "spanId": "a010f13bb278e420",
+      "durationMs": 3.4,
+      "attributes": {
+        "question": "what is nimbus",
+        "usedLlm": true,
+        "attempts": 2,
+        "confident": true,
+        "graph.next": "END",
+        "citation_count": 3
+      }
+    }
+  ]
+}

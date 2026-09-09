@@ -14,8 +14,9 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Nimbus — product analytics",
-  description: "See what users actually do. Demo site for Relaydesk, an AI support widget and inbox.",
+  title: "Nimbus, product analytics",
+  description:
+    "Relaydesk demo. The widget cites Nimbus help articles. Staff inbox password is nimbus-demo.",
 };
 
 export default function RootLayout({

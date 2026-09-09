@@ -1,31 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { PENDING_TICKET_EMAIL } from "@/lib/escalate";
+import type { Conversation, Message, Ticket } from "@/lib/models";
 
-export type Conversation = {
-  id: string;
-  visitor_email: string | null;
-  created_at: string;
-};
-
-export type Message = {
-  id: string;
-  conversation_id: string;
-  role: "visitor" | "assistant" | "agent";
-  body: string;
-  citations: string | null;
-  created_at: string;
-};
-
-export type Ticket = {
-  id: string;
-  conversation_id: string;
-  email: string;
-  status: "open" | "waiting" | "closed";
-  preview: string;
-  created_at: string;
-  updated_at: string;
-};
+export type { Conversation, Message, Ticket };
 
 type GlobalDb = typeof globalThis & { __relaydeskDb?: Database.Database };
 
@@ -58,12 +37,21 @@ function open(): Database.Database {
       status TEXT NOT NULL,
       preview TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      assignee TEXT
     );
   `);
+  migrateTickets(db);
   seedIfEmpty(db);
   g.__relaydeskDb = db;
   return db;
+}
+
+function migrateTickets(db: Database.Database) {
+  const cols = db.prepare("PRAGMA table_info(tickets)").all() as { name: string }[];
+  if (!cols.some((col) => col.name === "assignee")) {
+    db.exec("ALTER TABLE tickets ADD COLUMN assignee TEXT");
+  }
 }
 
 function seedIfEmpty(db: Database.Database) {
@@ -134,14 +122,14 @@ function seedIfEmpty(db: Database.Database) {
     "m6",
     c2,
     "agent",
-    "I checked your workspace — JIT is off and owen@harborapps.com was never invited. I sent a viewer invite. After you accept it, Google SSO will let you in.",
+    "I checked your workspace. JIT is off and owen@harborapps.com was never invited. I sent a viewer invite. After you accept it, Google SSO will let you in.",
     null,
     late,
   );
 
   const insertTicket = db.prepare(
-    `INSERT INTO tickets (id, conversation_id, email, status, preview, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tickets (id, conversation_id, email, status, preview, created_at, updated_at, assignee)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   insertTicket.run(
     "tkt_seats",
@@ -151,6 +139,7 @@ function seedIfEmpty(db: Database.Database) {
     "Invoice shows 12 seats but we only have 9 people",
     late,
     late,
+    null,
   );
   insertTicket.run(
     "tkt_sso",
@@ -160,6 +149,7 @@ function seedIfEmpty(db: Database.Database) {
     "SSO keeps bouncing me back to Google",
     late,
     iso,
+    "You",
   );
 }
 
@@ -226,7 +216,19 @@ export function createTicket(conversationId: string, email: string): Ticket {
   const existing = db()
     .prepare("SELECT * FROM tickets WHERE conversation_id = ?")
     .get(conversationId) as Ticket | undefined;
-  if (existing) return existing;
+  const nextEmail = email.trim().toLowerCase();
+  const realEmail = nextEmail.includes("@") && nextEmail !== PENDING_TICKET_EMAIL;
+  if (existing) {
+    if (realEmail) {
+      const now = new Date().toISOString();
+      db()
+        .prepare("UPDATE tickets SET email = ?, updated_at = ? WHERE id = ?")
+        .run(nextEmail, now, existing.id);
+      setConversationEmail(conversationId, nextEmail);
+      return getTicket(existing.id) ?? existing;
+    }
+    return existing;
+  }
 
   const last = db()
     .prepare(
@@ -237,16 +239,17 @@ export function createTicket(conversationId: string, email: string): Ticket {
   const row: Ticket = {
     id: `tkt_${crypto.randomUUID().slice(0, 8)}`,
     conversation_id: conversationId,
-    email,
+    email: nextEmail,
     status: "open",
+    assignee: null,
     preview: (last?.body ?? "New conversation").slice(0, 140),
     created_at: now,
     updated_at: now,
   };
   db()
     .prepare(
-      `INSERT INTO tickets (id, conversation_id, email, status, preview, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tickets (id, conversation_id, email, status, preview, created_at, updated_at, assignee)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       row.id,
@@ -256,8 +259,9 @@ export function createTicket(conversationId: string, email: string): Ticket {
       row.preview,
       row.created_at,
       row.updated_at,
+      row.assignee,
     );
-  setConversationEmail(conversationId, email);
+  setConversationEmail(conversationId, nextEmail);
   return row;
 }
 
@@ -285,7 +289,26 @@ export function replyToTicket(id: string, body: string): Ticket | undefined {
   addMessage(ticket.conversation_id, "agent", body);
   const now = new Date().toISOString();
   db()
-    .prepare("UPDATE tickets SET status = 'waiting', updated_at = ? WHERE id = ?")
+    .prepare(
+      "UPDATE tickets SET status = 'waiting', assignee = COALESCE(assignee, 'You'), updated_at = ? WHERE id = ?",
+    )
     .run(now, id);
+  return getTicket(id);
+}
+
+export function updateTicket(
+  id: string,
+  patch: { status?: Ticket["status"]; assignee?: string | null },
+): Ticket | undefined {
+  const ticket = getTicket(id);
+  if (!ticket) return undefined;
+  const status = patch.status ?? ticket.status;
+  const assignee = patch.assignee === undefined ? ticket.assignee : patch.assignee;
+  const now = new Date().toISOString();
+  db()
+    .prepare(
+      "UPDATE tickets SET status = ?, assignee = ?, updated_at = ? WHERE id = ?",
+    )
+    .run(status, assignee, now, id);
   return getTicket(id);
 }

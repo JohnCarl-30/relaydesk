@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { DashboardPreview } from "@/components/DashboardPreview";
+import { Logo } from "@/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,31 +28,52 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-full items-center justify-center bg-[#121613] px-6 text-[#e8eee9]">
-      <form onSubmit={onSubmit} className="w-full max-w-sm">
-        <p className="text-xs uppercase tracking-widest text-[#8aa396]">Relaydesk</p>
-        <h1 className="mt-2 font-serif text-3xl">Staff inbox</h1>
-        <p className="mt-2 text-sm text-[#8aa396]">
-          Demo password <code className="text-[#e8eee9]">nimbus-demo</code>
+    <main className="grid min-h-full lg:grid-cols-2">
+      <section className="flex flex-col bg-card px-6 py-8">
+        <Link href="/" className="text-sm">
+          <Logo />
+        </Link>
+        <form onSubmit={onSubmit} className="m-auto w-full max-w-sm py-16">
+          <h1 className="text-2xl font-medium tracking-tight">Staff inbox</h1>
+          <p className="mt-2 text-sm text-muted">
+            Staff inbox. Demo password is{" "}
+            <code className="text-ink">nimbus-demo</code>.
+          </p>
+          <label className="mt-8 block text-sm">
+            <span className="text-muted">Password</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none ring-forest/20 focus:ring-2"
+              autoFocus
+            />
+          </label>
+          {error ? <p className="mt-2 text-sm text-copper">{error}</p> : null}
+          <button
+            type="submit"
+            className="mt-5 w-full rounded-lg bg-forest py-2.5 text-sm text-paper hover:bg-forest-2"
+          >
+            Sign in
+          </button>
+          <Link href="/" className="mt-6 block text-center text-sm text-muted hover:text-ink">
+            Back to Nimbus
+          </Link>
+        </form>
+        <p className="text-xs text-muted">Nimbus · Relaydesk demo</p>
+      </section>
+      <section className="relative hidden overflow-hidden bg-[linear-gradient(165deg,#1b3d31_0%,#2d5a48_45%,#e4ece6_100%)] p-10 lg:flex lg:flex-col lg:justify-end">
+        <p className="max-w-md font-serif text-3xl leading-snug text-paper">
+          "Seat count on the invoice is a snapshot. If someone left on day 28
+          they still appear."
         </p>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-6 w-full rounded-lg border border-[#2c342f] bg-[#1a1f1c] px-3 py-2 text-sm outline-none"
-          autoFocus
-        />
-        {error ? <p className="mt-2 text-sm text-[#e07a4c]">{error}</p> : null}
-        <button
-          type="submit"
-          className="mt-4 w-full rounded-lg bg-[#cfe0d4] py-2 text-sm text-[#121613]"
-        >
-          Enter
-        </button>
-        <a href="/" className="mt-6 block text-center text-xs text-[#8aa396]">
-          ← Back to Nimbus
-        </a>
-      </form>
+        <p className="mt-4 text-sm text-paper/70">
+          From How billing works: seats and events
+        </p>
+        <div className="mt-10 origin-bottom-left scale-[0.92]">
+          <DashboardPreview />
+        </div>
+      </section>
     </main>
   );
 }

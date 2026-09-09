@@ -1,0 +1,54 @@
+{
+  "capturedAt": "2026-08-28",
+  "n": 50,
+  "live_key_present": false,
+  "would_call_model": 43,
+  "actually_called_model": 0,
+  "hit_at_1": {
+    "extractive": "34/44",
+    "generate": "34/44"
+  },
+  "hit_at_3": {
+    "extractive": "43/44",
+    "generate": "43/44"
+  },
+  "hit_at_k_identical": true,
+  "ms_per_row": {
+    "extractive": {
+      "mean": 0.154,
+      "p50": 0.112,
+      "p95": 0.208,
+      "max": 1.763
+    },
+    "generate": {
+      "mean": 0.216,
+      "p50": 0.117,
+      "p95": 0.195,
+      "max": 4.833
+    }
+  },
+  "generate_only_estimate": {
+    "note": "gpt-4o-mini $0.15/$0.60 per 1M tokens, chars/4, ~120 output tokens. Rows that would call the model only. No rewrite loop.",
+    "would_call_model": 43,
+    "input_tokens": 20021,
+    "output_tokens": 5160,
+    "tokens_per_row": 503.6,
+    "usd_per_golden": 0.006099,
+    "usd_per_row": 0.000122
+  },
+  "lexical_means": {
+    "note": "rag-eval lexical on the jsonl this script writes. Refuse lines from week 9 are in the answers. Keyless, so means match.",
+    "extractive": {
+      "faithfulness": 0.704858,
+      "answer_relevancy": 0.58378,
+      "context_precision": 0.060224,
+      "context_recall": 0.863902
+    },
+    "generate": {
+      "faithfulness": 0.704858,
+      "answer_relevancy": 0.58378,
+      "context_precision": 0.060224,
+      "context_recall": 0.863902
+    }
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "capturedAt": "2026-08-28",
+  "n": 50,
+  "rewrite_rows": 5,
+  "keyword_rewrite_noop": true,
+  "hit_at_1": {
+    "norewrite": "34/44",
+    "rewrite": "34/44"
+  },
+  "hit_at_3": {
+    "norewrite": "43/44",
+    "rewrite": "43/44"
+  },
+  "ms_per_row": {
+    "norewrite": {
+      "mean": 0.174,
+      "p50": 0.116,
+      "p95": 0.329,
+      "max": 2.183
+    },
+    "rewrite": {
+      "mean": 0.124,
+      "p50": 0.109,
+      "p95": 0.202,
+      "max": 0.351
+    },
+    "graph_norewrite": {
+      "mean": 1.712,
+      "p50": 0.984,
+      "p95": 4.621,
+      "max": 26.805
+    }
+  },
+  "fires": [
+    {
+      "question": "What is the Growth plan event quota?",
+      "expected": "billing-seats-events",
+      "first": [
+        "funnel-zeros",
+        "billing-seats-events",
+        "data-retention"
+      ],
+      "second": [
+        "funnel-zeros",
+        "billing-seats-events",
+        "data-retention"
+      ],
+      "query": "growth plan event quota",
+      "sameRanking": true
+    },
+    {
+      "question": "Is JIT provisioning on by default?",
+      "expected": "sso",
+      "first": [
+        "sso"
+      ],
+      "second": [
+        "sso"
+      ],
+      "query": "jit provisioning default",
+      "sameRanking": true
+    },
+    {
+      "question": "Do expired invites occupy a seat?",
+      "expected": "inviting-teammates",
+      "first": [
+        "inviting-teammates",
+        "billing-seats-events",
+        "delete-project"
+      ],
+      "second": [
+        "inviting-teammates",
+        "billing-seats-events",
+        "delete-project"
+      ],
+      "query": "expired invites occupy seat",
+      "sameRanking": true
+    },
+    {
+      "question": "Can I demote the last owner?",
+      "expected": "inviting-teammates",
+      "first": [
+        "inviting-teammates",
+        "workspaces",
+        "billing-seats-events"
+      ],
+      "second": [
+        "inviting-teammates",
+        "workspaces",
+        "billing-seats-events"
+      ],
+      "query": "demote last owner",
+      "sameRanking": true
+    },
+    {
+      "question": "What can a viewer do?",
+      "expected": "inviting-teammates",
+      "first": [
+        "inviting-teammates"
+      ],
+      "second": [
+        "inviting-teammates"
+      ],
+      "query": "viewer",
+      "sameRanking": true
+    }
+  ],
+  "growth_quota_oracle": {
+    "question": "What is the Growth plan event quota?",
+    "first": [
+      "funnel-zeros",
+      "billing-seats-events",
+      "data-retention"
+    ],
+    "keyword": [
+      "funnel-zeros",
+      "billing-seats-events",
+      "data-retention"
+    ],
+    "oracle_billing_seats_events": [
+      "billing-seats-events",
+      "csv-export",
+      "data-retention"
+    ],
+    "demo_stub_nimbus_workspace_definition": [
+      "workspaces",
+      "billing-seats-events",
+      "sso"
+    ]
+  },
+  "graph_stub": {
+    "rewrite_false_nodes": [
+      "retrieve",
+      "generate",
+      "support.answer"
+    ],
+    "rewrite_true_nodes": [
+      "retrieve",
+      "generate",
+      "rewrite",
+      "retrieve",
+      "generate",
+      "support.answer"
+    ],
+    "rewrite_false_skips_loop": true,
+    "rewrite_true_runs_loop": true
+  },
+  "lexical_means": {
+    "note": "rag-eval lexical on the jsonl this script writes. Refuse lines from week 9 are in the answers. Identical on vs off.",
+    "norewrite": {
+      "faithfulness": 0.704858,
+      "answer_relevancy": 0.58378,
+      "context_precision": 0.060224,
+      "context_recall": 0.863902
+    },
+    "rewrite": {
+      "faithfulness": 0.704858,
+      "answer_relevancy": 0.58378,
+      "context_precision": 0.060224,
+      "context_recall": 0.863902
+    }
+  }
+}

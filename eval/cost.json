@@ -1,0 +1,32 @@
+{
+  "capturedAt": "2026-08-28",
+  "n": 40,
+  "extractive_api_eval": {
+    "note": "retrieve + extractiveAnswer, same work as POST /api/eval, in-process",
+    "ms_per_row_mean": 0.122,
+    "ms_per_row_p50": 0.12,
+    "ms_per_row_p95": 0.165,
+    "ms_per_row_max": 0.183,
+    "tokens_per_row": 0,
+    "usd_per_golden": 0
+  },
+  "graph_extractive": {
+    "note": "LangGraph retrieve → generate → END, no API key",
+    "ms_per_row_mean": 1.622,
+    "ms_per_row_p50": 0.969,
+    "ms_per_row_p95": 4.194,
+    "ms_per_row_max": 15.501,
+    "tokens_per_row": 0,
+    "usd_per_golden": 0
+  },
+  "llm_generate_rewrite_estimate": {
+    "note": "gpt-4o-mini $0.15/$0.60 per 1M tokens, chars/4, no live call",
+    "rewrite_rows": 9,
+    "input_tokens": 23106,
+    "output_tokens": 5988,
+    "tokens_per_row": 727.4,
+    "usd_per_golden": 0.007059,
+    "usd_per_row": 0.000176
+  },
+  "mean_retrieved_context_chars": 1446
+}
