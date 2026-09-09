@@ -52,7 +52,7 @@ Update the card under Settings → Billing. As soon as a payment succeeds, write
     body: `Go to Settings → Security → SSO. Pick Google Workspace or Okta.
 
 Google: enter your company domain. Users must sign in with that domain. Personal Gmail accounts are rejected.
-
+ 
 Okta: create a SAML app with ACS URL and Entity ID shown on that page. Map email to NameID.
 
 After SSO is on, password login is disabled for that workspace. If SSO loops (you bounce back to Google or Okta), check that the ACS URL has no trailing slash and that the user exists as a Nimbus member first. JIT provisioning is off by default; turn it on only if you want first-time SSO users created as viewers.`,
@@ -107,7 +107,7 @@ You cannot demote the last owner. Transfer ownership first.`,
 
 1. Open each step and confirm the event name still matches what the SDK sends. Renaming an event in code does not rename historical events.
 2. Check filters on the funnel (browser, plan, country). A filter on \`plan = pro\` hides free users.
-3. Timezone: Nimbus stores UTC. The chart timezone is a display setting. A “today” funnel at 01:00 in Manila is still “yesterday” in UTC.
+3. Timezone: Nimbus stores UTC. The chart timezone is a display setting. A "today" funnel at 01:00 in Manila is still "yesterday" in UTC.
 
 Data is not sampled on Growth or Scale. Starter samples at 1% after 200k events in a day, which can make a funnel look empty for rare steps. Upgrade or look at a longer range.`,
   },
@@ -120,7 +120,7 @@ Data is not sampled on Growth or Scale. Starter samples at 1% after 200k events 
 
 The Events explorer can export raw rows with the same cap. Use a workspace read key and the query API if you need a recurring dump.
 
-Exports include the event name, timestamp (UTC), and properties. They do not include other users’ private dashboard names.`,
+Exports include the event name, timestamp (UTC), and properties. They do not include other users' private dashboard names.`,
   },
   {
     slug: "delete-project",

@@ -33,6 +33,11 @@ body {
   color: var(--ink);
 }
 
+textarea,
+input {
+  font: inherit;
+}
+
 ::selection {
   background: #cfe0d4;
 }

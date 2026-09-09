@@ -1,0 +1,53 @@
+{
+  "capturedAt": "2026-08-28",
+  "question": "what is nimbus",
+  "mode": "extractive",
+  "stub": false,
+  "usedLlm": false,
+  "confident": false,
+  "tree": "support.answer     18.8ms  question=what is nimbus usedLlm=false attempts=1 confident=false graph.next=END citation_count=3\n  retrieve            0.3ms  retrieve.query=what is nimbus retrieve.hit_count=3 retrieve.top_slug=workspaces retrieve.top_score=5 retrieve.slugs=workspaces,billing-seats-events,sso\n  generate            0.2ms  generate.attempts=1 llm.stub=false generate.used_llm=false generate.confident=false graph.next=END",
+  "spans": [
+    {
+      "name": "retrieve",
+      "traceId": "04a3069d4976fae8af140fc54b7c755a",
+      "spanId": "d3564e6e9cfc4e09",
+      "parentSpanId": "73e5283439cd08d3",
+      "durationMs": 0.3,
+      "attributes": {
+        "retrieve.query": "what is nimbus",
+        "retrieve.hit_count": 3,
+        "retrieve.top_slug": "workspaces",
+        "retrieve.top_score": 5,
+        "retrieve.slugs": "workspaces,billing-seats-events,sso"
+      }
+    },
+    {
+      "name": "generate",
+      "traceId": "04a3069d4976fae8af140fc54b7c755a",
+      "spanId": "3fc774e0026bf142",
+      "parentSpanId": "73e5283439cd08d3",
+      "durationMs": 0.2,
+      "attributes": {
+        "generate.attempts": 1,
+        "llm.stub": false,
+        "generate.used_llm": false,
+        "generate.confident": false,
+        "graph.next": "END"
+      }
+    },
+    {
+      "name": "support.answer",
+      "traceId": "04a3069d4976fae8af140fc54b7c755a",
+      "spanId": "73e5283439cd08d3",
+      "durationMs": 18.8,
+      "attributes": {
+        "question": "what is nimbus",
+        "usedLlm": false,
+        "attempts": 1,
+        "confident": false,
+        "graph.next": "END",
+        "citation_count": 3
+      }
+    }
+  ]
+}

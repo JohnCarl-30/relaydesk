@@ -1,0 +1,6 @@
+support.answer      3.4ms  question=what is nimbus usedLlm=true attempts=2 confident=true graph.next=END citation_count=3
+  retrieve            0.1ms  retrieve.query=what is nimbus retrieve.hit_count=3 retrieve.top_slug=workspaces retrieve.top_score=5 retrieve.slugs=workspaces,billing-seats-events,sso
+  generate            0.1ms  generate.attempts=1 llm.stub=true llm.input_tokens=48 llm.output_tokens=32 generate.used_llm=true generate.confident=false graph.next=rewrite
+  rewrite               0ms  llm.stub=true llm.input_tokens=48 llm.output_tokens=32 rewrite.query=nimbus workspace definition graph.next=retrieve
+  retrieve            0.1ms  retrieve.query=nimbus workspace definition retrieve.hit_count=3 retrieve.top_slug=workspaces retrieve.top_score=14 retrieve.slugs=workspaces,billing-seats-events,sso
+  generate              0ms  generate.attempts=2 llm.stub=true llm.input_tokens=48 llm.output_tokens=32 generate.used_llm=true generate.confident=true graph.next=END

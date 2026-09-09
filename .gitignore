@@ -43,3 +43,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# rewritten by next dev; keep them out of git
+AGENTS.md
+CLAUDE.md
+
+# huggingface transformers.js model cache
+.cache/
+
+# live OpenTelemetry dump; committed samples live in eval/traces/*.json
+eval/traces/live.jsonl
+eval/.norewrite.jsonl
+eval/.rewrite.jsonl
+eval/.extractive.jsonl
+eval/.generate.jsonl
+
+# local browser dumps from Cursor
+.playwright-cli/
