@@ -119,7 +119,7 @@ npx --yes tsx eval/generate.ts
 
 ## Escalation
 
-Lexical CI still scores quotes. The refuse line would tank faithfulness, so the ticket policy has its own 15-row labels. Policy recall is 1.0 on those 7 out-of-corpus rows. `always-answer` recall is 0. That is the drop. Chat opens the ticket. `POST /api/eval` does not. See [escalation.md](escalation.md).
+The lexical gate skips answer metrics on rows where `/api/eval` escalated (rag-eval-harness 0.1.1), so whether to refuse is scored here, on its own 15-row labels. Policy recall is 1.0 on those 7 out-of-corpus rows. `always-answer` recall is 0. That is the drop. Chat opens the ticket. `POST /api/eval` does not. See [escalation.md](escalation.md).
 
 ```bash
 npx --yes tsx eval/escalation.ts
