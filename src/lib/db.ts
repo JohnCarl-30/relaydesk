@@ -90,7 +90,7 @@ function seedIfEmpty(db: Database.Database) {
     c1,
     "assistant",
     "Seat count on the invoice is a snapshot from the last day of the billing period. If someone left mid-cycle they can still appear on that invoice. Pending invites do not count until they accept.",
-    JSON.stringify(["How billing works: seats and events"]),
+    JSON.stringify(["How billing works: seats and the invoice"]),
     mid,
   );
   insertMsg.run(

@@ -23,6 +23,8 @@ Hit@k vs `expected_slug` (no server):
 npx --yes tsx eval/compare-retrievers.ts
 ```
 
+After the 2026-09-11 corpus split, count is **44/44** hit@1 and hit@3 on the 44 labeled rows. Chunked is 42/44 and 43/44. Do not promote chunked. The tables below are the 2026-08-28 A/B snapshots.
+
 Lexical means for BM25, with the app on :3000:
 
 ```bash

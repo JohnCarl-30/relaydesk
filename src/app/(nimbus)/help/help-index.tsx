@@ -62,7 +62,7 @@ export function HelpIndex({ articles }: { articles: Article[] }) {
 
       {groups.length === 0 ? (
         <p className="mt-12 text-center text-sm text-muted">
-          No articles match "{query}".
+          No articles match &ldquo;{query}&rdquo;.
         </p>
       ) : q ? (
         <ul className="mx-auto mt-10 max-w-xl divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
