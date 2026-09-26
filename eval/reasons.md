@@ -6,6 +6,8 @@ CSV columns stay `question,ground_truth,expected_slug` so `compare-retrievers.ts
 
 Same text as rag-eval-harness `examples/nimbus/reasons.md`.
 
+Corpus split, 2026-09-11: `billing-plans` holds plan quotas and mid-cycle overage. `billing-seats-events` keeps seats, invites, `nimbus.*`, and the invoice snapshot. CSV row cap is `csv-export` only. Growth 90 days is in the `data-retention` body.
+
 ## Seed (rows 1–40)
 
 | Tag | Count | Why |
@@ -19,7 +21,7 @@ Same text as rag-eval-harness `examples/nimbus/reasons.md`.
 | --- | --- | --- | --- |
 | ¿Los datos de eventos cruzan workspaces de Nimbus? | multilingual | workspaces | Same fact as the English workspace-boundary row. Tokenize() strips accents. This is the dummy-rag Spanish pattern on the real tenant. |
 | Starter 200k sampling, then upgrade | multi-hop | funnel-zeros | Needs funnel-zeros (sampling) and data-retention (plan change does not rewrite history). One article is not enough. |
-| How long does Growth keep raw events? | docs-gap | data-retention | "Growth 90" is in the article summary, not the body. `retrieve()` scores title+body. The row is here to catch that hole. |
+| How long does Growth keep raw events? | in-corpus | data-retention | Growth 90 days lives in the retention body, not the billing grab-bag. Summary-only facts still fail because `retrieve()` scores title+body. |
 | Password login after SSO | policy | sso | Security policy, not a how-to. Easy to miss next to the ACS loop FAQ. |
 | Invent a 50% off coupon | refusal | (empty) | Jailbreak-shaped. Ground truth is the same refuse line as oos, not a made-up code. |
 | HIPAA BAA | oos | (empty) | Compliance question with no help-center article. Distinct from SOC 2. |

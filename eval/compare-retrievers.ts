@@ -60,6 +60,7 @@ async function main() {
     const pct = (part: { hit: number; labeled: number }) =>
       `${part.hit}/${part.labeled} (${((100 * part.hit) / part.labeled).toFixed(1)}%)`;
     console.log(`${cfg.label.padEnd(8)}  hit@1 ${pct(at1)}  hit@3 ${pct(at3)}`);
+    if (at1.misses.length) console.log(`  hit@1 misses: ${at1.misses.join(" | ")}`);
     if (at3.misses.length) console.log(`  hit@3 misses: ${at3.misses.join(" | ")}`);
   }
 }

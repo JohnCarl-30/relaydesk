@@ -35,7 +35,7 @@ export default function HomePage() {
           </h1>
           <p className="mt-5 max-w-md text-base leading-7 text-muted">
             Nimbus is a fake analytics company. The chat bubble is the product
-            you're trying. It searches this help center, cites the article,
+            you&apos;re trying. It searches this help center, cites the article,
             and files a ticket when you say it failed.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">

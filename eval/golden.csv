@@ -6,9 +6,9 @@ question,ground_truth,expected_slug
 "How does Nimbus billing work?","Nimbus bills two dimensions: seats plus a monthly event quota.",billing-seats-events
 "Do pending invites count as billed seats?","Pending invites do not count until they accept.",billing-seats-events
 "Do nimbus.* system events count toward quota?","Internal nimbus.* system events are free and do not count toward quota.",billing-seats-events
-"What happens if I exceed events mid-cycle?","If you exceed events mid-cycle we do not drop data. We invoice the overage on the next statement at $0.00012 per extra event.",billing-seats-events
+"What happens if I exceed events mid-cycle?","If you exceed events mid-cycle we do not drop data. We invoice the overage on the next statement at $0.00012 per extra event.",billing-plans
 "Which day is seat count taken from on the invoice?","Seat count on the invoice is a snapshot from the last day of the billing period.",billing-seats-events
-"What is the Growth plan event quota?","Growth includes 10 seats and 10M events.",billing-seats-events
+"What is the Growth plan event quota?","Growth includes 10 seats and 10M events.",billing-plans
 "What happens if a Nimbus payment fails?","If a card is declined we retry on day 3, 7, and 14. You will get email each time.",failed-payment
 "When do new event writes pause after a declined card?","New event writes pause only after day 14. Existing data is not deleted.",failed-payment
 "Is there a reactivation fee after I update the card?","We do not charge a reactivation fee.",failed-payment
@@ -22,7 +22,7 @@ question,ground_truth,expected_slug
 "What is the write-key rate limit?","100 requests / second per write key.",api-keys
 "How long does Starter keep raw events?","Starter keeps 30 days. Raw events older than the retention window are deleted on a nightly job around 03:00 UTC.",data-retention
 "What happens to old events if I downgrade from Growth to Starter?","If you downgrade from Growth to Starter, events older than 30 days are deleted on the next nightly job. Export first.",data-retention
-"What is the CSV export row cap?","CSV exports are capped at 500,000 rows per file.",data-retention
+"What is the CSV export row cap?","CSV exports are capped at 500,000 rows per file.",csv-export
 "How long before a teammate invite expires?","An invite expires after 7 days.",inviting-teammates
 "Do expired invites occupy a seat?","Expired invites do not occupy a seat.",inviting-teammates
 "Can I demote the last owner?","You cannot demote the last owner. Transfer ownership first.",inviting-teammates
