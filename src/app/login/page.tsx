@@ -64,11 +64,11 @@ export default function LoginPage() {
       </section>
       <section className="relative hidden overflow-hidden bg-[linear-gradient(165deg,#1b3d31_0%,#2d5a48_45%,#e4ece6_100%)] p-10 lg:flex lg:flex-col lg:justify-end">
         <p className="max-w-md font-serif text-3xl leading-snug text-paper">
-          "Seat count on the invoice is a snapshot. If someone left on day 28
-          they still appear."
+          &ldquo;Seat count on the invoice is a snapshot. If someone left on day 28
+          they still appear.&rdquo;
         </p>
         <p className="mt-4 text-sm text-paper/70">
-          From How billing works: seats and events
+          From How billing works: seats and the invoice
         </p>
         <div className="mt-10 origin-bottom-left scale-[0.92]">
           <DashboardPreview />

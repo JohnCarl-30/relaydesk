@@ -20,22 +20,29 @@ The owner can rename a workspace from Settings → General. Changing the name do
   },
   {
     slug: "billing-seats-events",
-    title: "How billing works: seats and events",
+    title: "How billing works: seats and the invoice",
     category: "Billing",
     summary: "You pay for seats plus a monthly event quota.",
-    body: `Nimbus bills two dimensions.
+    body: `Nimbus bills two dimensions: seats plus a monthly event quota. Seats are billed per workspace, not per project.
 
-Seats: every person with login access counts, including viewers. Pending invites do not count until they accept.
+Pending invites do not count until they accept. Every person with login access counts, including viewers.
 
-Events: tracked product events that land in Nimbus. Internal \`nimbus.*\` system events are free and do not count toward quota.
+Internal nimbus.* system events are free and do not count toward quota. They are not product events.
 
-Plans: Starter (3 seats, 1M events), Growth (10 seats, 10M events), Scale (unlimited seats, custom events). If you exceed events mid-cycle we do not drop data. We invoice the overage on the next statement at $0.00012 per extra event.
+If your invoice shows extra seats, look at the snapshot date. Seat count on the invoice is a snapshot from the last day of the billing period. If someone left on day 28 they still appear on that invoice.`,
+  },
+  {
+    slug: "billing-plans",
+    title: "Plan quota and mid-cycle overage",
+    category: "Billing",
+    summary: "Starter 3 seats and 1M events. Growth 10 and 10M. Scale is custom.",
+    body: `Growth includes 10 seats and 10M events. Starter is 3 seats and 1M events. Scale is unlimited seats with a custom event cap.
 
-Seat count on the invoice is a snapshot from the last day of the billing period. If someone left on day 28 they still appear on that invoice.`,
+If you exceed events mid-cycle we do not drop data. We invoice the overage on the next statement at $0.00012 per extra event.`,
   },
   {
     slug: "failed-payment",
-    title: "What happens if a payment fails?",
+    title: "If a payment fails, dashboards stay readable while retrying a declined card",
     category: "Billing",
     summary: "We retry for 14 days, then freeze writes.",
     body: `If a card is declined we retry on day 3, 7, and 14. You will get email each time.
@@ -49,43 +56,53 @@ Update the card under Settings → Billing. As soon as a payment succeeds, write
     title: "Set up Google or Okta SSO",
     category: "Security",
     summary: "SSO is available on Growth and Scale. One provider per workspace.",
-    body: `Go to Settings → Security → SSO. Pick Google Workspace or Okta.
+    body: `SSO is available on Growth and Scale. Go to Settings → Security → SSO. Pick Google Workspace or Okta.
 
 Google: enter your company domain. Users must sign in with that domain. Personal Gmail accounts are rejected.
- 
+
 Okta: create a SAML app with ACS URL and Entity ID shown on that page. Map email to NameID.
 
-After SSO is on, password login is disabled for that workspace. If SSO loops (you bounce back to Google or Okta), check that the ACS URL has no trailing slash and that the user exists as a Nimbus member first. JIT provisioning is off by default; turn it on only if you want first-time SSO users created as viewers.`,
+After SSO is on, password login is disabled for that workspace.
+
+If SSO loops, check that the ACS URL has no trailing slash and that the user exists as a Nimbus member first. The ACS URL is the one on that settings page.
+
+JIT provisioning is off by default; turn it on only if you want first-time SSO users created as viewers.`,
   },
   {
     slug: "api-keys",
     title: "API keys and rate limits",
     category: "Developers",
     summary: "Project keys ingest events. Workspace keys read data.",
-    body: `There are two key types.
+    body: `Project write keys send events. Workspace read keys query data and cannot ingest events.
 
 Project write key: used by the JS snippet and server SDKs to send events. It can only write. Rotate it from Project → API.
 
 Workspace read key: used for the query API and CSV exports. It cannot ingest events. Treat it like a password.
 
-Rate limits: 100 requests / second per write key, 10 / second per read key. Burst above that returns HTTP 429 with Retry-After. Keys created before March 2025 share a workspace-wide 50 rps cap; create a new key to get the current limits.
+Write keys are limited to 100 requests / second per write key. Read keys are limited to 10 / second per read key.
+
+Burst above that returns HTTP 429 with Retry-After.
+
+Keys created before March 2025 share a workspace-wide 50 rps cap; create a new key to get the current limits.
 
 Never ship a read key in frontend code.`,
   },
   {
     slug: "data-retention",
-    title: "Data retention windows",
+    title: "How long Starter and Growth keep raw events",
     category: "Privacy",
     summary: "Starter keeps 30 days. Growth 90. Scale 365 or custom.",
-    body: `Raw events older than the retention window are deleted on a nightly job around 03:00 UTC. Saved funnel and chart definitions are kept; only the underlying events go away.
+    body: `Starter keeps raw events 30 days. Growth keeps raw events 90 days. Scale keeps raw events 365 days, or a custom window.
+
+Raw events older than the retention window are deleted on a nightly job around 03:00 UTC. Saved funnel and chart definitions are kept; only the underlying events go away.
 
 Changing a plan does not rewrite history. If you downgrade from Growth to Starter, events older than 30 days are deleted on the next nightly job. Export first.
 
-To export before a downgrade: any chart → Export CSV, or the query API with a read key. CSV exports are capped at 500,000 rows per file.`,
+Exports are not a backup. If you need a copy past retention, export before the window closes.`,
   },
   {
     slug: "inviting-teammates",
-    title: "Invite teammates and assign roles",
+    title: "Invite teammates. Editors cannot change billing",
     category: "Team",
     summary: "Owners, editors, and viewers. Invites expire in 7 days.",
     body: `Settings → Team → Invite. Enter email and a role.
@@ -100,23 +117,25 @@ You cannot demote the last owner. Transfer ownership first.`,
   },
   {
     slug: "funnel-zeros",
-    title: "A funnel shows zeros or a sudden drop",
+    title: "A funnel shows zeros. Does Starter sample events?",
     category: "Charts",
     summary: "Usually a renamed event, a filter, or timezone, not lost data.",
-    body: `If a funnel that used to work now shows zero:
+    body: `If a funnel that used to work now shows zero, open each step and confirm the event name still matches what the SDK sends. Renaming an event in code does not rename historical events.
 
-1. Open each step and confirm the event name still matches what the SDK sends. Renaming an event in code does not rename historical events.
-2. Check filters on the funnel (browser, plan, country). A filter on \`plan = pro\` hides free users.
-3. Timezone: Nimbus stores UTC. The chart timezone is a display setting. A "today" funnel at 01:00 in Manila is still "yesterday" in UTC.
+Check filters on the funnel (browser, country). A filter on \`plan = pro\` hides free users.
 
-Data is not sampled on Growth or Scale. Starter samples at 1% after 200k events in a day, which can make a funnel look empty for rare steps. Upgrade or look at a longer range.`,
+Timezone: Nimbus stores UTC. The chart timezone is a display setting. A "today" funnel at 01:00 in Manila is still "yesterday" in UTC.
+
+Does Starter sample events? Starter samples at 1% after 200k events in a day, which can make a funnel look empty for rare steps. Data is not sampled on Growth or Scale. Upgrade or look at a longer range. If you upgrade, last month's sampled-away events do not come back.`,
   },
   {
     slug: "csv-export",
     title: "Export a chart or events to CSV",
     category: "Charts",
     summary: "Exports are capped at 500k rows and email a link when large.",
-    body: `On any chart click Export CSV. Files under 50 MB download in the browser. Larger jobs email a signed link to the requester that expires in 24 hours.
+    body: `CSV exports are capped at 500,000 rows per file. The CSV export row cap is 500,000. On any chart click Export CSV.
+
+Files under 50 MB download in the browser. Larger jobs email a signed link to the requester that expires in 24 hours.
 
 The Events explorer can export raw rows with the same cap. Use a workspace read key and the query API if you need a recurring dump.
 
