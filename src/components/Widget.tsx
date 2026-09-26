@@ -151,7 +151,11 @@ export function Widget() {
         )}
       </button>
       {open ? (
-        <div className="fixed bottom-24 right-5 z-40 flex h-[min(34rem,72vh)] w-[min(22.5rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-2xl">
+        <div
+          role="region"
+          aria-label="Nimbus support chat"
+          className="fixed bottom-24 right-5 z-40 flex h-[min(34rem,72vh)] w-[min(22.5rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-2xl"
+        >
           <div className="bg-forest px-4 py-3.5 text-paper">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-paper/15 text-sm">
