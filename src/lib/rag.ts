@@ -26,6 +26,8 @@ export type RagResult = {
 
 export type AnswerOptions = {
   alwaysAnswer?: boolean;
+  /** Text whose words pick the quoted sentences first, e.g. the follow-up inside a contextualized question. */
+  focus?: string;
 };
 
 export type RetrieveMode = "count" | "bm25" | "hybrid";
@@ -315,11 +317,12 @@ export function extractiveAnswer(
     .map((s) => s.trim())
     .filter(Boolean);
   const q = new Set(tokenize(question));
-  const ranked = [...sentences].sort((a, b) => {
-    const sa = tokenize(a).filter((t) => q.has(t)).length;
-    const sb = tokenize(b).filter((t) => q.has(t)).length;
-    return sb - sa;
-  });
+  const focus = new Set(tokenize(options.focus ?? ""));
+  const overlap = (sentence: string, terms: Set<string>) =>
+    tokenize(sentence).filter((t) => terms.has(t)).length;
+  const ranked = [...sentences].sort(
+    (a, b) => overlap(b, focus) - overlap(a, focus) || overlap(b, q) - overlap(a, q),
+  );
   const picked = ranked.slice(0, 2).join(" ");
   return {
     answer: `${picked}\n\nThat's from "${top.article.title}". If this isn't the case you're in, talk to a person.`,
