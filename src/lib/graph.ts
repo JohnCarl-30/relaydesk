@@ -1,6 +1,21 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
-import { CONFIDENT_MIN_SCORE, shouldEscalate } from "./escalate";
+import {
+  ACKNOWLEDGEMENT_REPLY,
+  boundConversationHistory,
+  fallbackStandaloneQuestion,
+  isAcknowledgement,
+  needsConversationContext,
+  preferTopic,
+  unsupportedExplicitAnchors,
+  type ConversationTurn,
+} from "./conversation-context";
+import {
+  CONFIDENT_MIN_SCORE,
+  isVisitorEscalation,
+  REFUSE_LINE,
+  shouldEscalate,
+} from "./escalate";
 import {
   extractiveAnswer,
   retrieve,
@@ -11,7 +26,14 @@ import {
 import { initTracing, withSpan } from "./trace";
 
 const SupportState = Annotation.Root({
+  originalQuestion: Annotation<string>,
+  /** Plain text for retrieval, coverage, and extractive answers. */
   question: Annotation<string>,
+  /** What the model sees. Labels earlier questions when contextualized. */
+  modelQuestion: Annotation<string>,
+  contextualized: Annotation<boolean>,
+  /** Top article for the earlier questions when contextualized. */
+  topicSlug: Annotation<string | undefined>,
   query: Annotation<string>,
   hits: Annotation<Hit[]>,
   answer: Annotation<string>,
@@ -88,6 +110,36 @@ function chatModel(): ChatLike {
   }) as ChatLike;
 }
 
+type ResolvedQuestion = {
+  question: string;
+  modelQuestion: string;
+  contextualized: boolean;
+  topicSlug?: string;
+};
+
+function resolveQuestion(
+  question: string,
+  history: ConversationTurn[],
+): ResolvedQuestion {
+  const asAsked = { question, modelQuestion: question, contextualized: false };
+  const bounded = boundConversationHistory(history);
+  if (
+    isVisitorEscalation(question) ||
+    !needsConversationContext(question, bounded)
+  ) {
+    return asAsked;
+  }
+
+  const standalone = fallbackStandaloneQuestion(question, bounded);
+  if (!standalone) return asAsked;
+  return {
+    question: standalone.search,
+    modelQuestion: standalone.prompt,
+    contextualized: true,
+    topicSlug: retrieve(standalone.earlier)[0]?.article.slug,
+  };
+}
+
 function nextAfterGenerate(state: SupportStateType): "rewrite" | "END" {
   if (state.allowRewrite === false) return "END";
   if (state.escalated || state.confident || (state.attempts ?? 0) >= 2) return "END";
@@ -105,7 +157,12 @@ function tokenAttrs(response: ChatResponse): Record<string, number> {
 async function retrieveNode(state: SupportStateType) {
   const query = state.query?.trim() || state.question;
   return withSpan("retrieve", { "retrieve.query": query }, (span) => {
-    const hits = retrieve(query);
+    const retrieved = retrieve(query);
+    const hits = state.contextualized
+      ? preferTopic(retrieved, state.topicSlug, state.originalQuestion)
+      : retrieved;
+    span.setAttribute("retrieve.topic_slug", state.topicSlug ?? "");
+    span.setAttribute("retrieve.kept_topic", hits[0] !== retrieved[0]);
     span.setAttribute("retrieve.hit_count", hits.length);
     span.setAttribute("retrieve.top_slug", hits[0]?.article.slug ?? "");
     span.setAttribute("retrieve.top_score", hits[0]?.score ?? 0);
@@ -131,8 +188,31 @@ async function generateNode(state: SupportStateType) {
         return patch;
       };
 
+      const explicitEscalation = isVisitorEscalation(state.originalQuestion);
+      const unsupportedAnchors = state.contextualized
+        ? unsupportedExplicitAnchors(state.originalQuestion, hits)
+        : [];
+      span.setAttribute("generate.explicit_escalation", explicitEscalation);
+      span.setAttribute("generate.unsupported_anchors", unsupportedAnchors.join(","));
+
+      if (explicitEscalation || unsupportedAnchors.length > 0) {
+        return finish({
+          answer: REFUSE_LINE,
+          citations: [],
+          confident: false,
+          usedLlm: false,
+          escalated: true,
+          attempts,
+        });
+      }
+
+      const extractive = () =>
+        extractiveAnswer(state.question, hits, {
+          focus: state.contextualized ? state.originalQuestion : undefined,
+        });
+
       if (!hasLlm() || hits.length === 0 || shouldEscalate(state.question, hits)) {
-        return finish({ ...extractiveAnswer(state.question, hits), attempts });
+        return finish({ ...extractive(), attempts });
       }
 
       const context = hits
@@ -144,7 +224,7 @@ async function generateNode(state: SupportStateType) {
           { role: "system", content: GENERATE_SYSTEM },
           {
             role: "user",
-            content: `Question: ${state.question}\n\nHelp articles:\n${context}`,
+            content: `Question: ${state.modelQuestion ?? state.question}\n\nHelp articles:\n${context}`,
           },
         ]);
         const tokens = tokenAttrs(response);
@@ -153,7 +233,7 @@ async function generateNode(state: SupportStateType) {
         const text =
           typeof response.content === "string" ? response.content.trim() : "";
         if (!text) {
-          return finish({ ...extractiveAnswer(state.question, hits), attempts });
+          return finish({ ...extractive(), attempts });
         }
         return finish({
           answer: text,
@@ -167,7 +247,7 @@ async function generateNode(state: SupportStateType) {
           attempts,
         });
       } catch {
-        return finish({ ...extractiveAnswer(state.question, hits), attempts });
+        return finish({ ...extractive(), attempts });
       }
     },
   );
@@ -181,7 +261,7 @@ async function rewriteNode(state: SupportStateType) {
         content:
           "Rewrite the visitor question as a short help-center search query. Return only the query. Keep product words like seats, SSO, invoice, funnel, API key.",
       },
-      { role: "user", content: state.question },
+      { role: "user", content: state.modelQuestion ?? state.question },
     ]);
     const tokens = tokenAttrs(response);
     span.setAttribute("llm.input_tokens", tokens["llm.input_tokens"]);
@@ -261,13 +341,32 @@ export async function generateFromHits(
 
 export async function answerQuestion(
   question: string,
-  options: { rewrite?: boolean } = {},
+  options: { rewrite?: boolean; history?: ConversationTurn[] } = {},
 ): Promise<RagResult> {
   initTracing();
   stubSession = undefined;
   return withSpan("support.answer", { question }, async (span) => {
+    const acknowledgement = isAcknowledgement(question);
+    span.setAttribute("acknowledgement", acknowledgement);
+    if (acknowledgement) {
+      return {
+        answer: ACKNOWLEDGEMENT_REPLY,
+        citations: [],
+        confident: false,
+        usedLlm: false,
+        escalated: false,
+      };
+    }
+
+    const resolved = resolveQuestion(question, options.history ?? []);
+    span.setAttribute("contextualized", resolved.contextualized);
+    span.setAttribute("standalone_question", resolved.question);
     const state = await supportGraph().invoke({
-      question,
+      originalQuestion: question,
+      question: resolved.question,
+      modelQuestion: resolved.modelQuestion,
+      contextualized: resolved.contextualized,
+      topicSlug: resolved.topicSlug,
       allowRewrite: options.rewrite !== false,
     });
     span.setAttribute("usedLlm", Boolean(state.usedLlm));

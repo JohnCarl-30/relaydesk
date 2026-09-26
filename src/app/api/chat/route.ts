@@ -58,8 +58,12 @@ export async function POST(request: Request) {
     conversationId = createConversation(body.email).id;
   }
 
+  const history = listMessages(conversationId).map(({ role, body: messageBody }) => ({
+    role,
+    body: messageBody,
+  }));
   addMessage(conversationId, "visitor", text);
-  const rag = await answerQuestion(text);
+  const rag = await answerQuestion(text, { history });
   const conversation = getConversation(conversationId);
   let ticket = getTicketByConversation(conversationId);
   let reply = rag.answer;

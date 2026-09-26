@@ -38,7 +38,7 @@ export function Widget() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [email, setEmail] = useState("");
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const conversationId = useRef<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +48,12 @@ export function Widget() {
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     if (!saved) return;
-    setConversationId(saved);
+    conversationId.current = saved;
     fetch(`/api/chat?conversationId=${encodeURIComponent(saved)}`)
       .then(async (res) => {
         if (res.status === 404) {
           window.localStorage.removeItem(STORAGE_KEY);
-          setConversationId(null);
+          conversationId.current = null;
           return;
         }
         if (!res.ok) return;
@@ -88,11 +88,14 @@ export function Widget() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, message: text }),
+        body: JSON.stringify({
+          conversationId: conversationId.current,
+          message: text,
+        }),
       });
       const data = (await res.json()) as ChatResponse & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Chat failed");
-      setConversationId(data.conversationId);
+      conversationId.current = data.conversationId;
       window.localStorage.setItem(STORAGE_KEY, data.conversationId);
       if (data.ticketId) setTicketId(data.ticketId);
       setMessages(
@@ -115,12 +118,12 @@ export function Widget() {
 
   async function saveEmail(event: React.FormEvent) {
     event.preventDefault();
-    if (!conversationId || !email.includes("@")) return;
+    if (!conversationId.current || !email.includes("@")) return;
     setError(null);
     const res = await fetch("/api/tickets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId, email }),
+      body: JSON.stringify({ conversationId: conversationId.current, email }),
     });
     const data = (await res.json()) as { ticket?: { id: string }; error?: string };
     if (!res.ok) {
