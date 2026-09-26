@@ -38,13 +38,21 @@ type Capture = {
 
 async function capture(mode: "extractive" | "llm"): Promise<Capture> {
   resetSpans();
-  const stub = mode === "llm" && !process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
+  const stub = mode === "llm" && !apiKey;
   if (mode === "extractive") {
+    // graph.ts calls the model whenever a key is set, so hide it for this pass.
+    delete process.env.OPENAI_API_KEY;
     delete process.env.RELAYDESK_STUB_LLM;
   } else if (stub) {
     process.env.RELAYDESK_STUB_LLM = "1";
   }
-  const rag = await answerQuestion(QUESTION);
+  let rag;
+  try {
+    rag = await answerQuestion(QUESTION);
+  } finally {
+    if (apiKey !== undefined) process.env.OPENAI_API_KEY = apiKey;
+  }
   await flushTracing();
   const traceId = latestTraceId(snapshotSpans());
   if (!traceId) throw new Error("no support.answer span");
@@ -72,7 +80,7 @@ async function main() {
   const extractive = await capture("extractive");
   writeCapture("extractive", extractive);
   const llm = await capture("llm");
-  writeCapture(llm.stub ? "llm-rewrite" : "llm-rewrite", llm);
+  writeCapture("llm-rewrite", llm);
 
   console.log("Same question:", QUESTION);
   console.log("\n--- extractive (no key, rewrite skipped) ---\n");

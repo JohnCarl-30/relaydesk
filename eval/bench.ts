@@ -89,7 +89,11 @@ async function main() {
         extractiveAnswer(row.question, hits);
       }),
     );
-    graphMs.push(await timeMs(() => answerQuestion(row.question)));
+    graphMs.push(
+      await timeMs(async () => {
+        await answerQuestion(row.question);
+      }),
+    );
 
     const hits = retrieve(row.question);
     contextChars += hits.reduce((n, h) => n + h.text.length, 0);
