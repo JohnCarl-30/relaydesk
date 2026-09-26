@@ -125,6 +125,16 @@ Lexical CI still scores quotes. The refuse line would tank faithfulness, so the 
 npx --yes tsx eval/escalation.ts
 ```
 
+## Follow-ups
+
+`conversations.jsonl` is 27 multi-turn conversations, 28 checked turns. The categories follow IBM's [MTRAG](https://github.com/IBM/mt-rag-benchmark): `nonstandalone` needs the earlier turn, `standalone` switches topic and must not drag the old one along, `unanswerable` should escalate, `conversational` is thanks or ok, `handoff` asks for a person. Each turn replays through `answerQuestion` with the real replies as history. Keyless.
+
+```bash
+npx --yes tsx eval/conversations.ts
+```
+
+2026-09-27: **26/28**. The two misses are open on purpose. "Does that also happen on Growth?" after a sampling question goes to `data-retention`, since "also" and "happen" keep the topic rule from firing. "how much does it cost?" after SSO answers from the SSO article; there is no named subject to check, so it does not escalate.
+
 ## Traces
 
 LangGraph nodes emit OpenTelemetry spans. Same question, extractive vs rewrite: [eval/traces/README.md](traces/README.md).
