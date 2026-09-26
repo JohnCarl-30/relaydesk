@@ -12,9 +12,10 @@ function open(): Database.Database {
   const g = globalThis as GlobalDb;
   if (g.__relaydeskDb) return g.__relaydeskDb;
 
-  const dir = path.join(process.cwd(), "data");
-  fs.mkdirSync(dir, { recursive: true });
-  const db = new Database(path.join(dir, "relaydesk.db"));
+  const file =
+    process.env.RELAYDESK_DB_PATH ?? path.join(process.cwd(), "data", "relaydesk.db");
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const db = new Database(file);
   db.pragma("journal_mode = WAL");
   db.exec(`
     CREATE TABLE IF NOT EXISTS conversations (

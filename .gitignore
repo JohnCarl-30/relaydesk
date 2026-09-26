@@ -60,3 +60,8 @@ eval/.generate.jsonl
 
 # local browser dumps from Cursor
 .playwright-cli/
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
