@@ -222,10 +222,11 @@ export function explicitAnchors(question: string): string[] {
 }
 
 /**
- * Moves the article the conversation is already on to the front when it
- * mentions every content word of the follow-up, so "and Starter?" after a
- * plan-quota question stays on plan quotas instead of jumping to whichever
- * article also names Starter in its title.
+ * Moves the article the conversation is already on to the front unless the
+ * current top hit matches more of the follow-up's own words. "and Starter?"
+ * after a plan-quota question stays on plan quotas instead of jumping to
+ * whichever article also names Starter in its title, and generic words like
+ * "also" or "happen" that no article uses cannot tip it either way.
  */
 export function preferTopic<T extends { article: { slug: string }; text: string }>(
   hits: T[],
@@ -234,12 +235,29 @@ export function preferTopic<T extends { article: { slug: string }; text: string 
 ): T[] {
   const index = hits.findIndex((hit) => hit.article.slug === topicSlug);
   if (index <= 0) return hits;
-  const topicWords = new Set(tokenize(hits[index].text));
-  const covered = tokenize(followUp)
-    .filter((word) => !isFillerWord(word))
-    .every((word) => topicWords.has(word));
-  if (!covered) return hits;
+  const words = new Set(tokenize(followUp).filter((word) => !isFillerWord(word)));
+  const matched = (hit: T) => {
+    const hitWords = new Set(tokenize(hit.text));
+    return [...words].filter((word) => hitWords.has(word)).length;
+  };
+  if (matched(hits[index]) < matched(hits[0])) return hits;
   return [hits[index], ...hits.slice(0, index), ...hits.slice(index + 1)];
+}
+
+const PRICE_QUESTION = /\b(how much|cost|costs|price|prices|pricing|fee|fees|charge|charged)\b/i;
+const PRICE_EVIDENCE = /\$\s?\d|\b(fee|fees|charge|charges|charged|cost|costs|price|prices|pricing)\b/i;
+
+/**
+ * A price question answered from an article with no price in it quotes the
+ * wrong thing. The help center lists the overage rate and fees, not plan or
+ * seat prices, so "how much does it cost?" after an SSO question should reach
+ * a person.
+ */
+export function unsupportedPriceQuestion(
+  question: string,
+  answerSource: { text: string } | undefined,
+): boolean {
+  return PRICE_QUESTION.test(question) && !PRICE_EVIDENCE.test(answerSource?.text ?? "");
 }
 
 function anchorForms(value: string): string[] {

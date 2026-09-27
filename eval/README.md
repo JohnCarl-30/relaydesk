@@ -127,13 +127,15 @@ npx --yes tsx eval/escalation.ts
 
 ## Follow-ups
 
-`conversations.jsonl` is 27 multi-turn conversations, 28 checked turns. The categories follow IBM's [MTRAG](https://github.com/IBM/mt-rag-benchmark): `nonstandalone` needs the earlier turn, `standalone` switches topic and must not drag the old one along, `unanswerable` should escalate, `conversational` is thanks or ok, `handoff` asks for a person. Each turn replays through `answerQuestion` with the real replies as history. Keyless.
+`conversations.jsonl` is 35 multi-turn conversations, 36 checked turns. The categories follow IBM's [MTRAG](https://github.com/IBM/mt-rag-benchmark): `nonstandalone` needs the earlier turn, `standalone` switches topic and must not drag the old one along, `unanswerable` should escalate, `conversational` is thanks or ok, `handoff` asks for a person. Each turn replays through `answerQuestion` with the real replies as history. Keyless.
 
 ```bash
 npx --yes tsx eval/conversations.ts
 ```
 
-2026-09-27: **26/28**. The two misses are open on purpose. "Does that also happen on Growth?" after a sampling question goes to `data-retention`, since "also" and "happen" keep the topic rule from firing. "how much does it cost?" after SSO answers from the SSO article; there is no named subject to check, so it does not escalate.
+2026-09-27, first run: **26/28**. "Does that also happen on Growth?" after a sampling question went to `data-retention`, because "also" and "happen" kept the topic rule from firing. "how much does it cost?" after SSO answered from the SSO article.
+
+Before fixing, 8 more rows went in: three more generic-word follow-ups, three price questions the help center cannot answer, and two it can (overage rate, reactivation fee). That run was **31/36**; every unanswerable price question failed. Two rule changes followed. The topic article stays first unless another hit matches more of the follow-up's words. A price question escalates when the article it would answer from has no price or fee. Now **36/36**. The same author wrote the rows and the rules, so treat this as a regression check, not a held-out score. Real transcripts would make a better test set.
 
 ## Traces
 
