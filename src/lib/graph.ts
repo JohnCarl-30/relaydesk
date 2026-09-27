@@ -8,6 +8,7 @@ import {
   needsConversationContext,
   preferTopic,
   unsupportedExplicitAnchors,
+  unsupportedPriceQuestion,
   type ConversationTurn,
 } from "./conversation-context";
 import {
@@ -192,10 +193,12 @@ async function generateNode(state: SupportStateType) {
       const unsupportedAnchors = state.contextualized
         ? unsupportedExplicitAnchors(state.originalQuestion, hits)
         : [];
+      const unpricedQuestion = unsupportedPriceQuestion(state.originalQuestion, hits[0]);
       span.setAttribute("generate.explicit_escalation", explicitEscalation);
       span.setAttribute("generate.unsupported_anchors", unsupportedAnchors.join(","));
+      span.setAttribute("generate.unsupported_price", unpricedQuestion);
 
-      if (explicitEscalation || unsupportedAnchors.length > 0) {
+      if (explicitEscalation || unsupportedAnchors.length > 0 || unpricedQuestion) {
         return finish({
           answer: REFUSE_LINE,
           citations: [],
