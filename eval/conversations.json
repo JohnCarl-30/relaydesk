@@ -1,16 +1,16 @@
 {
   "categories": {
     "nonstandalone": {
-      "pass": 12,
-      "total": 13
+      "pass": 18,
+      "total": 18
     },
     "standalone": {
       "pass": 5,
       "total": 5
     },
     "unanswerable": {
-      "pass": 4,
-      "total": 5
+      "pass": 8,
+      "total": 8
     },
     "conversational": {
       "pass": 3,
@@ -22,21 +22,8 @@
     }
   },
   "total": {
-    "pass": 26,
-    "total": 28
+    "pass": 36,
+    "total": 36
   },
-  "failures": [
-    {
-      "id": "sampling-growth",
-      "turn": 2,
-      "visitor": "Does that also happen on Growth?",
-      "reason": "want funnel-zeros, got data-retention"
-    },
-    {
-      "id": "sso-price",
-      "turn": 2,
-      "visitor": "how much does it cost?",
-      "reason": "want escalated=true, got sso"
-    }
-  ]
+  "failures": []
 }

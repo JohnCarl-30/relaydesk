@@ -6,6 +6,7 @@ import {
   fallbackStandaloneQuestion,
   isAcknowledgement,
   preferTopic,
+  unsupportedPriceQuestion,
   type ConversationTurn,
 } from "./conversation-context";
 import { REFUSE_LINE } from "./escalate";
@@ -123,9 +124,31 @@ describe("preferTopic", () => {
     assert.deepEqual(ordered.map((h) => h.article.slug), ["billing-plans", "data-retention"]);
   });
 
-  it("leaves the order alone when the follow-up names something the topic lacks", () => {
-    assert.equal(preferTopic(hits, "billing-plans", "and Salesforce?"), hits);
+  it("ignores words no hit uses", () => {
+    const ordered = preferTopic(hits, "billing-plans", "does that also happen on Starter?");
+    assert.equal(ordered[0].article.slug, "billing-plans");
+  });
+
+  it("leaves the order alone when the top hit matches more of the follow-up", () => {
+    assert.equal(preferTopic(hits, "billing-plans", "and how long are raw events kept?"), hits);
     assert.equal(preferTopic(hits, "workspaces", "and Starter?"), hits);
+  });
+});
+
+describe("unsupportedPriceQuestion", () => {
+  const sso = { text: "SSO is available on Growth and Scale." };
+
+  it("flags a price question the answering article has no price for", () => {
+    assert.equal(unsupportedPriceQuestion("how much does it cost?", sso), true);
+    assert.equal(unsupportedPriceQuestion("is there a fee for that?", undefined), true);
+  });
+
+  it("allows price questions the article answers, and non-price questions", () => {
+    const overage = { text: "We invoice the overage at $0.00012 per extra event." };
+    const payment = { text: "We do not charge a reactivation fee." };
+    assert.equal(unsupportedPriceQuestion("how much does that cost?", overage), false);
+    assert.equal(unsupportedPriceQuestion("do you charge a fee to reactivate?", payment), false);
+    assert.equal(unsupportedPriceQuestion("Is it available on Starter?", sso), false);
   });
 });
 
