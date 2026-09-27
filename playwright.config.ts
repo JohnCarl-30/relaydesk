@@ -2,7 +2,8 @@ import os from "node:os";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 3100;
+// Uncommon default so other local apps on 3000/3100 do not block the run.
+const PORT = Number(process.env.E2E_PORT ?? 3217);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 // Workers re-read this file; the env var keeps one fresh database per run.
