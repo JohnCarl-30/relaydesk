@@ -127,7 +127,7 @@ npx --yes tsx eval/escalation.ts
 
 ## Follow-ups
 
-`conversations.jsonl` is 35 multi-turn conversations, 36 checked turns. The categories follow IBM's [MTRAG](https://github.com/IBM/mt-rag-benchmark): `nonstandalone` needs the earlier turn, `standalone` switches topic and must not drag the old one along, `unanswerable` should escalate, `conversational` is thanks or ok, `handoff` asks for a person. Each turn replays through `answerQuestion` with the real replies as history. Keyless.
+`conversations.jsonl` is 43 conversations, 45 checked turns. The categories follow IBM's [MTRAG](https://github.com/IBM/mt-rag-benchmark): `nonstandalone` needs the earlier turn, `standalone` switches topic and must not drag the old one along, `unanswerable` should escalate, `conversational` is thanks or ok, `handoff` asks for a person. Each turn replays through `answerQuestion` with the real replies as history. Keyless.
 
 ```bash
 npx --yes tsx eval/conversations.ts
@@ -136,6 +136,22 @@ npx --yes tsx eval/conversations.ts
 2026-09-27, first run: **26/28**. "Does that also happen on Growth?" after a sampling question went to `data-retention`, because "also" and "happen" kept the topic rule from firing. "how much does it cost?" after SSO answered from the SSO article.
 
 Before fixing, 8 more rows went in: three more generic-word follow-ups, three price questions the help center cannot answer, and two it can (overage rate, reactivation fee). That run was **31/36**; every unanswerable price question failed. Two rule changes followed. The topic article stays first unless another hit matches more of the follow-up's words. A price question escalates when the article it would answer from has no price or fee. Now **36/36**. The same author wrote the rows and the rules, so treat this as a regression check, not a held-out score. Real transcripts would make a better test set.
+
+2026-09-28, code review: a separate reviewer found 8 more failures, and they went in as rows first.
+- Interjections read as named subjects ("Well, what about Scale?", "Then what about Scale?").
+- A quantifier read as a subject ("with multiple projects").
+- A three-deep chain lost the sampling topic.
+- Three acknowledgements pushed the question out of the history window.
+- Answerable questions escalated as prices ("charged for pending invites", "How much raw data", "in charge of billing").
+
+That run was **37/45**. After the fixes it is **45/45**:
+- A sentence-opening word before a comma or a question word is a discourse marker, not a subject.
+- Determiners and quantifiers are skipped.
+- The topic comes from the chain's first question.
+- Acknowledgements do not count against the history window.
+- "how much" is a price question only when a verb follows ("how much does it…"), and "charge" is not a price word.
+
+The price check still runs on every chat question, not just follow-ups. Limited to follow-ups, "what does an extra seat cost?" and "how much is Growth per month?" go through as standalone questions, get answered from the wrong article, and the score drops to 43/45.
 
 ## Traces
 

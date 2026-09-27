@@ -137,7 +137,7 @@ function resolveQuestion(
     question: standalone.search,
     modelQuestion: standalone.prompt,
     contextualized: true,
-    topicSlug: retrieve(standalone.earlier)[0]?.article.slug,
+    topicSlug: retrieve(standalone.topic)[0]?.article.slug,
   };
 }
 

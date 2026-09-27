@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   ACKNOWLEDGEMENT_REPLY,
+  boundConversationHistory,
   explicitAnchors,
   fallbackStandaloneQuestion,
   isAcknowledgement,
@@ -110,6 +111,18 @@ describe("explicitAnchors", () => {
     assert.deepEqual(explicitAnchors("And if we have 20 seats?"), []);
     assert.deepEqual(explicitAnchors("What about them?"), []);
   });
+
+  it("treats a sentence-opening word before a comma or question word as a marker", () => {
+    for (const text of ["Well, what about Scale?", "Hmm, and Scale?", "Then what about Scale?"]) {
+      assert.deepEqual(explicitAnchors(text), ["Scale"], text);
+    }
+    assert.deepEqual(explicitAnchors("Salesforce?"), ["Salesforce"]);
+  });
+
+  it("skips determiners and quantifiers after about/with", () => {
+    assert.deepEqual(explicitAnchors("is it the same with multiple projects?"), ["projects"]);
+    assert.deepEqual(explicitAnchors("Is that the same with both?"), []);
+  });
 });
 
 describe("preferTopic", () => {
@@ -150,6 +163,14 @@ describe("unsupportedPriceQuestion", () => {
     assert.equal(unsupportedPriceQuestion("do you charge a fee to reactivate?", payment), false);
     assert.equal(unsupportedPriceQuestion("Is it available on Starter?", sso), false);
   });
+
+  it("does not read quantity, billing, or role questions as price questions", () => {
+    const seats = { text: "Pending invites do not count until they accept." };
+    assert.equal(unsupportedPriceQuestion("How much raw data does Starter keep?", sso), false);
+    assert.equal(unsupportedPriceQuestion("how much of it can I export?", sso), false);
+    assert.equal(unsupportedPriceQuestion("Will I be charged for pending invites?", seats), false);
+    assert.equal(unsupportedPriceQuestion("Who is in charge of billing?", seats), false);
+  });
 });
 
 describe("fallbackStandaloneQuestion", () => {
@@ -164,6 +185,7 @@ describe("fallbackStandaloneQuestion", () => {
       "What is the Growth plan event quota?\nWhat about Scale?\nand Starter?",
     );
     assert.match(standalone?.prompt ?? "", /^Previous question: .*\n.*\nFollow-up question: and Starter\?$/);
+    assert.equal(standalone?.topic, "What is the Growth plan event quota?");
   });
 
   it("skips thanks and requests for a person", () => {
@@ -177,5 +199,23 @@ describe("fallbackStandaloneQuestion", () => {
 
   it("returns nothing without an earlier question", () => {
     assert.equal(fallbackStandaloneQuestion("and Starter?", [visitor("thanks")]), null);
+  });
+});
+
+describe("boundConversationHistory", () => {
+  it("keeps the question when acknowledgements fill the window", () => {
+    const history = [
+      visitor("How long does Starter keep raw events?"),
+      assistant("Starter keeps raw events 30 days."),
+      ...["thanks", "ok cool", "great"].flatMap((text) => [
+        visitor(text),
+        assistant(ACKNOWLEDGEMENT_REPLY),
+      ]),
+    ];
+    const bounded = boundConversationHistory(history);
+    assert.deepEqual(bounded.map((turn) => turn.body), [
+      "How long does Starter keep raw events?",
+      "Starter keeps raw events 30 days.",
+    ]);
   });
 });
