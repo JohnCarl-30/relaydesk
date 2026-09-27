@@ -7,8 +7,8 @@ export type ConversationTurn = {
 };
 
 export type StandaloneQuestion = {
-  /** Earlier questions only, for finding the article the conversation is on. */
-  earlier: string;
+  /** The chain's first question, for finding the article the conversation is on. */
+  topic: string;
   /** Earlier questions plus the follow-up, unlabeled, for retrieval and coverage. */
   search: string;
   /** The same questions labeled for the model, so it knows which one to answer. */
@@ -113,6 +113,12 @@ export function isAcknowledgement(text: string): boolean {
   );
 }
 
+function isAcknowledgementTurn(turn: ConversationTurn): boolean {
+  return turn.role === "visitor"
+    ? isAcknowledgement(turn.body)
+    : turn.body.trim() === ACKNOWLEDGEMENT_REPLY;
+}
+
 export function boundConversationHistory(
   history: ConversationTurn[],
 ): ConversationTurn[] {
@@ -122,6 +128,8 @@ export function boundConversationHistory(
   for (let index = history.length - 1; index >= 0; index -= 1) {
     if (selected.length >= MAX_HISTORY_TURNS || remaining <= 0) break;
     const turn = history[index];
+    // "thanks" and its reply would otherwise push the real question out of the window.
+    if (isAcknowledgementTurn(turn)) continue;
     const body = turn.body.trim().slice(0, Math.min(MAX_TURN_CHARS, remaining));
     if (!body) continue;
     selected.unshift({ role: turn.role, body });
@@ -180,7 +188,9 @@ export function fallbackStandaloneQuestion(
   if (earlier.length === 0) return null;
   const followUp = question.trim();
   return {
-    earlier: earlier.join("\n"),
+    // Later follow-ups name plans and features that would drag the topic off
+    // ("What about Growth?" after a sampling question); the first one does not.
+    topic: earlier[0],
     search: [...earlier, followUp].join("\n"),
     prompt: [
       ...earlier.map((body) => `Previous question: ${body}`),
@@ -189,12 +199,33 @@ export function fallbackStandaloneQuestion(
   };
 }
 
+// Determiners and quantifiers are a closed word class: they pick out an amount
+// ("multiple projects", "both"), never a subject.
+const DETERMINERS = [
+  "a", "all", "an", "another", "any", "both", "each", "every", "few", "its", "many",
+  "more", "most", "multiple", "my", "other", "our", "several", "some", "that", "the",
+  "their", "these", "this", "those", "your",
+];
+const DETERMINER_WORDS = new Set(DETERMINERS);
+
+// A sentence-opening word followed by a comma or a question word is a discourse
+// marker ("Well, what about…", "Then what about…"), not a named subject.
+const MARKER_FOLLOWER =
+  /^(?:\s*,|\s+(?:what|how|why|when|where|which|who|and|but|about|is|are|do|does|did|can|could|would|will|should)\b)/i;
+
+function isDiscourseMarker(question: string, start: number, end: number): boolean {
+  const before = question.slice(0, start).trimEnd();
+  const opensSentence = before === "" || /[.!?]$/.test(before);
+  return opensSentence && MARKER_FOLLOWER.test(question.slice(end));
+}
+
 function isFillerWord(word: string): boolean {
   const normalized = word.toLowerCase();
   return (
     COMMON_SENTENCE_WORDS.has(word) ||
     ACKNOWLEDGEMENTS.has(normalized) ||
     ACKNOWLEDGEMENT_FILLER.has(normalized) ||
+    DETERMINER_WORDS.has(normalized) ||
     CONTEXT_REFERENCE.test(normalized) ||
     tokenize(normalized).length === 0
   );
@@ -202,13 +233,19 @@ function isFillerWord(word: string): boolean {
 
 /**
  * Named subjects in a follow-up ("Scale", "Okta", "about hubspot") that the
- * evidence must mention. Quantities and verbs ("20 seats", "to wait") are left
- * out; they refine the earlier topic rather than change it.
+ * evidence must mention. Quantities, verbs, and sentence-opening markers
+ * ("20 seats", "to wait", "Well,") are left out; they refine the earlier topic
+ * rather than change it.
  */
 export function explicitAnchors(question: string): string[] {
-  const capitalized = question.match(/\b[A-Z][A-Za-z0-9-]{2,}\b/g) ?? [];
+  const capitalized = [...question.matchAll(/\b[A-Z][A-Za-z0-9-]{2,}\b/g)]
+    .filter((match) => !isDiscourseMarker(question, match.index, match.index + match[0].length))
+    .map((match) => match[0]);
+  const determiners = `(?:(?:${DETERMINERS.join("|")}|\\d+)\\s+)*`;
   const contextualSubjects = [
-    ...question.matchAll(/\b(?:about|with|via|using)\s+([a-z0-9][a-z0-9.-]{2,})\b/gi),
+    ...question.matchAll(
+      new RegExp(`\\b(?:about|with|via|using)\\s+${determiners}([a-z0-9][a-z0-9.-]{2,})\\b`, "gi"),
+    ),
   ].map((match) => match[1]);
   const seen = new Set<string>();
 
@@ -244,7 +281,11 @@ export function preferTopic<T extends { article: { slug: string }; text: string 
   return [hits[index], ...hits.slice(0, index), ...hits.slice(index + 1)];
 }
 
-const PRICE_QUESTION = /\b(how much|cost|costs|price|prices|pricing|fee|fees|charge|charged)\b/i;
+// "how much" asks a price only when a verb follows ("how much does it…");
+// "how much raw data" or "how much of it" ask a quantity. "charged" and
+// "in charge" are billing and role questions the help center can answer.
+const PRICE_QUESTION =
+  /\b(?:cost|costs|price|prices|pricing|fee|fees)\b|\bhow much (?:does|do|is|are|will|would)\b/i;
 const PRICE_EVIDENCE = /\$\s?\d|\b(fee|fees|charge|charges|charged|cost|costs|price|prices|pricing)\b/i;
 
 /**

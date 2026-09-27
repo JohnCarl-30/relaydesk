@@ -1,12 +1,12 @@
 {
   "categories": {
     "nonstandalone": {
-      "pass": 18,
-      "total": 18
+      "pass": 24,
+      "total": 24
     },
     "standalone": {
-      "pass": 5,
-      "total": 5
+      "pass": 8,
+      "total": 8
     },
     "unanswerable": {
       "pass": 8,
@@ -22,8 +22,8 @@
     }
   },
   "total": {
-    "pass": 36,
-    "total": 36
+    "pass": 45,
+    "total": 45
   },
   "failures": []
 }
