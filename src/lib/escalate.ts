@@ -38,3 +38,23 @@ export function shouldEscalate(question: string, hits: ScoredText[]): boolean {
   if (top.score >= CONFIDENT_MIN_SCORE) return false;
   return questionCoverage(question, top.text) < COVERAGE_ESCALATE_BELOW;
 }
+
+// "how much" asks a price only when a verb follows ("how much does it…");
+// "how much raw data" or "how much of it" ask a quantity. "charged" and
+// "in charge" are billing and role questions the help center can answer.
+const PRICE_QUESTION =
+  /\b(?:cost|costs|price|prices|pricing|fee|fees)\b|\bhow much (?:does|do|is|are|will|would)\b/i;
+const PRICE_EVIDENCE = /\$\s?\d|\b(fee|fees|charge|charges|charged|cost|costs|price|prices|pricing)\b/i;
+
+/**
+ * A price question answered from an article with no price in it quotes the
+ * wrong thing. The help center lists the overage rate and fees, not plan or
+ * seat prices, so "how much does it cost?" after an SSO question should reach
+ * a person.
+ */
+export function unsupportedPriceQuestion(
+  question: string,
+  answerSource: { text: string } | undefined,
+): boolean {
+  return PRICE_QUESTION.test(question) && !PRICE_EVIDENCE.test(answerSource?.text ?? "");
+}

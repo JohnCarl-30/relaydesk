@@ -3,12 +3,11 @@ import { ChatOpenAI } from "@langchain/openai";
 import {
   ACKNOWLEDGEMENT_REPLY,
   boundConversationHistory,
-  fallbackStandaloneQuestion,
+  heuristicStandaloneQuestion,
   isAcknowledgement,
   needsConversationContext,
   preferTopic,
   unsupportedExplicitAnchors,
-  unsupportedPriceQuestion,
   type ConversationTurn,
 } from "./conversation-context";
 import {
@@ -16,6 +15,7 @@ import {
   isVisitorEscalation,
   REFUSE_LINE,
   shouldEscalate,
+  unsupportedPriceQuestion,
 } from "./escalate";
 import {
   extractiveAnswer,
@@ -26,15 +26,26 @@ import {
 } from "./rag";
 import { initTracing, withSpan } from "./trace";
 
-const SupportState = Annotation.Root({
-  originalQuestion: Annotation<string>,
+/** The visitor's question and the forms the graph uses it in. */
+type ResolvedQuestion = {
+  /** What the visitor typed. */
+  asked: string;
   /** Plain text for retrieval, coverage, and extractive answers. */
-  question: Annotation<string>,
+  search: string;
   /** What the model sees. Labels earlier questions when contextualized. */
-  modelQuestion: Annotation<string>,
-  contextualized: Annotation<boolean>,
-  /** Top article for the earlier questions when contextualized. */
-  topicSlug: Annotation<string | undefined>,
+  prompt: string;
+  /** True when earlier questions were folded in. */
+  contextualized: boolean;
+  /** Top article for the chain's first question, when contextualized. */
+  topicSlug?: string;
+};
+
+function asAsked(question: string): ResolvedQuestion {
+  return { asked: question, search: question, prompt: question, contextualized: false };
+}
+
+const SupportState = Annotation.Root({
+  resolved: Annotation<ResolvedQuestion>,
   query: Annotation<string>,
   hits: Annotation<Hit[]>,
   answer: Annotation<string>,
@@ -111,31 +122,20 @@ function chatModel(): ChatLike {
   }) as ChatLike;
 }
 
-type ResolvedQuestion = {
-  question: string;
-  modelQuestion: string;
-  contextualized: boolean;
-  topicSlug?: string;
-};
-
 function resolveQuestion(
   question: string,
   history: ConversationTurn[],
 ): ResolvedQuestion {
-  const asAsked = { question, modelQuestion: question, contextualized: false };
   const bounded = boundConversationHistory(history);
-  if (
-    isVisitorEscalation(question) ||
-    !needsConversationContext(question, bounded)
-  ) {
-    return asAsked;
-  }
+  // Escalation requests take the same path; answerFromHits refuses them either way.
+  if (!needsConversationContext(question, bounded)) return asAsked(question);
 
-  const standalone = fallbackStandaloneQuestion(question, bounded);
-  if (!standalone) return asAsked;
+  const standalone = heuristicStandaloneQuestion(question, bounded);
+  if (!standalone) return asAsked(question);
   return {
-    question: standalone.search,
-    modelQuestion: standalone.prompt,
+    asked: question,
+    search: standalone.search,
+    prompt: standalone.prompt,
     contextualized: true,
     topicSlug: retrieve(standalone.topic)[0]?.article.slug,
   };
@@ -156,13 +156,12 @@ function tokenAttrs(response: ChatResponse): Record<string, number> {
 }
 
 async function retrieveNode(state: SupportStateType) {
-  const query = state.query?.trim() || state.question;
+  const query = state.query?.trim() || state.resolved.search;
   return withSpan("retrieve", { "retrieve.query": query }, (span) => {
     const retrieved = retrieve(query);
-    const hits = state.contextualized
-      ? preferTopic(retrieved, state.topicSlug, state.originalQuestion)
-      : retrieved;
-    span.setAttribute("retrieve.topic_slug", state.topicSlug ?? "");
+    const { contextualized, topicSlug, asked } = state.resolved;
+    const hits = contextualized ? preferTopic(retrieved, topicSlug, asked) : retrieved;
+    span.setAttribute("retrieve.topic_slug", topicSlug ?? "");
     span.setAttribute("retrieve.kept_topic", hits[0] !== retrieved[0]);
     span.setAttribute("retrieve.hit_count", hits.length);
     span.setAttribute("retrieve.top_slug", hits[0]?.article.slug ?? "");
@@ -172,6 +171,84 @@ async function retrieveNode(state: SupportStateType) {
   });
 }
 
+type SpanAttrs = Record<string, string | number | boolean>;
+
+/**
+ * Refusal checks, then the model when one is configured, else an extractive
+ * quote. The widget's generate node and /api/eval?variant=generate both call
+ * this, so the A/B measures what the widget runs.
+ */
+async function answerFromHits(
+  resolved: ResolvedQuestion,
+  hits: Hit[],
+): Promise<{ result: RagResult; attrs: SpanAttrs }> {
+  const explicitEscalation = isVisitorEscalation(resolved.asked);
+  const unsupportedAnchors = resolved.contextualized
+    ? unsupportedExplicitAnchors(resolved.asked, hits)
+    : [];
+  const unpricedQuestion = unsupportedPriceQuestion(resolved.asked, hits[0]);
+  const attrs: SpanAttrs = {
+    "generate.explicit_escalation": explicitEscalation,
+    "generate.unsupported_anchors": unsupportedAnchors.join(","),
+    "generate.unsupported_price": unpricedQuestion,
+  };
+
+  if (explicitEscalation || unsupportedAnchors.length > 0 || unpricedQuestion) {
+    return {
+      result: {
+        answer: REFUSE_LINE,
+        citations: [],
+        confident: false,
+        usedLlm: false,
+        escalated: true,
+      },
+      attrs,
+    };
+  }
+
+  const extractive = () =>
+    extractiveAnswer(resolved.search, hits, {
+      focus: resolved.contextualized ? resolved.asked : undefined,
+    });
+
+  if (!hasLlm() || hits.length === 0 || shouldEscalate(resolved.search, hits)) {
+    return { result: extractive(), attrs };
+  }
+
+  const context = hits
+    .map((h, i) => `[${i + 1}] ${h.article.title}\n${h.article.body}`)
+    .join("\n\n");
+
+  try {
+    const response = await chatModel().invoke([
+      { role: "system", content: GENERATE_SYSTEM },
+      {
+        role: "user",
+        content: `Question: ${resolved.prompt}\n\nHelp articles:\n${context}`,
+      },
+    ]);
+    Object.assign(attrs, tokenAttrs(response));
+    const text =
+      typeof response.content === "string" ? response.content.trim() : "";
+    if (!text) return { result: extractive(), attrs };
+    return {
+      result: {
+        answer: text,
+        citations: hits.map((h) => ({
+          slug: h.article.slug,
+          title: h.article.title,
+        })),
+        confident: (hits[0]?.score ?? 0) >= CONFIDENT_MIN_SCORE,
+        usedLlm: true,
+        escalated: false,
+      },
+      attrs,
+    };
+  } catch {
+    return { result: extractive(), attrs };
+  }
+}
+
 async function generateNode(state: SupportStateType) {
   const hits = state.hits ?? [];
   const attempts = (state.attempts ?? 0) + 1;
@@ -179,79 +256,16 @@ async function generateNode(state: SupportStateType) {
     "generate",
     { "generate.attempts": attempts, "llm.stub": usingStubLlm() },
     async (span) => {
-      const finish = (patch: Partial<SupportStateType> & { attempts: number }) => {
-        const next = nextAfterGenerate({ ...state, ...patch } as SupportStateType);
-        span.setAttribute("generate.used_llm", Boolean(patch.usedLlm));
-        span.setAttribute("generate.confident", Boolean(patch.confident));
-        span.setAttribute("generate.escalated", Boolean(patch.escalated));
-        span.setAttribute("generate.attempts", patch.attempts);
-        span.setAttribute("graph.next", next);
-        return patch;
-      };
-
-      const explicitEscalation = isVisitorEscalation(state.originalQuestion);
-      const unsupportedAnchors = state.contextualized
-        ? unsupportedExplicitAnchors(state.originalQuestion, hits)
-        : [];
-      const unpricedQuestion = unsupportedPriceQuestion(state.originalQuestion, hits[0]);
-      span.setAttribute("generate.explicit_escalation", explicitEscalation);
-      span.setAttribute("generate.unsupported_anchors", unsupportedAnchors.join(","));
-      span.setAttribute("generate.unsupported_price", unpricedQuestion);
-
-      if (explicitEscalation || unsupportedAnchors.length > 0 || unpricedQuestion) {
-        return finish({
-          answer: REFUSE_LINE,
-          citations: [],
-          confident: false,
-          usedLlm: false,
-          escalated: true,
-          attempts,
-        });
-      }
-
-      const extractive = () =>
-        extractiveAnswer(state.question, hits, {
-          focus: state.contextualized ? state.originalQuestion : undefined,
-        });
-
-      if (!hasLlm() || hits.length === 0 || shouldEscalate(state.question, hits)) {
-        return finish({ ...extractive(), attempts });
-      }
-
-      const context = hits
-        .map((h, i) => `[${i + 1}] ${h.article.title}\n${h.article.body}`)
-        .join("\n\n");
-
-      try {
-        const response = await chatModel().invoke([
-          { role: "system", content: GENERATE_SYSTEM },
-          {
-            role: "user",
-            content: `Question: ${state.modelQuestion ?? state.question}\n\nHelp articles:\n${context}`,
-          },
-        ]);
-        const tokens = tokenAttrs(response);
-        span.setAttribute("llm.input_tokens", tokens["llm.input_tokens"]);
-        span.setAttribute("llm.output_tokens", tokens["llm.output_tokens"]);
-        const text =
-          typeof response.content === "string" ? response.content.trim() : "";
-        if (!text) {
-          return finish({ ...extractive(), attempts });
-        }
-        return finish({
-          answer: text,
-          citations: hits.map((h) => ({
-            slug: h.article.slug,
-            title: h.article.title,
-          })),
-          confident: (hits[0]?.score ?? 0) >= CONFIDENT_MIN_SCORE,
-          usedLlm: true,
-          escalated: false,
-          attempts,
-        });
-      } catch {
-        return finish({ ...extractive(), attempts });
-      }
+      const { result, attrs } = await answerFromHits(state.resolved, hits);
+      for (const [key, value] of Object.entries(attrs)) span.setAttribute(key, value);
+      const patch = { ...result, attempts };
+      const next = nextAfterGenerate({ ...state, ...patch } as SupportStateType);
+      span.setAttribute("generate.used_llm", Boolean(patch.usedLlm));
+      span.setAttribute("generate.confident", Boolean(patch.confident));
+      span.setAttribute("generate.escalated", Boolean(patch.escalated));
+      span.setAttribute("generate.attempts", patch.attempts);
+      span.setAttribute("graph.next", next);
+      return patch;
     },
   );
 }
@@ -264,7 +278,7 @@ async function rewriteNode(state: SupportStateType) {
         content:
           "Rewrite the visitor question as a short help-center search query. Return only the query. Keep product words like seats, SSO, invoice, funnel, API key.",
       },
-      { role: "user", content: state.modelQuestion ?? state.question },
+      { role: "user", content: state.resolved.prompt },
     ]);
     const tokens = tokenAttrs(response);
     span.setAttribute("llm.input_tokens", tokens["llm.input_tokens"]);
@@ -272,7 +286,7 @@ async function rewriteNode(state: SupportStateType) {
     const query =
       typeof response.content === "string" && response.content.trim()
         ? response.content.trim()
-        : state.question;
+        : state.resolved.search;
     span.setAttribute("rewrite.query", query);
     span.setAttribute("graph.next", "retrieve");
     return { query };
@@ -305,41 +319,12 @@ function supportGraph() {
   return graph;
 }
 
+/** /api/eval?variant=generate: the widget's answer step for one standalone question. */
 export async function generateFromHits(
   question: string,
   hits: Hit[],
 ): Promise<RagResult> {
-  if (!process.env.OPENAI_API_KEY || hits.length === 0 || shouldEscalate(question, hits)) {
-    return extractiveAnswer(question, hits);
-  }
-
-  const context = hits
-    .map((h, i) => `[${i + 1}] ${h.article.title}\n${h.article.body}`)
-    .join("\n\n");
-
-  try {
-    const response = await chatModel().invoke([
-      { role: "system", content: GENERATE_SYSTEM },
-      {
-        role: "user",
-        content: `Question: ${question}\n\nHelp articles:\n${context}`,
-      },
-    ]);
-    const text = typeof response.content === "string" ? response.content.trim() : "";
-    if (!text) return extractiveAnswer(question, hits);
-    return {
-      answer: text,
-      citations: hits.map((h) => ({
-        slug: h.article.slug,
-        title: h.article.title,
-      })),
-      confident: (hits[0]?.score ?? 0) >= CONFIDENT_MIN_SCORE,
-      usedLlm: true,
-      escalated: false,
-    };
-  } catch {
-    return extractiveAnswer(question, hits);
-  }
+  return (await answerFromHits(asAsked(question), hits)).result;
 }
 
 export async function answerQuestion(
@@ -363,13 +348,9 @@ export async function answerQuestion(
 
     const resolved = resolveQuestion(question, options.history ?? []);
     span.setAttribute("contextualized", resolved.contextualized);
-    span.setAttribute("standalone_question", resolved.question);
+    span.setAttribute("resolved.search", resolved.search);
     const state = await supportGraph().invoke({
-      originalQuestion: question,
-      question: resolved.question,
-      modelQuestion: resolved.modelQuestion,
-      contextualized: resolved.contextualized,
-      topicSlug: resolved.topicSlug,
+      resolved,
       allowRewrite: options.rewrite !== false,
     });
     span.setAttribute("usedLlm", Boolean(state.usedLlm));

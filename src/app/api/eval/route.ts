@@ -22,9 +22,10 @@ export const runtime = "nodejs";
  * - hybrid-chunked: hybrid over paragraphs. A/B only.
  * - always-answer: same retriever as baseline, never escalate, quotes even on OOS.
  *   A/B for the escalation metric only. Do not use as CI default.
- * - generate: same retrieve as baseline, then the generate-node prompt when
- *   OPENAI_API_KEY is set. Empty hits, no key, or shouldEscalate fall back to
- *   extractiveAnswer. Rewrite stays off. A/B only. Do not use as CI default.
+ * - generate: same retrieve as baseline, then the widget's answer step: refusal
+ *   checks, then the model when OPENAI_API_KEY (or RELAYDESK_STUB_LLM=1) is set.
+ *   Empty hits, no model, or shouldEscalate fall back to extractiveAnswer.
+ *   Rewrite stays off. A/B only. Do not use as CI default.
  */
 function retrieveOptions(variant: string | null): {
   variant:

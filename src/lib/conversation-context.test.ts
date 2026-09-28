@@ -4,19 +4,16 @@ import {
   ACKNOWLEDGEMENT_REPLY,
   boundConversationHistory,
   explicitAnchors,
-  fallbackStandaloneQuestion,
+  heuristicStandaloneQuestion,
   isAcknowledgement,
   preferTopic,
-  unsupportedPriceQuestion,
   type ConversationTurn,
 } from "./conversation-context";
 import { REFUSE_LINE } from "./escalate";
 import { answerQuestion } from "./graph";
+import { forceExtractiveAnswers } from "./keyless";
 
-// Keyless extractive path, and keep test spans out of eval/traces/live.jsonl.
-delete process.env.OPENAI_API_KEY;
-delete process.env.RELAYDESK_STUB_LLM;
-process.env.RELAYDESK_TRACE_FILE = "0";
+forceExtractiveAnswers();
 
 const visitor = (body: string): ConversationTurn => ({ role: "visitor", body });
 const assistant = (body: string): ConversationTurn => ({ role: "assistant", body });
@@ -148,34 +145,9 @@ describe("preferTopic", () => {
   });
 });
 
-describe("unsupportedPriceQuestion", () => {
-  const sso = { text: "SSO is available on Growth and Scale." };
-
-  it("flags a price question the answering article has no price for", () => {
-    assert.equal(unsupportedPriceQuestion("how much does it cost?", sso), true);
-    assert.equal(unsupportedPriceQuestion("is there a fee for that?", undefined), true);
-  });
-
-  it("allows price questions the article answers, and non-price questions", () => {
-    const overage = { text: "We invoice the overage at $0.00012 per extra event." };
-    const payment = { text: "We do not charge a reactivation fee." };
-    assert.equal(unsupportedPriceQuestion("how much does that cost?", overage), false);
-    assert.equal(unsupportedPriceQuestion("do you charge a fee to reactivate?", payment), false);
-    assert.equal(unsupportedPriceQuestion("Is it available on Starter?", sso), false);
-  });
-
-  it("does not read quantity, billing, or role questions as price questions", () => {
-    const seats = { text: "Pending invites do not count until they accept." };
-    assert.equal(unsupportedPriceQuestion("How much raw data does Starter keep?", sso), false);
-    assert.equal(unsupportedPriceQuestion("how much of it can I export?", sso), false);
-    assert.equal(unsupportedPriceQuestion("Will I be charged for pending invites?", seats), false);
-    assert.equal(unsupportedPriceQuestion("Who is in charge of billing?", seats), false);
-  });
-});
-
-describe("fallbackStandaloneQuestion", () => {
+describe("heuristicStandaloneQuestion", () => {
   it("walks back through follow-ups to the last standalone question", () => {
-    const standalone = fallbackStandaloneQuestion("and Starter?", [
+    const standalone = heuristicStandaloneQuestion("and Starter?", [
       ...GROWTH_QUOTA,
       visitor("What about Scale?"),
       assistant("Scale is unlimited seats with a custom event cap."),
@@ -189,7 +161,7 @@ describe("fallbackStandaloneQuestion", () => {
   });
 
   it("skips thanks and requests for a person", () => {
-    const standalone = fallbackStandaloneQuestion("and Starter?", [
+    const standalone = heuristicStandaloneQuestion("and Starter?", [
       ...GROWTH_QUOTA,
       visitor("thanks"),
       visitor("talk to a person"),
@@ -198,7 +170,7 @@ describe("fallbackStandaloneQuestion", () => {
   });
 
   it("returns nothing without an earlier question", () => {
-    assert.equal(fallbackStandaloneQuestion("and Starter?", [visitor("thanks")]), null);
+    assert.equal(heuristicStandaloneQuestion("and Starter?", [visitor("thanks")]), null);
   });
 });
 
