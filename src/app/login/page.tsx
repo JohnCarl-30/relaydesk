@@ -28,7 +28,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-full lg:grid-cols-2">
+    <main className="grid min-h-dvh lg:grid-cols-2">
       <section className="flex flex-col bg-card px-6 py-8">
         <Link href="/" className="text-sm">
           <Logo />
@@ -36,7 +36,7 @@ export default function LoginPage() {
         <form onSubmit={onSubmit} className="m-auto w-full max-w-sm py-16">
           <h1 className="text-2xl font-medium tracking-tight">Staff inbox</h1>
           <p className="mt-2 text-sm text-muted">
-            Staff inbox. Demo password is{" "}
+            Demo password is{" "}
             <code className="text-ink">nimbus-demo</code>.
           </p>
           <label className="mt-8 block text-sm">
@@ -52,7 +52,7 @@ export default function LoginPage() {
           {error ? <p className="mt-2 text-sm text-copper">{error}</p> : null}
           <button
             type="submit"
-            className="mt-5 w-full rounded-lg bg-forest py-2.5 text-sm text-paper hover:bg-forest-2"
+            className="mt-5 w-full rounded-lg bg-forest py-2.5 text-sm text-paper transition hover:bg-forest-2 active:scale-[0.98]"
           >
             Sign in
           </button>
