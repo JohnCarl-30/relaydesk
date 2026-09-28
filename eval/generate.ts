@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { performance } from "node:perf_hooks";
 import { shouldEscalate } from "../src/lib/escalate";
 import { generateFromHits } from "../src/lib/graph";
+import { forceExtractiveAnswers } from "../src/lib/keyless";
 import { extractiveAnswer, retrieve } from "../src/lib/rag";
 import { loadGolden } from "./golden";
 
@@ -121,10 +122,7 @@ function lexicalMeans(jsonlPath: string): {
 }
 
 async function main() {
-  process.env.RELAYDESK_TRACE_FILE = "0";
-  const liveKey = process.env.OPENAI_API_KEY;
-  delete process.env.RELAYDESK_STUB_LLM;
-  delete process.env.OPENAI_API_KEY;
+  const liveKey = forceExtractiveAnswers();
 
   const here = dirname(fileURLToPath(import.meta.url));
   const rows = loadGolden(join(here, "golden.csv"));

@@ -1,8 +1,17 @@
+/**
+ * Multi-turn follow-ups for the Nimbus widget, MTRAG-style categories.
+ *
+ *   npx --yes tsx eval/conversations.ts
+ *
+ * Keyless. Replays each conversation through answerQuestion with the real
+ * replies as history and writes eval/conversations.json.
+ */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ACKNOWLEDGEMENT_REPLY, type ConversationTurn } from "../src/lib/conversation-context";
 import { answerQuestion } from "../src/lib/graph";
+import { forceExtractiveAnswers } from "../src/lib/keyless";
 import type { RagResult } from "../src/lib/rag";
 
 type Expect = { slug?: string | string[]; escalated?: boolean; ack?: boolean };
@@ -16,19 +25,16 @@ type Conversation = {
 
 type Tally = { pass: number; total: number };
 
-// Keyless and reproducible, like the other eval scripts.
-delete process.env.OPENAI_API_KEY;
-delete process.env.RELAYDESK_STUB_LLM;
-process.env.RELAYDESK_TRACE_FILE ??= "0";
+forceExtractiveAnswers();
 
-function describe(result: RagResult): string {
+function outcomeLabel(result: RagResult): string {
   if (result.answer === ACKNOWLEDGEMENT_REPLY) return "ack";
   if (result.escalated) return "escalated";
   return result.citations[0]?.slug ?? "no citation";
 }
 
 function failure(expect: Expect, result: RagResult): string | null {
-  const got = describe(result);
+  const got = outcomeLabel(result);
   if (expect.ack) return got === "ack" ? null : `want ack, got ${got}`;
   if (expect.escalated !== undefined && result.escalated !== expect.escalated) {
     return `want escalated=${expect.escalated}, got ${got}`;
@@ -70,7 +76,7 @@ async function main() {
         (reason ? "FAIL" : "pass").padEnd(5),
         conversation.category.padEnd(15),
         `${conversation.id}#${index + 1}`.padEnd(24),
-        reason ?? describe(result),
+        reason ?? outcomeLabel(result),
       );
     }
   }
@@ -91,4 +97,7 @@ async function main() {
   );
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

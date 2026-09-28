@@ -13,6 +13,7 @@ import { performance } from "node:perf_hooks";
 import { extractiveAnswer, retrieve } from "../src/lib/rag";
 import { retrieveMaybeRewrite, rewriteSearchQuery } from "../src/lib/rewrite";
 import { answerQuestion } from "../src/lib/graph";
+import { forceExtractiveAnswers } from "../src/lib/keyless";
 import {
   dumpSpans,
   flushTracing,
@@ -78,9 +79,7 @@ function fmtHit(part: { hit: number; labeled: number }): string {
 }
 
 async function main() {
-  process.env.RELAYDESK_TRACE_FILE = "0";
-  delete process.env.RELAYDESK_STUB_LLM;
-  delete process.env.OPENAI_API_KEY;
+  forceExtractiveAnswers();
 
   const here = dirname(fileURLToPath(import.meta.url));
   const rows = loadGolden(join(here, "golden.csv"));

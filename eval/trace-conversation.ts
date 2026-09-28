@@ -10,6 +10,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { answerQuestion } from "../src/lib/graph";
+import { forceExtractiveAnswers } from "../src/lib/keyless";
 import {
   dumpSpans,
   flushTracing,
@@ -42,8 +43,7 @@ async function capture(mode: "extractive" | "llm"): Promise<Capture> {
   const stub = mode === "llm" && !apiKey;
   if (mode === "extractive") {
     // graph.ts calls the model whenever a key is set, so hide it for this pass.
-    delete process.env.OPENAI_API_KEY;
-    delete process.env.RELAYDESK_STUB_LLM;
+    forceExtractiveAnswers();
   } else if (stub) {
     process.env.RELAYDESK_STUB_LLM = "1";
   }
