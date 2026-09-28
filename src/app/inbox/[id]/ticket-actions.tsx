@@ -55,8 +55,8 @@ export function TicketActions({
         onClick={() => void patch({ status: closed ? "open" : "closed" })}
         className={
           closed
-            ? "rounded-md border border-line px-2.5 py-1 text-xs hover:bg-paper"
-            : "rounded-md bg-forest px-2.5 py-1 text-xs text-paper hover:bg-forest-2"
+            ? "rounded-md border border-line px-2.5 py-1 text-xs transition hover:bg-paper active:scale-[0.98]"
+            : "rounded-md bg-forest px-2.5 py-1 text-xs text-paper transition hover:bg-forest-2 active:scale-[0.98]"
         }
       >
         {closed ? "Reopen" : "Close"}

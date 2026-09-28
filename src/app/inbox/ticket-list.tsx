@@ -92,7 +92,7 @@ export function TicketList({
                       <p className="truncate text-sm font-medium">
                         {ticket.email.split("@")[0]}
                       </p>
-                      <p className="shrink-0 text-[11px] text-muted">
+                      <p className="shrink-0 text-[11px] tabular-nums text-muted">
                         {formatRelative(ticket.updated_at)}
                       </p>
                     </div>

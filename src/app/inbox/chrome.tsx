@@ -18,7 +18,10 @@ export function InboxShell({
 
   return (
     <div className="flex h-dvh overflow-hidden bg-paper text-ink">
-      <aside className="flex w-14 shrink-0 flex-col items-center border-r border-forest-2/40 bg-forest py-3 text-paper">
+      <aside
+        data-surface="dark"
+        className="flex w-14 shrink-0 flex-col items-center border-r border-forest-2/40 bg-forest py-3 text-paper"
+      >
         <Link
           href="/"
           className="flex h-8 w-8 items-center justify-center rounded-full bg-paper/15 text-xs font-medium"
@@ -31,6 +34,8 @@ export function InboxShell({
             href="/inbox"
             className="flex h-9 w-9 items-center justify-center rounded-lg bg-paper/15"
             title="Inbox"
+            aria-label="Inbox"
+            aria-current="page"
           >
             <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
               <path
@@ -43,8 +48,9 @@ export function InboxShell({
           </Link>
           <Link
             href="/help"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-paper/70 hover:bg-paper/10 hover:text-paper"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-paper/70 transition-colors hover:bg-paper/10 hover:text-paper"
             title="Help"
+            aria-label="Help center"
           >
             <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
               <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
@@ -61,8 +67,9 @@ export function InboxShell({
         <form action={logout}>
           <button
             type="submit"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-paper/70 hover:bg-paper/10 hover:text-paper"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-paper/70 transition-colors hover:bg-paper/10 hover:text-paper"
             title="Log out"
+            aria-label="Log out"
           >
             <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
               <path
