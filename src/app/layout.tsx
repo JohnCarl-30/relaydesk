@@ -13,10 +13,18 @@ const newsreader = Newsreader({
   style: ["normal", "italic"],
 });
 
+const description =
+  "Relaydesk demo. The widget cites Nimbus help articles. Staff inbox password is nimbus-demo.";
+
 export const metadata: Metadata = {
   title: "Nimbus, product analytics",
-  description:
-    "Relaydesk demo. The widget cites Nimbus help articles. Staff inbox password is nimbus-demo.",
+  description,
+  openGraph: {
+    title: "Nimbus, product analytics",
+    description,
+    siteName: "Nimbus",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
