@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { ADMIN_PASSWORD } from "./env";
 
 type ChatReply = { ticketId: string | null; escalated: boolean };
 
@@ -13,13 +14,19 @@ async function openChat(page: Page) {
   await expect(chat(page)).toBeVisible();
 }
 
-async function ask(page: Page, text: string): Promise<ChatReply> {
-  const response = page.waitForResponse(
+/** Start waiting before the click that sends the message. */
+async function nextChatReply(page: Page): Promise<ChatReply> {
+  const response = await page.waitForResponse(
     (res) => res.url().endsWith("/api/chat") && res.request().method() === "POST",
   );
+  return response.json();
+}
+
+async function ask(page: Page, text: string): Promise<ChatReply> {
+  const reply = nextChatReply(page);
   await chat(page).getByPlaceholder("Type a message").fill(text);
   await chat(page).getByRole("button", { name: "Send" }).click();
-  return (await response).json();
+  return reply;
 }
 
 test.beforeEach(async ({ page }) => {
@@ -65,7 +72,7 @@ test("an unanswerable follow-up lands in the staff inbox", async ({ page }) => {
   await expect(chat(page).getByRole("link", { name: "staff inbox" })).toBeVisible();
 
   await page.goto("/login");
-  await page.getByLabel("Password").fill("nimbus-demo");
+  await page.getByLabel("Password").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/inbox$/);
   await expect(page.locator(`a[href="/inbox/${reply.ticketId}"]`)).toContainText(
@@ -75,9 +82,9 @@ test("an unanswerable follow-up lands in the staff inbox", async ({ page }) => {
 
 test("'This didn't help' opens a ticket", async ({ page }) => {
   await ask(page, RETENTION_QUESTION);
-  const response = page.waitForResponse((res) => res.url().endsWith("/api/chat"));
+  const reply = nextChatReply(page);
   await chat(page).getByRole("button", { name: "This didn't help" }).click();
 
-  expect(((await (await response).json()) as ChatReply).ticketId).toBeTruthy();
+  expect((await reply).ticketId).toBeTruthy();
   await expect(chat(page).getByRole("link", { name: "staff inbox" })).toBeVisible();
 });

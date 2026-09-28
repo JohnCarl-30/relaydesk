@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
 import { extractiveAnswer, retrieve } from "../src/lib/rag";
 import { answerQuestion } from "../src/lib/graph";
+import { forceExtractiveAnswers } from "../src/lib/keyless";
 import { loadGolden } from "./golden";
 
 const GENERATE_SYSTEM =
@@ -64,9 +65,7 @@ async function timeMs(fn: () => void | Promise<void>): Promise<number> {
 }
 
 async function main() {
-  process.env.RELAYDESK_TRACE_FILE = "0";
-  delete process.env.RELAYDESK_STUB_LLM;
-  delete process.env.OPENAI_API_KEY;
+  forceExtractiveAnswers();
 
   const here = dirname(fileURLToPath(import.meta.url));
   const rows = loadGolden(join(here, "golden.csv"));
