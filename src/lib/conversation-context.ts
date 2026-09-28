@@ -1,10 +1,8 @@
 import { isVisitorEscalation } from "./escalate";
+import type { Message } from "./models";
 import { tokenize } from "./tokenize";
 
-export type ConversationTurn = {
-  role: "visitor" | "assistant" | "agent";
-  body: string;
-};
+export type ConversationTurn = Pick<Message, "role" | "body">;
 
 export type StandaloneQuestion = {
   /** The chain's first question, for finding the article the conversation is on. */
@@ -180,7 +178,7 @@ function earlierQuestions(history: ConversationTurn[]): string[] {
   return chain;
 }
 
-export function fallbackStandaloneQuestion(
+export function heuristicStandaloneQuestion(
   question: string,
   history: ConversationTurn[],
 ): StandaloneQuestion | null {
@@ -281,43 +279,22 @@ export function preferTopic<T extends { article: { slug: string }; text: string 
   return [hits[index], ...hits.slice(0, index), ...hits.slice(index + 1)];
 }
 
-// "how much" asks a price only when a verb follows ("how much does it…");
-// "how much raw data" or "how much of it" ask a quantity. "charged" and
-// "in charge" are billing and role questions the help center can answer.
-const PRICE_QUESTION =
-  /\b(?:cost|costs|price|prices|pricing|fee|fees)\b|\bhow much (?:does|do|is|are|will|would)\b/i;
-const PRICE_EVIDENCE = /\$\s?\d|\b(fee|fees|charge|charges|charged|cost|costs|price|prices|pricing)\b/i;
-
-/**
- * A price question answered from an article with no price in it quotes the
- * wrong thing. The help center lists the overage rate and fees, not plan or
- * seat prices, so "how much does it cost?" after an SSO question should reach
- * a person.
- */
-export function unsupportedPriceQuestion(
-  question: string,
-  answerSource: { text: string } | undefined,
-): boolean {
-  return PRICE_QUESTION.test(question) && !PRICE_EVIDENCE.test(answerSource?.text ?? "");
-}
+// [suffix, word must be longer than, characters to drop]
+const SUFFIX_RULES: [string, number, number][] = [
+  ["tion", 5, 3],
+  ["ing", 5, 3],
+  ["ed", 4, 2],
+  ["s", 4, 1],
+  ["e", 4, 1],
+];
 
 function anchorForms(value: string): string[] {
   const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, "");
   const forms = new Set([normalized]);
-  if (normalized.length > 5 && normalized.endsWith("tion")) {
-    forms.add(normalized.slice(0, -3));
-  }
-  if (normalized.length > 5 && normalized.endsWith("ing")) {
-    forms.add(normalized.slice(0, -3));
-  }
-  if (normalized.length > 4 && normalized.endsWith("ed")) {
-    forms.add(normalized.slice(0, -2));
-  }
-  if (normalized.length > 4 && normalized.endsWith("s")) {
-    forms.add(normalized.slice(0, -1));
-  }
-  if (normalized.length > 4 && normalized.endsWith("e")) {
-    forms.add(normalized.slice(0, -1));
+  for (const [suffix, longerThan, drop] of SUFFIX_RULES) {
+    if (normalized.length > longerThan && normalized.endsWith(suffix)) {
+      forms.add(normalized.slice(0, -drop));
+    }
   }
   return [...forms].filter(Boolean);
 }
