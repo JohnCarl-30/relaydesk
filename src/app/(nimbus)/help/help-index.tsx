@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { Article } from "@/lib/articles";
-import { IconSearch } from "@/components/ui";
+import { IconChevron, IconSearch } from "@/components/ui";
 
 const CATEGORY_BLURB: Record<string, string> = {
   "Getting started": "Workspaces, projects, first events.",
@@ -68,7 +68,7 @@ export function HelpIndex({ articles }: { articles: Article[] }) {
         <ul className="mx-auto mt-10 max-w-xl divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
           {groups.flatMap(([, list]) => list).map((article) => (
             <li key={article.slug}>
-              <Link href={`/help/${article.slug}`} className="block px-5 py-4 hover:bg-paper">
+              <Link href={`/help/${article.slug}`} className="block px-5 py-4 transition-colors hover:bg-paper">
                 <p className="text-[11px] uppercase tracking-widest text-copper">
                   {article.category}
                 </p>
@@ -79,29 +79,28 @@ export function HelpIndex({ articles }: { articles: Article[] }) {
           ))}
         </ul>
       ) : (
-        <div className="mt-12 grid gap-4 sm:grid-cols-2">
+        <div className="mx-auto mt-14 max-w-4xl divide-y divide-line border-y border-line">
           {groups.map(([category, list]) => (
             <section
               key={category}
-              className="rounded-xl border border-line bg-card p-5"
+              className="grid gap-3 py-7 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-10"
             >
-              <div className="flex items-baseline justify-between gap-3">
+              <div>
                 <h2 className="font-medium">{category}</h2>
-                <span className="text-xs text-muted">
+                <p className="mt-1 text-sm text-muted">{CATEGORY_BLURB[category] ?? ""}</p>
+                <p className="mt-2 text-xs tabular-nums text-muted">
                   {list.length} {list.length === 1 ? "article" : "articles"}
-                </span>
+                </p>
               </div>
-              <p className="mt-1 text-sm text-muted">
-                {CATEGORY_BLURB[category] ?? ""}
-              </p>
-              <ul className="mt-4 space-y-2">
+              <ul className="-mx-3">
                 {list.map((article) => (
                   <li key={article.slug}>
                     <Link
                       href={`/help/${article.slug}`}
-                      className="text-sm hover:text-forest"
+                      className="group flex items-center justify-between gap-4 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-card"
                     >
-                      {article.title}
+                      <span>{article.title}</span>
+                      <IconChevron className="h-4 w-4 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-forest" />
                     </Link>
                   </li>
                 ))}
