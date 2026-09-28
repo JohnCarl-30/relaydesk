@@ -1,6 +1,6 @@
 export function DashboardPreview() {
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-card shadow-[0_28px_80px_-28px_rgba(27,61,49,0.4)]">
+    <div className="overflow-hidden rounded-xl border border-line bg-card tabular-nums shadow-[0_28px_80px_-28px_rgba(27,61,49,0.4)]">
       <div className="flex items-center gap-1.5 border-b border-line px-4 py-2.5">
         <span className="h-2.5 w-2.5 rounded-full bg-[#e8c4b8]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#e6d9a8]" />

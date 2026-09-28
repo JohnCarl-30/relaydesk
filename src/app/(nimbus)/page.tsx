@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { DashboardPreview } from "@/components/DashboardPreview";
+import { OpenChatButton } from "@/components/OpenChatButton";
+import { IconChevron } from "@/components/ui";
 
 const STEPS = [
   {
     n: "1",
     title: "Ask",
-    lead: '"Why is my invoice 12 seats?"',
+    lead: "“Why is my invoice 12 seats?”",
     body: "The widget searches the help center and answers with a citation.",
   },
   {
     n: "2",
     title: "Escalate",
-    lead: '"This didn\'t help"',
+    lead: "“This didn’t help”",
     body: "Leave an email. A ticket lands in the staff inbox with the full transcript.",
   },
   {
@@ -41,15 +43,16 @@ export default function HomePage() {
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/help"
-              className="rounded-lg bg-forest px-4 py-2.5 text-sm text-paper hover:bg-forest-2"
+              className="rounded-lg bg-forest px-4 py-2.5 text-sm text-paper transition hover:bg-forest-2 active:scale-[0.98]"
             >
               Get started free
             </Link>
             <Link
               href="/inbox"
-              className="rounded-lg border border-ink/15 bg-card px-4 py-2.5 text-sm hover:bg-paper"
+              className="group inline-flex items-center gap-1 px-1 py-2.5 text-sm text-muted transition-colors hover:text-ink"
             >
-              Open inbox
+              See the staff inbox
+              <IconChevron className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
             </Link>
           </div>
         </div>
@@ -69,41 +72,52 @@ export default function HomePage() {
         </ul>
       </section>
 
-      <section className="px-6 py-20">
-        <p className="text-center text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
-          How it works
-        </p>
-        <h2 className="mx-auto mt-3 max-w-xl text-center font-serif text-3xl tracking-tight sm:text-4xl">
-          No contact form. The widget files the ticket.
-        </h2>
-        <div className="mx-auto mt-14 grid max-w-5xl gap-10 sm:grid-cols-3">
+      <section className="mx-auto grid max-w-6xl gap-12 px-6 pb-24 pt-20 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-20">
+        <div className="lg:sticky lg:top-24 lg:self-start">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+            How it works
+          </p>
+          <h2 className="mt-3 max-w-md font-serif text-3xl tracking-tight sm:text-4xl">
+            No contact form. The widget files the ticket.
+          </h2>
+          <p className="mt-4 max-w-sm text-muted">
+            Three steps, one conversation. Try them with the bubble in the corner.
+          </p>
+          <OpenChatButton className="group mt-6 inline-flex items-center gap-1 text-sm text-forest transition-colors hover:text-forest-2">
+            Open the chat
+            <IconChevron className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+          </OpenChatButton>
+        </div>
+        <ol className="divide-y divide-line border-y border-line">
           {STEPS.map((step) => (
-            <div key={step.n}>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-forest text-sm text-paper">
+            <li key={step.n} className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3 py-8">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-forest text-sm tabular-nums text-paper">
                 {step.n}
               </span>
-              <p className="mt-4 text-xs uppercase tracking-widest text-muted">{step.title}</p>
-              <p className="mt-2 font-serif text-2xl">{step.lead}</p>
-              <p className="mt-2 text-sm leading-6 text-muted">{step.body}</p>
-            </div>
+              <div>
+                <p className="text-xs uppercase tracking-widest text-muted">{step.title}</p>
+                <p className="mt-2 font-serif text-2xl">{step.lead}</p>
+                <p className="mt-2 max-w-md text-sm leading-6 text-muted">{step.body}</p>
+              </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
 
-      <footer className="border-t border-line px-6 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="border-t border-line py-10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted">
             Nimbus · a Relaydesk demo. Inbox password{" "}
             <code className="text-ink">nimbus-demo</code>.
           </p>
           <div className="flex gap-6 text-sm text-muted">
-            <Link href="/help" className="hover:text-ink">
+            <Link href="/help" className="transition-colors hover:text-ink">
               Help
             </Link>
-            <Link href="/inbox" className="hover:text-ink">
+            <Link href="/inbox" className="transition-colors hover:text-ink">
               Inbox
             </Link>
-            <Link href="/login" className="hover:text-ink">
+            <Link href="/login" className="transition-colors hover:text-ink">
               Log in
             </Link>
           </div>
