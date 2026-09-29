@@ -1,5 +1,7 @@
 # When Relaydesk stays extractive
 
+_Written while a rag-eval-harness gate scored `POST /api/eval` in CI. The gate, the endpoint, and `baseline.json` were removed on 2026-09-29; the numbers here are a record._
+
 The widget can call a model. `/api/eval` should not. Retrieve is the thing CI can break. Prose style is not.
 
 ```bash

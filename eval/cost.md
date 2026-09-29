@@ -1,5 +1,7 @@
 # Cost and p95 (2026-08-28)
 
+_Written while a rag-eval-harness gate scored `POST /api/eval` in CI. The gate, the endpoint, and `baseline.json` were removed on 2026-09-29; the numbers here are a record._
+
 Lexical stays the PR gate. Not because gpt-4o-mini is expensive on 40 Nimbus rows. It is not. The extractive `/api/eval` path is **0.12 ms/row** and **$0**. An LLM generate+rewrite pass is about **$0.007** for the whole golden set at gpt-4o-mini list prices. CI still should not call a model.
 
 Reproduce:

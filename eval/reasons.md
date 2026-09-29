@@ -2,9 +2,9 @@
 
 50 questions. Cap is 100. The first 40 are the seed set from the 2026-08-27 case study (36 in-corpus, 4 oos). Rows 41–50 were added 2026-08-28. Each new row has a reason. Do not add paraphrases of existing facts.
 
-CSV columns stay `question,ground_truth,expected_slug` so `compare-retrievers.ts` and the harness loader keep working. This file is the reasons column.
+CSV columns stay `question,ground_truth,expected_slug` so `compare-retrievers.ts` and `golden.ts` keep working. This file is the reasons column.
 
-Same text as rag-eval-harness `examples/nimbus/reasons.md`.
+rag-eval-harness keeps a copy as `examples/nimbus/reasons.md`.
 
 Corpus split, 2026-09-11: `billing-plans` holds plan quotas and mid-cycle overage. `billing-seats-events` keeps seats, invites, `nimbus.*`, and the invoice snapshot. CSV row cap is `csv-export` only. Growth 90 days is in the `data-retention` body.
 
@@ -30,4 +30,4 @@ Corpus split, 2026-09-11: `billing-plans` holds plan quotas and mid-cycle overag
 | Dashboards during payment retry | in-corpus | failed-payment | Golden had pause-writes and no reactivation fee. Not "dashboards stay readable". |
 | Keys created before March 2025 | in-corpus | api-keys | Legacy 50 rps cap. Easy to retrieve the new limits and miss the grandfather rule. |
 
-Counts now: **44 in-corpus**, **6 oos/refusal**. Case-study snapshots in the harness stay on the original 40. CI re-locks [`baseline.json`](baseline.json) on this 50-row set.
+Counts now: **44 in-corpus**, **6 oos/refusal**. The harness case-study snapshots stay on the original 40.

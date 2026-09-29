@@ -1,12 +1,12 @@
 # Why the widget opens a ticket
 
-The lexical CI gate scores answers against the help center. Escalation is a different question. Did we refuse Salesforce, or paste a workspace paragraph and hope?
+Answer quality and escalation are different questions. Did we refuse Salesforce, or paste a workspace paragraph and hope?
 
-## Why CI stays lexical
+## Why refusals get their own check
 
-`eval/baseline.json` is title-boosted bag-of-words on 50 Nimbus questions. A drop of more than 0.05 fails the PR. A refuse line used to fail it. "I don't have that in the Nimbus help center" shares almost no tokens with the retrieved articles, so once `/api/eval` started refusing (4d717c1), faithfulness fell to 0.7049 against 0.7823 while that commit's 43 answered rows held at 0.785. After the article split, 44 rows answer, and the gate reads 0.7717 with refusals skipped (2026-09-27).
+A refuse line shares almost no words with the retrieved articles. When the old rag-eval-harness gate scored `/api/eval` on lexical faithfulness in CI, correct refusals scored near zero. Once the widget started refusing (4d717c1), faithfulness fell to 0.7049 against 0.7823, while that commit's 43 answered rows held at 0.785. The harness learned to skip refused rows, and on 2026-09-29 the gate was removed from this repo.
 
-`/api/eval` returns `escalated`. rag-eval-harness 0.1.1 reads it as `abstained` and skips faithfulness and answer_relevancy on those rows; context metrics still count. The gate judges answers. This script judges whether to refuse, on 15 labeled rows. It does not replace the lexical gate. It does not fail the PR on cost. RAGAS stays out of CI.
+Whether to refuse is judged here instead, on 15 labeled rows. It runs locally and does not gate CI. RAGAS stays out.
 
 ```bash
 npx --yes tsx eval/escalation.ts
@@ -49,6 +49,6 @@ Policy recall 1.0 means all 7 positives opened a ticket. always-answer recall 0 
 
 ## What you say in the interview
 
-Out of corpus opens a ticket. Ask "How do I connect Nimbus to Salesforce?" and the widget refuses. Then `/inbox` has a row. "This didn't help" is the same policy. Chat writes the ticket. `POST /api/eval` never does.
+Out of corpus opens a ticket. Ask "How do I connect Nimbus to Salesforce?" and the widget refuses. Then `/inbox` has a row. "This didn't help" is the same policy. Chat writes the ticket. The eval scripts never do.
 
-always-answer is the counterfactual. It would quote the workspaces article at Salesforce because "Nimbus" matches. That is why `?variant=always-answer` exists. Do not make it the CI default.
+always-answer is the counterfactual. It would quote the workspaces article at Salesforce because "Nimbus" matches. That is why `escalation.ts` scores the `alwaysAnswer` option next to the policy. Do not ship it.
