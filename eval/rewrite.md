@@ -1,5 +1,7 @@
 # Rewrite on vs off
 
+_Written while a rag-eval-harness gate scored `POST /api/eval` in CI. The gate, the endpoint, and `baseline.json` were removed on 2026-09-29; the numbers here are a record._
+
 The widget can rewrite a weak question and search again. CI should not. A second bag-of-words pass with the same tokens does not move hit@k or lexical recall. Keep the loop on chat when a key exists. Leave `/api/eval` on one retrieve.
 
 ```bash

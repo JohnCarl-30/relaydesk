@@ -1,5 +1,5 @@
 /**
- * Write extractive traces for the golden CSV (same work as POST /api/eval).
+ * Write extractive traces for the golden CSV (retrieve + extractiveAnswer).
  *
  *   npx --yes tsx eval/dump-traces.ts > /tmp/nimbus.jsonl
  */

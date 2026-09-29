@@ -3,7 +3,7 @@
  *
  *   npx --yes tsx eval/bench.ts
  *
- * Extractive path is what POST /api/eval runs (retrieve + extractiveAnswer).
+ * Extractive path is retrieve + extractiveAnswer, the widget's keyless answer.
  * LLM $ is estimated from prompt size at gpt-4o-mini list prices. No live key required.
  */
 import { writeFileSync } from "node:fs";
@@ -120,7 +120,7 @@ async function main() {
     capturedAt: new Date().toISOString().slice(0, 10),
     n: rows.length,
     extractive_api_eval: {
-      note: "retrieve + extractiveAnswer, same work as POST /api/eval, in-process",
+      note: "retrieve + extractiveAnswer, the widget's keyless answer, in-process",
       ms_per_row_mean: round(extractive.mean),
       ms_per_row_p50: round(extractive.p50),
       ms_per_row_p95: round(extractive.p95),

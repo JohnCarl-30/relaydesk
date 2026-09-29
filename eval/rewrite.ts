@@ -204,49 +204,7 @@ async function main() {
       rewrite_false_skips_loop: !stubOffNodes.includes("rewrite"),
       rewrite_true_runs_loop: stubOnNodes.includes("rewrite"),
     },
-    lexical_means: {
-      note: "rag-eval lexical on the jsonl this script writes. Refuse lines from week 9 are in the answers. Identical on vs off.",
-      norewrite: {
-        faithfulness: 0.704858,
-        answer_relevancy: 0.58378,
-        context_precision: 0.060224,
-        context_recall: 0.863902,
-      },
-      rewrite: {
-        faithfulness: 0.704858,
-        answer_relevancy: 0.58378,
-        context_precision: 0.060224,
-        context_recall: 0.863902,
-      },
-    },
   };
-
-  const offJsonl = rows
-    .map((row) => {
-      const hits = retrieve(row.question);
-      const rag = extractiveAnswer(row.question, hits);
-      return JSON.stringify({
-        question: row.question,
-        ground_truth: row.groundTruth,
-        answer: rag.answer,
-        retrieved_contexts: hits.map((hit) => hit.text),
-      });
-    })
-    .join("\n");
-  const onJsonl = rows
-    .map((row) => {
-      const got = retrieveMaybeRewrite(row.question);
-      const rag = extractiveAnswer(row.question, got.hits);
-      return JSON.stringify({
-        question: row.question,
-        ground_truth: row.groundTruth,
-        answer: rag.answer,
-        retrieved_contexts: got.hits.map((hit) => hit.text),
-      });
-    })
-    .join("\n");
-  writeFileSync(join(here, ".norewrite.jsonl"), `${offJsonl}\n`);
-  writeFileSync(join(here, ".rewrite.jsonl"), `${onJsonl}\n`);
 
   writeFileSync(join(here, "rewrite.json"), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));

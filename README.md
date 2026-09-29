@@ -2,9 +2,7 @@
 
 A support widget and a staff inbox. Nimbus is the fake analytics company they sit on.
 
-This folder is separate from the eval harness in `~/Documents/agentic-system` ([JohnCarl-30/rag-eval-harness](https://github.com/JohnCarl-30/rag-eval-harness)).
-
-The widget answers from `/help` and cites the article. An out-of-corpus question or "This didn't help" opens a ticket in `/inbox`. Staff reply from there. Why the lexical CI gate still quotes, and why Salesforce must refuse, is in [eval/escalation.md](eval/escalation.md).
+The widget answers from `/help` and cites the article. An out-of-corpus question or "This didn't help" opens a ticket in `/inbox`. Staff reply from there. Why Salesforce must refuse is in [eval/escalation.md](eval/escalation.md).
 
 ## Run
 
@@ -34,13 +32,21 @@ OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/trac
 
 Two fixture tickets are already in the inbox so it isn't empty on first open.
 
-## Quality gate
+## Tests and evals
 
-CI scores `POST /api/eval` with [rag-eval-harness](https://github.com/JohnCarl-30/rag-eval-harness) (`--evaluator lexical`) against [`eval/golden.csv`](eval/golden.csv). A drop of more than 0.05 vs [`eval/baseline.json`](eval/baseline.json) fails the PR. `?variant=bm25`, `hybrid`, `chunked`, `hybrid-chunked`, `always-answer`, `norewrite`, `rewrite`, and `generate` are A/B only. `generate` is not CI. Escalation: [eval/escalation.md](eval/escalation.md). Rewrite on vs off: [eval/rewrite.md](eval/rewrite.md). Extractive vs generate: [eval/generate.md](eval/generate.md). Latency and $: [eval/cost.md](eval/cost.md).
+CI runs the unit tests and the widget's browser tests on every push and PR:
 
 ```bash
-# with the app running on :3000
-rag-eval eval eval/golden.csv --sut-url http://127.0.0.1:3000/api/eval \
-  --evaluator lexical -o /tmp/head.json
-rag-eval regress --baseline eval/baseline.json --head /tmp/head.json --threshold 0.05
+npm test          # node:test, keyless
+npm run test:e2e  # Playwright; builds and serves on :3217
 ```
+
+The evals are keyless scripts you run by hand against [`eval/golden.csv`](eval/golden.csv) and the conversation set:
+
+```bash
+npx --yes tsx eval/compare-retrievers.ts  # hit@1 / hit@3 per retriever
+npx --yes tsx eval/conversations.ts       # multi-turn follow-ups
+npx --yes tsx eval/escalation.ts          # when to open a ticket
+```
+
+Details and past results: [eval/README.md](eval/README.md). Escalation: [eval/escalation.md](eval/escalation.md). Rewrite on vs off: [eval/rewrite.md](eval/rewrite.md). Extractive vs generate: [eval/generate.md](eval/generate.md). Latency and $: [eval/cost.md](eval/cost.md).

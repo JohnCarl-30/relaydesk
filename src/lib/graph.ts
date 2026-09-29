@@ -175,8 +175,8 @@ type SpanAttrs = Record<string, string | number | boolean>;
 
 /**
  * Refusal checks, then the model when one is configured, else an extractive
- * quote. The widget's generate node and /api/eval?variant=generate both call
- * this, so the A/B measures what the widget runs.
+ * quote. The widget's generate node and eval/generate.ts both call this, so
+ * the A/B measures what the widget runs.
  */
 async function answerFromHits(
   resolved: ResolvedQuestion,
@@ -319,7 +319,7 @@ function supportGraph() {
   return graph;
 }
 
-/** /api/eval?variant=generate: the widget's answer step for one standalone question. */
+/** eval/generate.ts: the widget's answer step for one standalone question. */
 export async function generateFromHits(
   question: string,
   hits: Hit[],
