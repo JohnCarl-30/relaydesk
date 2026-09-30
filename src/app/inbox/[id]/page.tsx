@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatClock, Initials, StatusPill } from "@/components/ui";
+import { helpHrefForTitle } from "@/lib/articles";
 import { getTicket, listMessages } from "@/lib/db";
 import { ReplyForm } from "./reply-form";
 import { TicketActions } from "./ticket-actions";
@@ -39,6 +40,11 @@ export default async function TicketPage({
             const visitor = message.role === "visitor";
             const agent = message.role === "agent";
             const label = visitor ? name : agent ? "You" : "Nimbus bot";
+            // Bot replies store the articles they drew on; the first is the one quoted.
+            const source =
+              !visitor && !agent && message.citations
+                ? (JSON.parse(message.citations) as string[])[0]
+                : undefined;
             return (
               <li
                 key={message.id}
@@ -77,6 +83,17 @@ export default async function TicketPage({
                   >
                     <p className="whitespace-pre-wrap text-sm leading-6">{message.body}</p>
                   </div>
+                  {source ? (
+                    <p className="mt-1.5 text-[11px] text-muted">
+                      Answer based on{" "}
+                      <Link
+                        href={helpHrefForTitle(source)}
+                        className="text-ink underline-offset-2 hover:text-forest hover:underline"
+                      >
+                        {source}
+                      </Link>
+                    </p>
+                  ) : null}
                 </div>
               </li>
             );

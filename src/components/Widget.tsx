@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ARTICLES } from "@/lib/articles";
+import { helpHrefForTitle } from "@/lib/articles";
 import { IconChat, IconClose, IconDoc, IconPerson, IconSend } from "@/components/ui";
 
 type ChatMessage = {
@@ -34,11 +34,6 @@ const SUGGESTIONS = [
   "SSO loops back to Google.",
   "Where do I find API keys?",
 ];
-
-function citationHref(title: string) {
-  const article = ARTICLES.find((a) => a.title === title);
-  return article ? `/help/${article.slug}` : "/help";
-}
 
 export function Widget() {
   const [open, setOpen] = useState(false);
@@ -238,7 +233,7 @@ export function Widget() {
                     <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
                       Answer based on
                       <Link
-                        href={citationHref(source)}
+                        href={helpHrefForTitle(source)}
                         className="inline-flex items-center gap-1 rounded-md border border-line bg-card px-1.5 py-0.5 text-ink transition hover:border-forest/40 hover:text-forest"
                       >
                         <IconDoc className="h-3 w-3" />

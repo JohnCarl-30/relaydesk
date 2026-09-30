@@ -325,7 +325,7 @@ export function extractiveAnswer(
   );
   const picked = ranked.slice(0, 2).join(" ");
   return {
-    answer: `${picked}\n\nThat's from "${top.article.title}". If this isn't the case you're in, talk to a person.`,
+    answer: picked,
     citations: citationsFromHits(hits),
     confident: top.score >= CONFIDENT_MIN_SCORE,
     usedLlm: false,
