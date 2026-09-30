@@ -157,3 +157,9 @@ Deleting a project does not change seat count. It can reduce events on the next 
 export function getArticle(slug: string): Article | undefined {
   return ARTICLES.find((article) => article.slug === slug);
 }
+
+/** Help-center link for a citation. Messages store citations by title, so a renamed article falls back to /help. */
+export function helpHrefForTitle(title: string): string {
+  const article = ARTICLES.find((a) => a.title === title);
+  return article ? `/help/${article.slug}` : "/help";
+}
