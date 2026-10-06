@@ -1,33 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
-import { ADMIN_PASSWORD } from "./env";
-
-type ChatReply = { ticketId: string | null; escalated: boolean };
+import { expect, test } from "@playwright/test";
+import { ask, chat, nextChatReply, openChat, signIn } from "./chat";
 
 const RETENTION_QUESTION = "How long does Starter keep raw events?";
-
-function chat(page: Page) {
-  return page.getByRole("region", { name: "Nimbus support chat" });
-}
-
-async function openChat(page: Page) {
-  await page.getByRole("button", { name: "Ask Nimbus" }).click();
-  await expect(chat(page)).toBeVisible();
-}
-
-/** Start waiting before the click that sends the message. */
-async function nextChatReply(page: Page): Promise<ChatReply> {
-  const response = await page.waitForResponse(
-    (res) => res.url().endsWith("/api/chat") && res.request().method() === "POST",
-  );
-  return response.json();
-}
-
-async function ask(page: Page, text: string): Promise<ChatReply> {
-  const reply = nextChatReply(page);
-  await chat(page).getByPlaceholder("Type a message").fill(text);
-  await chat(page).getByRole("button", { name: "Send" }).click();
-  return reply;
-}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -71,10 +45,7 @@ test("an unanswerable follow-up lands in the staff inbox", async ({ page }) => {
   await expect(chat(page).getByText(/^I don't have that in the Nimbus help center\./)).toBeVisible();
   await expect(chat(page).getByRole("link", { name: "staff inbox" })).toBeVisible();
 
-  await page.goto("/login");
-  await page.getByLabel("Password").fill(ADMIN_PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/inbox$/);
+  await signIn(page);
   await expect(page.locator(`a[href="/inbox/${reply.ticketId}"]`)).toContainText(
     "What about Salesforce?",
   );

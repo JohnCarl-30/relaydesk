@@ -32,6 +32,18 @@ OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/trac
 
 Two fixture tickets are already in the inbox so it isn't empty on first open.
 
+## Inbox co-pilot
+
+Every new ticket gets a co-pilot pass right after the chat reply is sent:
+- **Triage:** it files the ticket under a help-center topic, writes a one-line summary, and notes why a person is needed.
+- **Draft:** it saves one suggested reply. Staff **Send**, edit and send, or **Reject** it with a reason.
+
+It never sends on its own. Only the staff reply path posts to the customer.
+
+Without a model key the draft is a holding reply ("I've passed this to the team…"), since every ticket exists because the article bot already failed. With `OPENAI_API_KEY` set, it drafts an answer from the cited articles. Refunds, discounts, cancellations, and legal questions always get a holding reply.
+
+The **AI drafts on/off** switch in the inbox header turns it off. Each ticket gets at most 5 runs a day, and every run is logged in the ticket's sidebar.
+
 ## Tests and evals
 
 CI runs the unit tests and the widget's browser tests on every push and PR:
@@ -47,6 +59,7 @@ The evals are keyless scripts you run by hand against [`eval/golden.csv`](eval/g
 npx --yes tsx eval/compare-retrievers.ts  # hit@1 / hit@3 per retriever
 npx --yes tsx eval/conversations.ts       # multi-turn follow-ups
 npx --yes tsx eval/escalation.ts          # when to open a ticket
+npx --yes tsx eval/copilot.ts             # co-pilot triage on replayed tickets
 ```
 
 Details and past results: [eval/README.md](eval/README.md). Escalation: [eval/escalation.md](eval/escalation.md). Rewrite on vs off: [eval/rewrite.md](eval/rewrite.md). Extractive vs generate: [eval/generate.md](eval/generate.md). Latency and $: [eval/cost.md](eval/cost.md).
