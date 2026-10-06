@@ -8,9 +8,11 @@ import type { Ticket } from "@/lib/models";
 
 export function InboxShell({
   tickets,
+  copilotOn,
   children,
 }: {
   tickets: Ticket[];
+  copilotOn: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -85,7 +87,11 @@ export function InboxShell({
       </aside>
 
       <div className={onTicket ? "hidden min-h-0 w-80 shrink-0 lg:flex" : "flex min-h-0 w-full shrink-0 lg:w-80"}>
-        <TicketList tickets={tickets} activeId={onTicket ? pathname.slice("/inbox/".length) : null} />
+        <TicketList
+          tickets={tickets}
+          activeId={onTicket ? pathname.slice("/inbox/".length) : null}
+          copilotOn={copilotOn}
+        />
       </div>
 
       <div className={onTicket ? "flex min-h-0 min-w-0 flex-1" : "hidden min-h-0 min-w-0 flex-1 lg:flex"}>

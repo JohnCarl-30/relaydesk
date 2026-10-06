@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import {
   addMessage,
   createConversation,
@@ -7,6 +7,7 @@ import {
   getTicketByConversation,
   listMessages,
 } from "@/lib/db";
+import { runCopilot } from "@/lib/copilot";
 import { PENDING_TICKET_EMAIL } from "@/lib/escalate";
 import { answerQuestion } from "@/lib/graph";
 
@@ -69,10 +70,15 @@ export async function POST(request: Request) {
   let reply = rag.answer;
   if (rag.escalated) {
     if (!ticket) {
-      ticket = createTicket(
+      const created = createTicket(
         conversationId,
         ticketEmail(body.email, conversation?.visitor_email ?? null),
       );
+      ticket = created;
+      // Draft after the response is sent, so the visitor never waits on it.
+      after(async () => {
+        await runCopilot(created.id, "ticket_created");
+      });
     }
     if (ticket) {
       reply = `${rag.answer}\n\nTicket ${ticket.id} is in the staff inbox.`;

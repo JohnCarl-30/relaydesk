@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { PENDING_TICKET_EMAIL } from "@/lib/escalate";
-import type { Conversation, Message, Ticket } from "@/lib/models";
+import type { AgentDraft, AgentRun, Conversation, Message, Ticket } from "@/lib/models";
 
-export type { Conversation, Message, Ticket };
+export type { AgentDraft, AgentRun, Conversation, Message, Ticket };
 
 type GlobalDb = typeof globalThis & { __relaydeskDb?: Database.Database };
 
@@ -41,6 +41,36 @@ function open(): Database.Database {
       updated_at TEXT NOT NULL,
       assignee TEXT
     );
+    CREATE TABLE IF NOT EXISTS agent_drafts (
+      id TEXT PRIMARY KEY,
+      ticket_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      body TEXT NOT NULL,
+      citations TEXT,
+      rationale TEXT NOT NULL,
+      based_on_message_id TEXT,
+      status TEXT NOT NULL,
+      final_body TEXT,
+      reject_reason TEXT,
+      model TEXT NOT NULL,
+      prompt_version TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      decided_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS agent_runs (
+      id TEXT PRIMARY KEY,
+      ticket_id TEXT NOT NULL,
+      trigger TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      detail TEXT,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
   migrateTickets(db);
   seedIfEmpty(db);
@@ -50,8 +80,10 @@ function open(): Database.Database {
 
 function migrateTickets(db: Database.Database) {
   const cols = db.prepare("PRAGMA table_info(tickets)").all() as { name: string }[];
-  if (!cols.some((col) => col.name === "assignee")) {
-    db.exec("ALTER TABLE tickets ADD COLUMN assignee TEXT");
+  for (const column of ["assignee", "topic", "summary", "needs_human_reason"]) {
+    if (!cols.some((col) => col.name === column)) {
+      db.exec(`ALTER TABLE tickets ADD COLUMN ${column} TEXT`);
+    }
   }
 }
 
@@ -246,6 +278,9 @@ export function createTicket(conversationId: string, email: string): Ticket {
     preview: (last?.body ?? "New conversation").slice(0, 140),
     created_at: now,
     updated_at: now,
+    topic: null,
+    summary: null,
+    needs_human_reason: null,
   };
   db()
     .prepare(
@@ -268,7 +303,12 @@ export function createTicket(conversationId: string, email: string): Ticket {
 
 export function listTickets(): Ticket[] {
   return db()
-    .prepare("SELECT * FROM tickets ORDER BY updated_at DESC")
+    .prepare(
+      `SELECT t.*, EXISTS(
+         SELECT 1 FROM agent_drafts d WHERE d.ticket_id = t.id AND d.status = 'pending'
+       ) AS has_draft
+       FROM tickets t ORDER BY t.updated_at DESC`,
+    )
     .all() as Ticket[];
 }
 
@@ -289,9 +329,10 @@ export function replyToTicket(id: string, body: string): Ticket | undefined {
   if (!ticket) return undefined;
   addMessage(ticket.conversation_id, "agent", body);
   const now = new Date().toISOString();
+  // A person answered, so the "needs a human" flag is settled.
   db()
     .prepare(
-      "UPDATE tickets SET status = 'waiting', assignee = COALESCE(assignee, 'You'), updated_at = ? WHERE id = ?",
+      "UPDATE tickets SET status = 'waiting', assignee = COALESCE(assignee, 'You'), needs_human_reason = NULL, updated_at = ? WHERE id = ?",
     )
     .run(now, id);
   return getTicket(id);
@@ -312,4 +353,125 @@ export function updateTicket(
     )
     .run(status, assignee, now, id);
   return getTicket(id);
+}
+
+export function setTicketTriage(
+  id: string,
+  triage: { topic: string; summary: string; needsHumanReason: string | null },
+) {
+  db()
+    .prepare("UPDATE tickets SET topic = ?, summary = ?, needs_human_reason = ? WHERE id = ?")
+    .run(triage.topic, triage.summary, triage.needsHumanReason, id);
+}
+
+/** Saves a pending draft and supersedes any earlier pending draft for the ticket. */
+export function insertDraft(
+  draft: Omit<AgentDraft, "id" | "status" | "final_body" | "reject_reason" | "created_at" | "decided_at">,
+): AgentDraft {
+  const row: AgentDraft = {
+    ...draft,
+    id: `drf_${crypto.randomUUID().slice(0, 8)}`,
+    status: "pending",
+    final_body: null,
+    reject_reason: null,
+    created_at: new Date().toISOString(),
+    decided_at: null,
+  };
+  const write = db().transaction(() => {
+    db()
+      .prepare(
+        "UPDATE agent_drafts SET status = 'superseded', decided_at = ? WHERE ticket_id = ? AND status = 'pending'",
+      )
+      .run(row.created_at, row.ticket_id);
+    db()
+      .prepare(
+        `INSERT INTO agent_drafts (id, ticket_id, kind, body, citations, rationale, based_on_message_id,
+           status, final_body, reject_reason, model, prompt_version, created_at, decided_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        row.id, row.ticket_id, row.kind, row.body, row.citations, row.rationale,
+        row.based_on_message_id, row.status, row.final_body, row.reject_reason,
+        row.model, row.prompt_version, row.created_at, row.decided_at,
+      );
+  });
+  write();
+  return row;
+}
+
+export function getPendingDraft(ticketId: string): AgentDraft | undefined {
+  return db()
+    .prepare(
+      "SELECT * FROM agent_drafts WHERE ticket_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
+    )
+    .get(ticketId) as AgentDraft | undefined;
+}
+
+export function getDraft(id: string): AgentDraft | undefined {
+  return db().prepare("SELECT * FROM agent_drafts WHERE id = ?").get(id) as
+    | AgentDraft
+    | undefined;
+}
+
+export function decideDraft(
+  id: string,
+  decision: { status: "sent" | "edited" | "rejected"; finalBody?: string; rejectReason?: string },
+) {
+  db()
+    .prepare(
+      "UPDATE agent_drafts SET status = ?, final_body = ?, reject_reason = ?, decided_at = ? WHERE id = ?",
+    )
+    .run(
+      decision.status,
+      decision.finalBody ?? null,
+      decision.rejectReason ?? null,
+      new Date().toISOString(),
+      id,
+    );
+}
+
+export function recordRun(run: Omit<AgentRun, "id" | "created_at">): AgentRun {
+  const row: AgentRun = {
+    ...run,
+    id: `run_${crypto.randomUUID().slice(0, 8)}`,
+    created_at: new Date().toISOString(),
+  };
+  db()
+    .prepare(
+      `INSERT INTO agent_runs (id, ticket_id, trigger, outcome, detail, input_tokens, output_tokens, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      row.id, row.ticket_id, row.trigger, row.outcome, row.detail,
+      row.input_tokens, row.output_tokens, row.created_at,
+    );
+  return row;
+}
+
+export function listRuns(ticketId: string, limit = 5): AgentRun[] {
+  return db()
+    .prepare("SELECT * FROM agent_runs WHERE ticket_id = ? ORDER BY created_at DESC LIMIT ?")
+    .all(ticketId, limit) as AgentRun[];
+}
+
+export function countRunsSince(ticketId: string, sinceIso: string): number {
+  const row = db()
+    .prepare("SELECT COUNT(*) AS n FROM agent_runs WHERE ticket_id = ? AND created_at >= ?")
+    .get(ticketId, sinceIso) as { n: number };
+  return row.n;
+}
+
+export function getSetting(key: string): string | undefined {
+  const row = db().prepare("SELECT value FROM settings WHERE key = ?").get(key) as
+    | { value: string }
+    | undefined;
+  return row?.value;
+}
+
+export function setSetting(key: string, value: string) {
+  db()
+    .prepare(
+      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    )
+    .run(key, value);
 }

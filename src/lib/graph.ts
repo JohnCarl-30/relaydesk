@@ -73,7 +73,7 @@ type ChatResponse = {
   usage_metadata?: { input_tokens?: number; output_tokens?: number };
 };
 
-type ChatLike = {
+export type ChatLike = {
   invoke: (messages: { role: string; content: string }[]) => Promise<ChatResponse>;
 };
 
@@ -94,17 +94,17 @@ class StubChatModel implements ChatLike {
 const GENERATE_SYSTEM =
   "You are the Nimbus support assistant on a customer site. Answer only from the provided help articles. Be short. If the articles do not contain the answer, say you are unsure and suggest talking to a human. Mention article titles naturally. Do not invent policies, prices, or product behavior.";
 
-function hasLlm(): boolean {
+export function hasLlm(): boolean {
   return Boolean(process.env.OPENAI_API_KEY) || process.env.RELAYDESK_STUB_LLM === "1";
 }
 
-function usingStubLlm(): boolean {
+export function usingStubLlm(): boolean {
   return !process.env.OPENAI_API_KEY && process.env.RELAYDESK_STUB_LLM === "1";
 }
 
 let stubSession: StubChatModel | undefined;
 
-function chatModel(): ChatLike {
+export function chatModel(): ChatLike {
   if (usingStubLlm()) {
     stubSession ??= new StubChatModel([
       "Nimbus is the analytics product in the help center. I am not fully sure. Talk to a person if this is the wrong case.",

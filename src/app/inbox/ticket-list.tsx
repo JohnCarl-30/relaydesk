@@ -1,18 +1,54 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { formatRelative, IconSearch, Initials, StatusPill } from "@/components/ui";
 import type { Ticket } from "@/lib/models";
 
-const FILTERS = ["all", "open", "waiting", "closed"] as const;
+const FILTERS = ["all", "review", "open", "waiting", "closed"] as const;
+
+/** A draft waiting for review, or a ticket only a person can answer. */
+function needsReview(ticket: Ticket): boolean {
+  return Boolean(ticket.has_draft) || Boolean(ticket.needs_human_reason);
+}
+
+function CopilotToggle({ on }: { on: boolean }) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  async function toggle() {
+    setPending(true);
+    await fetch("/api/copilot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: !on }),
+    });
+    setPending(false);
+    router.refresh();
+  }
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={pending}
+      onClick={() => void toggle()}
+      className="flex items-center gap-1.5 text-[11px] text-muted transition-colors hover:text-ink disabled:opacity-50"
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${on ? "bg-forest" : "bg-line"}`} aria-hidden />
+      AI drafts {on ? "on" : "off"}
+    </button>
+  );
+}
 
 export function TicketList({
   tickets,
   activeId,
+  copilotOn,
 }: {
   tickets: Ticket[];
   activeId: string | null;
+  copilotOn: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
@@ -20,7 +56,9 @@ export function TicketList({
 
   const visible = useMemo(() => {
     return tickets.filter((ticket) => {
-      if (filter !== "all" && ticket.status !== filter) return false;
+      if (filter === "review" ? !needsReview(ticket) : filter !== "all" && ticket.status !== filter) {
+        return false;
+      }
       if (!q) return true;
       return (
         ticket.email.toLowerCase().includes(q) ||
@@ -34,8 +72,10 @@ export function TicketList({
     <section className="flex h-full min-h-0 w-full flex-col border-r border-line bg-card">
       <header className="border-b border-line px-4 py-3">
         <div className="flex items-baseline justify-between">
-          <h1 className="text-sm font-medium">Inbox</h1>
-          <p className="text-xs text-muted">{tickets.length}</p>
+          <h1 className="text-sm font-medium">
+            Inbox <span className="ml-1 text-xs font-normal tabular-nums text-muted">{tickets.length}</span>
+          </h1>
+          <CopilotToggle on={copilotOn} />
         </div>
         <label className="relative mt-3 block">
           <span className="sr-only">Search tickets</span>
@@ -96,9 +136,17 @@ export function TicketList({
                         {formatRelative(ticket.updated_at)}
                       </p>
                     </div>
-                    <p className="mt-0.5 truncate text-sm text-muted">{ticket.preview}</p>
+                    <p className="mt-0.5 truncate text-sm text-muted">{ticket.summary ?? ticket.preview}</p>
                     <div className="mt-1.5 flex items-center gap-2">
                       <StatusPill status={ticket.status} />
+                      {ticket.has_draft ? (
+                        <span className="rounded-md bg-forest/10 px-1.5 py-0.5 text-[11px] font-medium text-forest">
+                          Draft ready
+                        </span>
+                      ) : null}
+                      {ticket.topic ? (
+                        <span className="text-[11px] text-muted">{ticket.topic}</span>
+                      ) : null}
                       <span className="text-[11px] text-muted">
                         {ticket.assignee ?? "Unassigned"}
                       </span>
