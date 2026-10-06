@@ -2,9 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatClock, Initials, StatusPill } from "@/components/ui";
 import { helpHrefForTitle } from "@/lib/articles";
-import { getTicket, listMessages } from "@/lib/db";
+import { copilotEnabled } from "@/lib/copilot";
+import { getPendingDraft, getTicket, listMessages, listRuns } from "@/lib/db";
+import { DraftCard, type DraftView } from "./draft-card";
 import { ReplyForm } from "./reply-form";
 import { TicketActions } from "./ticket-actions";
+
+const RUN_LABEL: Record<string, string> = {
+  answer: "Drafted an answer",
+  holding: "Drafted a holding reply",
+  disabled: "Skipped: co-pilot off",
+  rate_limited: "Skipped: daily limit",
+  error: "Drafting failed",
+};
 
 export default async function TicketPage({
   params,
@@ -16,6 +26,18 @@ export default async function TicketPage({
   if (!ticket) notFound();
   const messages = listMessages(ticket.conversation_id);
   const name = ticket.email.split("@")[0];
+  const pending = getPendingDraft(ticket.id);
+  const draft: DraftView | null = pending
+    ? {
+        id: pending.id,
+        kind: pending.kind,
+        body: pending.body,
+        rationale: pending.rationale,
+        model: pending.model,
+        related: pending.citations ? (JSON.parse(pending.citations) as string[]) : [],
+      }
+    : null;
+  const runs = listRuns(ticket.id, 4);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
@@ -25,7 +47,7 @@ export default async function TicketPage({
             <Link href="/inbox" className="text-xs text-muted hover:text-ink lg:hidden">
               Inbox
             </Link>
-            <h1 className="truncate text-sm font-medium">{ticket.preview}</h1>
+            <h1 className="truncate text-sm font-medium">{ticket.summary ?? ticket.preview}</h1>
             <p className="truncate text-xs text-muted">{ticket.email}</p>
           </div>
           <TicketActions
@@ -105,7 +127,16 @@ export default async function TicketPage({
             Closed. Reopen to reply.
           </p>
         ) : (
-          <ReplyForm ticketId={ticket.id} email={ticket.email} />
+          <>
+            <DraftCard
+              key={draft?.id ?? "none"}
+              ticketId={ticket.id}
+              draft={draft}
+              needsHumanReason={ticket.needs_human_reason}
+              enabled={copilotEnabled()}
+            />
+            <ReplyForm ticketId={ticket.id} email={ticket.email} />
+          </>
         )}
       </section>
 
@@ -148,6 +179,29 @@ export default async function TicketPage({
             <dd className="text-right tabular-nums">{messages.length}</dd>
           </div>
         </dl>
+        {ticket.summary || runs.length ? (
+          <div className="border-t border-line px-4 py-4">
+            <p className="text-[11px] font-medium uppercase tracking-widest text-muted">Co-pilot</p>
+            {ticket.summary ? (
+              <p className="mt-2 text-sm">
+                {ticket.topic ? (
+                  <span className="mr-1.5 rounded bg-forest/10 px-1.5 py-px text-[11px] text-forest">{ticket.topic}</span>
+                ) : null}
+                {ticket.summary}
+              </p>
+            ) : null}
+            {runs.length ? (
+              <ol className="mt-3 space-y-1.5 text-xs text-muted">
+                {runs.map((run) => (
+                  <li key={run.id} className="flex justify-between gap-2 tabular-nums">
+                    <span>{RUN_LABEL[run.outcome] ?? run.outcome}</span>
+                    <span>{formatClock(run.created_at)}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </div>
+        ) : null}
       </aside>
     </div>
   );
