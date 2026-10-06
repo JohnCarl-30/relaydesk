@@ -117,6 +117,18 @@ That run was **37/45**. After the fixes it is **45/45**:
 
 The price check still runs on every chat question, not just follow-ups. Limited to follow-ups, "what does an extra seat cost?" and "how much is Growth per month?" go through as standalone questions, get answered from the wrong article, and the score drops to 43/45.
 
+## Co-pilot
+
+`copilot-tickets.jsonl` holds 12 conversations. Each replays through `answerQuestion` the way the chat route does, opening a ticket on escalation. The co-pilot then runs on the ticket, and the eval checks three things: why the ticket exists (out of scope, answer didn't help, asked for a person, or policy), its topic, and which customer question it is about. Keyless, with a temporary database.
+
+```bash
+npx --yes tsx eval/copilot.ts
+```
+
+2026-10-07: **12/12** on reason, topic, and question. The same author wrote the cases and the rules, so treat this as a regression check.
+
+The widget still misses one escalation. "I need a human" gets an article answer instead of a ticket, because the phrase isn't in `VISITOR_ESCALATE`.
+
 ## Traces
 
 LangGraph nodes emit OpenTelemetry spans. Same question, extractive vs rewrite: [eval/traces/README.md](traces/README.md).
