@@ -91,7 +91,7 @@ npx --yes tsx eval/escalation.ts
 
 ## Follow-ups
 
-`conversations.jsonl` is 43 conversations, 45 checked turns. The categories follow IBM's [MTRAG](https://github.com/IBM/mt-rag-benchmark): `nonstandalone` needs the earlier turn, `standalone` switches topic and must not drag the old one along, `unanswerable` should escalate, `conversational` is thanks or ok, `handoff` asks for a person. Each turn replays through `answerQuestion` with the real replies as history. Keyless.
+`conversations.jsonl` is 44 conversations, 46 checked turns. The categories follow IBM's [MTRAG](https://github.com/IBM/mt-rag-benchmark): `nonstandalone` needs the earlier turn, `standalone` switches topic and must not drag the old one along, `unanswerable` should escalate, `conversational` is thanks or ok, `handoff` asks for a person. Each turn replays through `answerQuestion` with the real replies as history. Keyless.
 
 ```bash
 npx --yes tsx eval/conversations.ts
@@ -119,15 +119,15 @@ The price check still runs on every chat question, not just follow-ups. Limited 
 
 ## Co-pilot
 
-`copilot-tickets.jsonl` holds 12 conversations. Each replays through `answerQuestion` the way the chat route does, opening a ticket on escalation. The co-pilot then runs on the ticket, and the eval checks three things: why the ticket exists (out of scope, answer didn't help, asked for a person, or policy), its topic, and which customer question it is about. Keyless, with a temporary database.
+`copilot-tickets.jsonl` holds 13 conversations. Each replays through `answerQuestion` the way the chat route does, opening a ticket on escalation. The co-pilot then runs on the ticket, and the eval checks three things: why the ticket exists (out of scope, answer didn't help, asked for a person, or policy), its topic, and which customer question it is about. Keyless, with a temporary database.
 
 ```bash
 npx --yes tsx eval/copilot.ts
 ```
 
-2026-10-07: **12/12** on reason, topic, and question. The same author wrote the cases and the rules, so treat this as a regression check.
+2026-10-07: **13/13** on reason, topic, and question. The same author wrote the cases and the rules, so treat this as a regression check.
 
-The widget still misses one escalation. "I need a human" gets an article answer instead of a ticket, because the phrase isn't in `VISITOR_ESCALATE`.
+The eval first found that "I need a human" got an article answer instead of a ticket. `VISITOR_ESCALATE` only knew a few exact phrases. It now matches requests for a person by intent ("talk/speak/chat to…", "need a human", "…please"), while questions that only mention a person or an agent, like "a person's email" or "the user agent filter", stay questions. Both evals carry that case now (follow-ups **46/46**).
 
 ## Traces
 

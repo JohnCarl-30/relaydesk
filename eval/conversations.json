@@ -17,13 +17,13 @@
       "total": 3
     },
     "handoff": {
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "total": {
-    "pass": 45,
-    "total": 45
+    "pass": 46,
+    "total": 46
   },
   "failures": []
 }

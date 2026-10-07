@@ -7,8 +7,19 @@ export const COVERAGE_ESCALATE_BELOW = 0.5;
 export const PENDING_TICKET_EMAIL = "unassigned@nimbus.demo";
 export const REFUSE_LINE = "I don't have that in the Nimbus help center.";
 
-const VISITOR_ESCALATE =
-  /this didn'?t help|this did not help|talk to a (person|human)|speak to (someone|a person)|open a ticket/i;
+// Requests for a person. Each phrase needs an intent ("talk to", "need a",
+// "please"), so a question that only mentions a person or an agent ("a
+// person's email", "the user agent filter") stays a question.
+const VISITOR_ESCALATE = new RegExp(
+  [
+    String.raw`this did(?:n'?t| not) help`,
+    String.raw`\b(?:talk|speak|chat)\s+(?:to|with)\s+(?:(?:a|an)\s+)?(?:real\s+|live\s+)?(?:person|human|someone|somebody|agent|representative|rep|staff)\b`,
+    String.raw`\b(?:need|want|get me|give me)\s+(?:a|an)\s+(?:real\s+person|live\s+(?:person|agent)|human(?:\s+agent)?|representative)\b(?!')`,
+    String.raw`\b(?:human|person|agent|representative)\s+please\b`,
+    String.raw`\bopen a ticket\b`,
+  ].join("|"),
+  "i",
+);
 
 export type ScoredText = {
   score: number;
