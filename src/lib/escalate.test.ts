@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { unsupportedPriceQuestion } from "./escalate";
+import { isVisitorEscalation, unsupportedPriceQuestion } from "./escalate";
 
 describe("unsupportedPriceQuestion", () => {
   const sso = { text: "SSO is available on Growth and Scale." };
@@ -26,3 +26,38 @@ describe("unsupportedPriceQuestion", () => {
     assert.equal(unsupportedPriceQuestion("Who is in charge of billing?", seats), false);
   });
 });
+
+describe("isVisitorEscalation", () => {
+  it("catches the ways visitors ask for a person", () => {
+    for (const text of [
+      "This didn't help",
+      "this did not help",
+      "I'd like to talk to a person",
+      "Can I speak to someone?",
+      "That doesn't match what sales told us. I need a human.",
+      "I need a human",
+      "I want a real person",
+      "can I chat with a live agent",
+      "speak with a representative please",
+      "human please",
+      "get me an agent please",
+      "Please open a ticket",
+    ]) {
+      assert.equal(isVisitorEscalation(text), true, text);
+    }
+  });
+
+  it("leaves product questions that only mention people or agents alone", () => {
+    for (const text of [
+      "Do I need a person's email to invite them?",
+      "I want a person to have viewer access",
+      "Do I need an agent to install the SDK?",
+      "How much is it per person?",
+      "What does the user agent filter do?",
+      "Can someone with viewer access export CSV?",
+    ]) {
+      assert.equal(isVisitorEscalation(text), false, text);
+    }
+  });
+});
+
