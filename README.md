@@ -63,3 +63,7 @@ npx --yes tsx eval/copilot.ts             # co-pilot triage on replayed tickets
 ```
 
 Details and past results: [eval/README.md](eval/README.md). Escalation: [eval/escalation.md](eval/escalation.md). Rewrite on vs off: [eval/rewrite.md](eval/rewrite.md). Extractive vs generate: [eval/generate.md](eval/generate.md). Latency and $: [eval/cost.md](eval/cost.md).
+
+## Operations
+
+[RUNBOOK.md](RUNBOOK.md) covers health checks, turning off the co-pilot, model outages, database backup and restore, and how to roll back.
