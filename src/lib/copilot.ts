@@ -13,8 +13,8 @@ import {
   type Ticket,
 } from "./db";
 import { isVisitorEscalation, PENDING_TICKET_EMAIL, REFUSE_LINE } from "./escalate";
-import { answerQuestion, chatModel, hasLlm, usingStubLlm } from "./graph";
-import { withSpan } from "./trace";
+import { answerQuestion, chatModel, chatModelName, hasLlm } from "./graph";
+import { generationAttributes, withSpan } from "./trace";
 
 /*
  * The inbox co-pilot. It reads a ticket, files it under a topic, and saves one
@@ -156,25 +156,36 @@ function holdingDraft(context: TicketContext, sources: Article[]): Drafted {
 }
 
 async function modelDraft(context: TicketContext, sources: Article[]): Promise<Drafted | null> {
-  const articles = sources.map((a, i) => `[${i + 1}] ${a.title}\n${a.body}`).join("\n\n");
-  const response = await chatModel().invoke([
-    { role: "system", content: DRAFT_SYSTEM },
-    {
-      role: "user",
-      content: `Customer first name: ${context.name}\n\nConversation:\n${context.transcript}\n\nHelp articles:\n${articles}`,
-    },
-  ]);
-  const body = typeof response.content === "string" ? response.content.trim() : "";
-  // A draft that talks money or cancellation goes back to a holding reply.
-  if (!body || POLICY_TERMS.test(body)) return null;
-  return {
-    kind: "answer",
-    body,
-    rationale: `Drafted from ${sources.map((a) => `"${a.title}"`).join(", ")}.`,
-    model: usingStubLlm() ? "stub" : (process.env.OPENAI_MODEL ?? "gpt-4o-mini"),
-    inputTokens: response.usage_metadata?.input_tokens ?? 0,
-    outputTokens: response.usage_metadata?.output_tokens ?? 0,
-  };
+  return withSpan("copilot.draft", {}, async (span) => {
+    const articles = sources.map((a, i) => `[${i + 1}] ${a.title}\n${a.body}`).join("\n\n");
+    const messages = [
+      { role: "system", content: DRAFT_SYSTEM },
+      {
+        role: "user",
+        content: `Customer first name: ${context.name}\n\nConversation:\n${context.transcript}\n\nHelp articles:\n${articles}`,
+      },
+    ];
+    const response = await chatModel().invoke(messages);
+    const body = typeof response.content === "string" ? response.content.trim() : "";
+    span.setAttributes(
+      generationAttributes({
+        model: chatModelName(),
+        input: messages,
+        output: body,
+        usage: response.usage_metadata,
+      }),
+    );
+    // A draft that talks money or cancellation goes back to a holding reply.
+    if (!body || POLICY_TERMS.test(body)) return null;
+    return {
+      kind: "answer",
+      body,
+      rationale: `Drafted from ${sources.map((a) => `"${a.title}"`).join(", ")}.`,
+      model: chatModelName(),
+      inputTokens: response.usage_metadata?.input_tokens ?? 0,
+      outputTokens: response.usage_metadata?.output_tokens ?? 0,
+    };
+  });
 }
 
 export function copilotEnabled(): boolean {
@@ -200,6 +211,7 @@ export async function runCopilot(
 
     const ticket = getTicket(ticketId);
     if (!ticket) return { outcome: "error" };
+    span.setAttribute("session.id", ticket.conversation_id);
     if (!copilotEnabled()) {
       log("disabled", "Co-pilot is off.");
       return { outcome: "disabled" };
