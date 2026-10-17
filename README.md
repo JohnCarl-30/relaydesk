@@ -67,3 +67,14 @@ Details and past results: [eval/README.md](eval/README.md). Escalation: [eval/es
 ## Operations
 
 [RUNBOOK.md](RUNBOOK.md) covers health checks, turning off the co-pilot, model outages, database backup and restore, and how to roll back.
+
+## Roadmap
+
+Each milestone is a set of issues. Progress is tracked there, not here.
+
+| Milestone | Target | Goal |
+| --- | --- | --- |
+| [Evals in Langfuse](https://github.com/JohnCarl-30/relaydesk/milestone/1) | Nov 15, 2026 | Every change is traced and gated by Langfuse experiments. The model is picked by an experiment. |
+| [Ready for real businesses](https://github.com/JohnCarl-30/relaydesk/milestone/2) | Dec 13, 2026 | A business can set up its own help center, hosted on a real domain. |
+| [Real users](https://github.com/JohnCarl-30/relaydesk/milestone/3) | Feb 28, 2027 | Two or three businesses use relaydesk every week. |
+| [Case study](https://github.com/JohnCarl-30/relaydesk/milestone/4) | Mar 31, 2027 | A written case study and demo, backed by real usage and eval numbers. |
