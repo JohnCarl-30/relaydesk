@@ -30,4 +30,17 @@ describe("redactText", () => {
     ];
     for (const text of kept) assert.equal(redactText(text), text);
   });
+
+  it("leaves UUIDs alone, even when their middle groups are all digits", () => {
+    const ids = [
+      "799ab1d1-7348-4105-9648-4d005768a7e6",
+      "12345678-1234-4234-9234-123456789012",
+      "B2C3D4E5-1111-4222-8333-ABCDEF012345",
+    ];
+    for (const id of ids) assert.equal(redactText(id), id);
+    assert.equal(
+      redactText("session 799ab1d1-7348-4105-9648-4d005768a7e6, call 0917-123-4567"),
+      "session 799ab1d1-7348-4105-9648-4d005768a7e6, call [phone]",
+    );
+  });
 });
