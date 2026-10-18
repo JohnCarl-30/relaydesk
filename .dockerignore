@@ -1,0 +1,12 @@
+.git
+node_modules
+.next
+data
+.cache
+.env*
+!.env.example
+test-results
+playwright-report
+blob-report
+.playwright-cli
+eval/traces/live.jsonl
