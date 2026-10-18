@@ -22,6 +22,28 @@ npx --yes tsx eval/upload-datasets.ts --dry-run  # prints the plan, writes nothi
 
 Don't edit these datasets in the Langfuse UI. The next sync overwrites edited items and archives added ones.
 
+## Langfuse experiments
+
+Each dataset item goes through `answerQuestion`, the widget's answer path. Each item becomes one experiment trace that holds the widget's spans, with scores attached:
+
+```bash
+npx --yes tsx eval/run-experiments.ts                       # both; or name one: golden, escalation
+npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defaults to <branch>@<sha>
+```
+
+| Dataset | Item scores | Run scores |
+| --- | --- | --- |
+| `relaydesk-golden` | `hit_at_1`, `hit_at_3` (in-corpus rows only), `faithfulness` | Mean of each |
+| `relaydesk-escalation` | `escalation_correct` | `escalation_precision`, `escalation_recall`, mean `escalation_correct` |
+
+- **Hit@k** uses the top 3 articles from the widget's first retrieval, the same check as `compare-retrievers.ts`.
+- **Faithfulness** is an LLM judge. It gives each answer a score from 0 to 1 for how well the articles it cites support it. Escalations and answers without citations get no score.
+- **Model use:** with `OPENAI_API_KEY` set, the model writes the answers, as in the widget, and also runs the judge. Without the key, answers are extractive and the judge is skipped.
+- **Without Langfuse keys**, the script runs the same task and evaluators on the CSVs and prints the scores without recording anything.
+- **Failure:** the script exits non-zero when an item fails or a run score is missing.
+
+2026-10-19, keyless (extractive answers, against a local Langfuse): hit@1 and hit@3 **1.0** (44/44), escalation precision and recall **1.0** (tp=7, fp=0, fn=0). These match `compare-retrievers.ts` and `escalation.ts`.
+
 ## Retrieval
 
 Hit@k vs `expected_slug` (no server):

@@ -30,6 +30,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@langfuse/client": "^6.0.0",
     "@langfuse/core": "^6.0.0",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
