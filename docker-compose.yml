@@ -1,0 +1,16 @@
+# docker compose up --build, then open http://127.0.0.1:3000.
+# Secrets come from .env.local (OPENAI_API_KEY, RELAYDESK_ADMIN_PASSWORD); it is optional.
+services:
+  relaydesk:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env.local
+        required: false
+    volumes:
+      - relaydesk-data:/data
+    restart: unless-stopped
+
+volumes:
+  relaydesk-data:

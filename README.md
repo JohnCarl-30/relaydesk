@@ -29,6 +29,14 @@ Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 - `/help` the articles the widget searches
 - `/inbox` staff inbox, password `nimbus-demo`
 
+Or run the production build in Docker:
+
+```bash
+docker compose up --build
+```
+
+The SQLite database lives in the `relaydesk-data` volume, so tickets survive a restart. Keys and the staff password come from `.env.local` if it exists. Set `RELAYDESK_ADMIN_PASSWORD` before exposing it anywhere.
+
 Answers go through a LangGraph loop. Retrieve help articles, write a reply, rewrite the query and search again if the first pass is weak. No API key still quotes when retrieve is confident. Out of corpus refuses and opens a ticket. Set `OPENAI_API_KEY` (and optional `OPENAI_BASE_URL`) if you want the generate and rewrite nodes to call the model.
 
 OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/traces/extractive.txt) is the no-key path. [`eval/traces/llm-rewrite.txt`](eval/traces/llm-rewrite.txt) is the rewrite loop. See [eval/traces/README.md](eval/traces/README.md).
