@@ -12,6 +12,8 @@ npx --yes tsx eval/rewrite.ts
 
 `answerQuestion(question, { rewrite: false })` caps the LangGraph loop after the first generate. Chat still defaults to rewrite on.
 
+Rerun on 2026-10-18, after the corpus split: hit@1 and hit@3 are **44/44** in both arms, and **4** rows fire the loop. Growth quota now hits at rank 1. The tables below are the 2026-08-28 snapshot. [rewrite.json](rewrite.json) has the rerun.
+
 ## Who would rewrite
 
 50 golden rows. 7 already escalate. 38 are confident (`score >= 6`). **5** would fire the loop.

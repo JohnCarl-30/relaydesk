@@ -1,13 +1,23 @@
 # Relaydesk
 
-A support widget and a staff inbox. Nimbus is the fake analytics company they sit on.
+A support bot that knows when to hand off to a person, and evals that show it.
 
-The widget answers from `/help` and cites the article. An out-of-corpus question or "This didn't help" opens a ticket in `/inbox`. Staff reply from there. Why Salesforce must refuse is in [eval/escalation.md](eval/escalation.md).
+The widget answers from the help center and cites the article. When the help center has no answer, it says so and opens a ticket. In the staff inbox, a co-pilot triages the ticket and drafts a reply, and a person sends it. Nimbus is the fake analytics company it runs on.
+
+![A visitor asks about SSO and gets a cited answer, asks about Salesforce and gets a ticket, then staff send the co-pilot's draft from the inbox](docs/demo.gif)
+
+| Eval | Result | Details |
+| --- | --- | --- |
+| Retrieval, 44 labeled questions | hit@1 44/44, hit@3 44/44 | [eval/README.md](eval/README.md) |
+| When to open a ticket, 15 labeled questions | precision 1.00, recall 1.00 (always answering: recall 0) | [eval/escalation.md](eval/escalation.md) |
+| Co-pilot triage, 13 replayed tickets | reason, topic and question 13/13 | [eval/copilot.ts](eval/copilot.ts) |
+| Cost, whole golden set | $0 without a key, about $0.007 with gpt-4o-mini | [eval/cost.md](eval/cost.md) |
+
+All of them run locally without an API key.
 
 ## Run
 
 ```bash
-cd ~/Documents/relaydesk
 cp .env.example .env.local   # optional: add OPENAI_API_KEY for LLM answers
 npm install
 npm run dev
