@@ -6,6 +6,11 @@ import {
   type AttributeValue,
   type Span,
 } from "@opentelemetry/api";
+import {
+  isDefaultExportSpan,
+  LangfuseSpanProcessor,
+  type ShouldExportSpan,
+} from "@langfuse/otel";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   NodeTracerProvider,
@@ -14,7 +19,11 @@ import {
 import type {
   ReadableSpan,
   SpanExporter,
+  SpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
+import { redactText } from "./redact";
+
+const TRACER_NAME = "relaydesk";
 
 export type SpanDump = {
   name: string;
@@ -65,13 +74,83 @@ const exporter: SpanExporter = {
   },
 };
 
+/**
+ * Runs first, so the local file, the in-memory snapshot, and Langfuse all see
+ * redacted text. Spans are mutable until every processor's onEnd has run.
+ */
+class RedactingSpanProcessor implements SpanProcessor {
+  onStart(): void {}
+  onEnd(span: ReadableSpan): void {
+    const attributes = span.attributes as Record<string, AttributeValue | undefined>;
+    for (const [key, value] of Object.entries(attributes)) {
+      if (typeof value === "string") {
+        attributes[key] = redactText(value);
+      } else if (Array.isArray(value)) {
+        attributes[key] = value.map((item) =>
+          typeof item === "string" ? redactText(item) : item,
+        ) as AttributeValue;
+      }
+    }
+  }
+  forceFlush(): Promise<void> {
+    return Promise.resolve();
+  }
+  shutdown(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+/** Langfuse's default (its own and GenAI spans) plus every relaydesk span. */
+export const shouldExportToLangfuse: ShouldExportSpan = ({ otelSpan }) =>
+  otelSpan.instrumentationScope.name === TRACER_NAME || isDefaultExportSpan(otelSpan);
+
+type LangfuseEnv = Record<string, string | undefined>;
+
+/** Sends spans to Langfuse only when both keys are set. */
+export function langfuseProcessor(env: LangfuseEnv = process.env): LangfuseSpanProcessor | undefined {
+  if (!env.LANGFUSE_PUBLIC_KEY || !env.LANGFUSE_SECRET_KEY) return undefined;
+  return new LangfuseSpanProcessor({
+    publicKey: env.LANGFUSE_PUBLIC_KEY,
+    secretKey: env.LANGFUSE_SECRET_KEY,
+    baseUrl: env.LANGFUSE_BASE_URL,
+    shouldExportSpan: shouldExportToLangfuse,
+  });
+}
+
 export function initTracing(): void {
   if (provider) return;
+  const langfuse = langfuseProcessor();
   provider = new NodeTracerProvider({
     resource: resourceFromAttributes({ "service.name": "relaydesk" }),
-    spanProcessors: [new SimpleSpanProcessor(exporter)],
+    spanProcessors: [
+      new RedactingSpanProcessor(),
+      new SimpleSpanProcessor(exporter),
+      ...(langfuse ? [langfuse] : []),
+    ],
   });
   provider.register();
+}
+
+type ChatMessage = { role: string; content: string };
+
+/**
+ * Marks a span as one model call. Model and token names follow the
+ * OpenTelemetry GenAI conventions; input and output use Langfuse's names.
+ */
+export function generationAttributes(call: {
+  model: string;
+  input: ChatMessage[];
+  output: string;
+  usage?: { input_tokens?: number; output_tokens?: number };
+}): Record<string, string | number> {
+  return {
+    "langfuse.observation.type": "generation",
+    "gen_ai.request.model": call.model,
+    "gen_ai.usage.input_tokens": call.usage?.input_tokens ?? 0,
+    "gen_ai.usage.output_tokens": call.usage?.output_tokens ?? 0,
+    "langfuse.observation.input": JSON.stringify(call.input),
+    "langfuse.observation.output": call.output,
+  };
 }
 
 export async function flushTracing(): Promise<void> {
@@ -116,6 +195,9 @@ export function latestTraceId(spans: ReadableSpan[] = finished): string | undefi
   return spans.at(-1)?.spanContext().traceId;
 }
 
+/** Full prompts and answers stay in the JSON dump; the tree stays one line per span. */
+const TREE_HIDDEN = new Set(["langfuse.observation.input", "langfuse.observation.output"]);
+
 export function formatTree(dumps: SpanDump[]): string {
   const children = new Map<string, SpanDump[]>();
   const roots: SpanDump[] = [];
@@ -132,7 +214,9 @@ export function formatTree(dumps: SpanDump[]): string {
 
   const lines: string[] = [];
   const walk = (row: SpanDump, depth: number) => {
-    const bits = Object.entries(row.attributes).map(([key, value]) => `${key}=${value}`);
+    const bits = Object.entries(row.attributes)
+      .filter(([key]) => !TREE_HIDDEN.has(key))
+      .map(([key, value]) => `${key}=${value}`);
     const extra = bits.length ? `  ${bits.join(" ")}` : "";
     lines.push(`${"  ".repeat(depth)}${row.name.padEnd(16)} ${String(row.durationMs).padStart(6)}ms${extra}`);
     for (const child of children.get(row.spanId) ?? []) walk(child, depth + 1);
@@ -147,7 +231,7 @@ export async function withSpan<T>(
   fn: (span: Span) => T | Promise<T>,
 ): Promise<T> {
   initTracing();
-  const tracer = trace.getTracer("relaydesk");
+  const tracer = trace.getTracer(TRACER_NAME);
   return tracer.startActiveSpan(name, async (span) => {
     for (const [key, value] of Object.entries(attrs)) {
       if (value !== undefined) span.setAttribute(key, value);

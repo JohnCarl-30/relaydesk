@@ -1,6 +1,8 @@
 # Traces
 
-OpenTelemetry spans on the LangGraph loop. Not Langfuse, not Phoenix. A JSON file you can open in the editor is enough to point at retrieve vs rewrite.
+OpenTelemetry spans on the LangGraph loop. A JSON file you can open in the editor is enough to point at retrieve vs rewrite.
+
+The same spans go to Langfuse when `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set (see `.env.example`). Model calls on `generate`, `rewrite`, and `copilot.draft` carry `gen_ai.*` model and token attributes plus `langfuse.observation.input`/`output`, so Langfuse shows them as generations with cost. The chat route passes the conversation ID as `session.id`. A redacting span processor runs before every exporter, so emails, phone numbers, and card numbers are masked in the local file and in Langfuse alike. The text trees below hide the full prompts; the JSON dumps keep them.
 
 Question captured here: `what is nimbus`. Retrieve score is 5, so `confident` is false. Without a key the graph still ends after generate. With an LLM (or `RELAYDESK_STUB_LLM=1`) it rewrites the query and searches again.
 

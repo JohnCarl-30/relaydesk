@@ -24,7 +24,7 @@ import {
   type Hit,
   type RagResult,
 } from "./rag";
-import { initTracing, withSpan } from "./trace";
+import { generationAttributes, initTracing, withSpan } from "./trace";
 
 /** The visitor's question and the forms the graph uses it in. */
 type ResolvedQuestion = {
@@ -102,6 +102,11 @@ export function usingStubLlm(): boolean {
   return !process.env.OPENAI_API_KEY && process.env.RELAYDESK_STUB_LLM === "1";
 }
 
+/** The model name traces and co-pilot drafts record. */
+export function chatModelName(): string {
+  return usingStubLlm() ? "stub" : (process.env.OPENAI_MODEL ?? "gpt-4o-mini");
+}
+
 let stubSession: StubChatModel | undefined;
 
 export function chatModel(): ChatLike {
@@ -115,7 +120,7 @@ export function chatModel(): ChatLike {
   }
   const base = process.env.OPENAI_BASE_URL?.replace(/\/$/, "");
   return new ChatOpenAI({
-    model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+    model: chatModelName(),
     temperature: 0.2,
     apiKey: process.env.OPENAI_API_KEY,
     ...(base ? { configuration: { baseURL: base } } : {}),
@@ -220,16 +225,26 @@ async function answerFromHits(
     .join("\n\n");
 
   try {
-    const response = await chatModel().invoke([
+    const messages = [
       { role: "system", content: GENERATE_SYSTEM },
       {
         role: "user",
         content: `Question: ${resolved.prompt}\n\nHelp articles:\n${context}`,
       },
-    ]);
-    Object.assign(attrs, tokenAttrs(response));
+    ];
+    const response = await chatModel().invoke(messages);
     const text =
       typeof response.content === "string" ? response.content.trim() : "";
+    Object.assign(
+      attrs,
+      tokenAttrs(response),
+      generationAttributes({
+        model: chatModelName(),
+        input: messages,
+        output: text,
+        usage: response.usage_metadata,
+      }),
+    );
     if (!text) return { result: extractive(), attrs };
     return {
       result: {
@@ -272,21 +287,28 @@ async function generateNode(state: SupportStateType) {
 
 async function rewriteNode(state: SupportStateType) {
   return withSpan("rewrite", { "llm.stub": usingStubLlm() }, async (span) => {
-    const response = await chatModel().invoke([
+    const messages = [
       {
         role: "system",
         content:
           "Rewrite the visitor question as a short help-center search query. Return only the query. Keep product words like seats, SSO, invoice, funnel, API key.",
       },
       { role: "user", content: state.resolved.prompt },
-    ]);
+    ];
+    const response = await chatModel().invoke(messages);
     const tokens = tokenAttrs(response);
     span.setAttribute("llm.input_tokens", tokens["llm.input_tokens"]);
     span.setAttribute("llm.output_tokens", tokens["llm.output_tokens"]);
-    const query =
-      typeof response.content === "string" && response.content.trim()
-        ? response.content.trim()
-        : state.resolved.search;
+    const text = typeof response.content === "string" ? response.content.trim() : "";
+    span.setAttributes(
+      generationAttributes({
+        model: chatModelName(),
+        input: messages,
+        output: text,
+        usage: response.usage_metadata,
+      }),
+    );
+    const query = text || state.resolved.search;
     span.setAttribute("rewrite.query", query);
     span.setAttribute("graph.next", "retrieve");
     return { query };
@@ -329,14 +351,25 @@ export async function generateFromHits(
 
 export async function answerQuestion(
   question: string,
-  options: { rewrite?: boolean; history?: ConversationTurn[] } = {},
+  options: {
+    rewrite?: boolean;
+    history?: ConversationTurn[];
+    /** Groups a conversation's traces into one Langfuse session. */
+    sessionId?: string;
+  } = {},
 ): Promise<RagResult> {
   initTracing();
   stubSession = undefined;
-  return withSpan("support.answer", { question }, async (span) => {
+  const attrs = {
+    question,
+    "session.id": options.sessionId,
+    "langfuse.observation.input": question,
+  };
+  return withSpan("support.answer", attrs, async (span) => {
     const acknowledgement = isAcknowledgement(question);
     span.setAttribute("acknowledgement", acknowledgement);
     if (acknowledgement) {
+      span.setAttribute("langfuse.observation.output", ACKNOWLEDGEMENT_REPLY);
       return {
         answer: ACKNOWLEDGEMENT_REPLY,
         citations: [],
@@ -360,6 +393,7 @@ export async function answerQuestion(
     span.setAttribute("rewrite.allowed", options.rewrite !== false);
     span.setAttribute("graph.next", "END");
     span.setAttribute("citation_count", (state.citations ?? []).length);
+    span.setAttribute("langfuse.observation.output", state.answer);
     return {
       answer: state.answer,
       citations: state.citations ?? [],

@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     body: messageBody,
   }));
   addMessage(conversationId, "visitor", text);
-  const rag = await answerQuestion(text, { history });
+  const rag = await answerQuestion(text, { history, sessionId: conversationId });
   const conversation = getConversation(conversationId);
   let ticket = getTicketByConversation(conversationId);
   let reply = rag.answer;

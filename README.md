@@ -39,7 +39,7 @@ The SQLite database lives in the `relaydesk-data` volume, so tickets survive a r
 
 Answers go through a LangGraph loop. Retrieve help articles, write a reply, rewrite the query and search again if the first pass is weak. No API key still quotes when retrieve is confident. Out of corpus refuses and opens a ticket. Set `OPENAI_API_KEY` (and optional `OPENAI_BASE_URL`) if you want the generate and rewrite nodes to call the model.
 
-OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/traces/extractive.txt) is the no-key path. [`eval/traces/llm-rewrite.txt`](eval/traces/llm-rewrite.txt) is the rewrite loop. See [eval/traces/README.md](eval/traces/README.md).
+OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/traces/extractive.txt) is the no-key path. [`eval/traces/llm-rewrite.txt`](eval/traces/llm-rewrite.txt) is the rewrite loop. See [eval/traces/README.md](eval/traces/README.md). Set the Langfuse keys in `.env.example` and the same spans go to Langfuse, with model calls as generations and each chat as one session.
 
 ## Demo path
 
