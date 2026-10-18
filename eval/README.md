@@ -4,6 +4,26 @@
 
 Until 2026-09-29, CI also scored a `POST /api/eval` endpoint with [rag-eval-harness](https://github.com/JohnCarl-30/rag-eval-harness) against a committed baseline. The gate, the endpoint, and the baseline were removed. The "lexical means" tables below are dated snapshots from it.
 
+## Langfuse datasets
+
+The CSVs stay the source of truth. Edit `golden.csv` or `escalation-labels.csv` in a PR, then sync them to Langfuse:
+
+```bash
+npx --yes tsx eval/upload-datasets.ts            # needs LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY
+npx --yes tsx eval/upload-datasets.ts --dry-run  # prints the plan, writes nothing
+```
+
+| CSV | Langfuse dataset | `expectedOutput` | `metadata` |
+| --- | --- | --- | --- |
+| `golden.csv` | `relaydesk-golden` | `{ slug, answer }`, `slug` is `null` for out-of-corpus rows | `{ source }` |
+| `escalation-labels.csv` | `relaydesk-escalation` | `{ shouldEscalate }` | `{ source, why }` |
+
+`input` is `{ question }` in both. Each item's id is the dataset name plus a hash of the question, so rerunning the script updates items instead of adding them. Only changed rows are written. Editing a question creates a new item, and a row removed from the CSV is archived in Langfuse, not deleted. Langfuse keeps a version per write. The script prints a timestamp at the end, and listing a dataset with that `version` returns exactly what was uploaded.
+
+Don't edit these datasets in the Langfuse UI. The next sync overwrites edited items and archives added ones.
+
+## Retrieval
+
 Hit@k vs `expected_slug` (no server):
 
 ```bash

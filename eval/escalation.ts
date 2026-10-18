@@ -1,13 +1,8 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { extractiveAnswer, retrieve } from "../src/lib/rag";
-
-type LabelRow = {
-  question: string;
-  shouldEscalate: boolean;
-  why: string;
-};
+import { loadLabels } from "./labels";
 
 type Confusion = {
   precision: number;
@@ -18,20 +13,6 @@ type Confusion = {
   fn: number;
   tn: number;
 };
-
-function loadLabels(path: string): LabelRow[] {
-  const text = readFileSync(path, "utf8").trim();
-  const lines = text.split("\n").slice(1);
-  return lines.map((line) => {
-    const match = line.match(/^"(.*)",(\d),(.+)$/);
-    if (!match) throw new Error(`bad label row: ${line}`);
-    return {
-      question: match[1].replaceAll('""', '"'),
-      shouldEscalate: match[2] === "1",
-      why: match[3].replaceAll(/^"|"$/g, "").replaceAll('""', '"'),
-    };
-  });
-}
 
 function confusion(pred: boolean[], gold: boolean[]): Confusion {
   let tp = 0;
