@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "npx --yes tsx --test \"src/**/*.test.ts\"",
+    "test": "npx --yes tsx --test \"src/**/*.test.ts\" \"eval/**/*.test.ts\"",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -30,6 +30,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@langfuse/core": "^6.0.0",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^9.6.0",
