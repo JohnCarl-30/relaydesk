@@ -42,6 +42,8 @@ async function ensureDataset(client: LangfuseAPIClient, spec: DatasetSpec) {
   }
 }
 
+// The list leaves out archived items. A row that comes back is upserted onto
+// its old id, so the summary counts it as new.
 async function listItems(client: LangfuseAPIClient, datasetName: string): Promise<ExistingItem[]> {
   const items: ExistingItem[] = [];
   for (let page = 1; ; page += 1) {
