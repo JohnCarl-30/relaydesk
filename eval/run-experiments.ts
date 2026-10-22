@@ -11,37 +11,17 @@
  * same task and evaluators on the CSVs and only prints the scores.
  * The answers use the model when OPENAI_API_KEY is set, like the widget. The
  * faithfulness judge needs that key too, and is skipped without it.
+ * It exits non-zero when a run score is below its threshold in eval/suite.ts,
+ * the same check the PR gate runs through eval/ci/.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { LangfuseClient, type Evaluation, type Evaluator, type RunEvaluator } from "@langfuse/client";
-import { answerQuestion, chatModel, chatModelName, usingStubLlm } from "../src/lib/graph";
+import { LangfuseClient } from "@langfuse/client";
 import { flushTracing, initTracing } from "../src/lib/trace";
-import { ESCALATION_DATASET, GOLDEN_DATASET, escalationItems, goldenItems, type DesiredItem } from "./datasets";
-import {
-  answerTask,
-  escalationMatch,
-  escalationPrecisionRecall,
-  faithfulnessJudge,
-  hitAtK,
-  meanOf,
-  runLocal,
-} from "./experiments";
-import { loadGolden } from "./golden";
-import { loadLabels } from "./labels";
-
-type Experiment = {
-  key: string;
-  dataset: string;
-  description: string;
-  localItems: () => DesiredItem[];
-  evaluators: Evaluator[];
-  runEvaluators: RunEvaluator[];
-  /** Run scores that must exist. The SDK logs a failing run evaluator and carries on. */
-  scores: string[];
-};
+import { regressions, runLocal } from "./experiments";
+import { assertScores, experimentSuite, printScores, type Experiment } from "./suite";
 
 function gitRunName(): string | undefined {
   try {
@@ -52,17 +32,11 @@ function gitRunName(): string | undefined {
   }
 }
 
-function assertScores(experiment: Experiment, evaluations: Evaluation[]) {
-  const missing = experiment.scores.filter((name) => !evaluations.some((e) => e.name === name));
-  if (missing.length) throw new Error(`${experiment.dataset}: no run score for ${missing.join(", ")}`);
-}
-
-function printScores(title: string, evaluations: Evaluation[]) {
-  console.log(title);
-  for (const e of evaluations) {
-    const value = typeof e.value === "number" ? e.value.toFixed(4) : String(e.value);
-    console.log(`  ${e.name.padEnd(22)} ${value}  ${e.comment ?? ""}`);
-  }
+/** The same check as the PR gate, so a regression shows up before the push. */
+function reportThresholds(experiment: Experiment, evaluations: Parameters<typeof regressions>[0]): boolean {
+  const failed = regressions(evaluations, experiment.thresholds);
+  for (const line of failed) console.log(`  below threshold: ${line}`);
+  return failed.length === 0;
 }
 
 async function main() {
@@ -77,37 +51,14 @@ async function main() {
   const runName = runNameAt >= 0 ? args[runNameAt + 1] : gitRunName();
   const only = args.filter((arg, i) => !arg.startsWith("--") && i !== runNameAt + 1);
 
-  const liveModel = Boolean(process.env.OPENAI_API_KEY) && !usingStubLlm();
-  const judge = liveModel ? [faithfulnessJudge(chatModel())] : [];
-
-  const experiments: Experiment[] = [
-    {
-      key: "golden",
-      dataset: GOLDEN_DATASET,
-      description: "Retrieval hit@k against the expected article, and faithfulness of the answer to its citations.",
-      localItems: () => goldenItems(loadGolden(join(here, "golden.csv"))),
-      evaluators: [hitAtK, ...judge],
-      runEvaluators: [meanOf("hit_at_1", "hit_at_3", "faithfulness")],
-      scores: ["hit_at_1", "hit_at_3", ...(liveModel ? ["faithfulness"] : [])],
-    },
-    {
-      key: "escalation",
-      dataset: ESCALATION_DATASET,
-      description: "Whether the widget opens a ticket exactly when the label says it should.",
-      localItems: () => escalationItems(loadLabels(join(here, "escalation-labels.csv"))),
-      evaluators: [escalationMatch],
-      runEvaluators: [escalationPrecisionRecall, meanOf("escalation_correct")],
-      scores: ["escalation_precision", "escalation_recall", "escalation_correct"],
-    },
-  ];
+  const { experiments, task, metadata } = experimentSuite();
   const unknown = only.filter((key) => !experiments.some((e) => e.key === key));
   if (unknown.length) throw new Error(`unknown experiment: ${unknown.join(", ")}`);
   const selected = only.length ? experiments.filter((e) => only.includes(e.key)) : experiments;
 
-  const task = answerTask((question) => answerQuestion(question));
-  const metadata = { answers: liveModel ? chatModelName() : "extractive", judge: liveModel ? chatModelName() : "none" };
   console.log(`answers: ${metadata.answers}, faithfulness judge: ${metadata.judge}`);
 
+  let passed = true;
   const live = Boolean(process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY);
   if (!live) {
     console.log("LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY not set; scoring the CSVs locally, nothing is recorded.\n");
@@ -120,7 +71,9 @@ async function main() {
       const result = await runLocal({ data, task, ...experiment });
       printScores(`${experiment.dataset} (${result.itemResults.length} items)`, result.runEvaluations);
       assertScores(experiment, result.runEvaluations);
+      passed = reportThresholds(experiment, result.runEvaluations) && passed;
     }
+    if (!passed) process.exitCode = 1;
     return;
   }
 
@@ -146,7 +99,9 @@ async function main() {
       printScores(`${experiment.dataset} run "${result.runName}" (${result.itemResults.length} items)`, result.runEvaluations);
       if (result.experimentUrl) console.log(`  ${result.experimentUrl}`);
       assertScores(experiment, result.runEvaluations);
+      passed = reportThresholds(experiment, result.runEvaluations) && passed;
     }
+    if (!passed) process.exitCode = 1;
   } finally {
     await flushTracing();
     await langfuse.shutdown();

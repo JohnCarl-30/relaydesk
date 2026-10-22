@@ -1,0 +1,68 @@
+name: experiments
+
+# Runs eval/ci/ against the Langfuse datasets on every PR, comments the scores,
+# and fails when a run score drops below its threshold in eval/suite.ts.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write # the results comment
+  actions: read # links the comment to this job and keeps the two legs apart
+
+concurrency:
+  group: experiments-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        experiment: [golden, escalation]
+    steps:
+      # Fork PRs and repos without the secrets get no Langfuse keys. Skip
+      # instead of failing; the unit tests still check the same thresholds on the CSVs.
+      - name: Check for Langfuse keys
+        id: keys
+        env:
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+        run: |
+          if [ -n "$LANGFUSE_PUBLIC_KEY" ] && [ -n "$LANGFUSE_SECRET_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY not available; skipping the ${{ matrix.experiment }} experiment."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.keys.outputs.present == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.keys.outputs.present == 'true'
+        with:
+          node-version: "22"
+          cache: npm
+      # The repo's lockfile pins @langfuse/client 6 and tsx, so the action uses
+      # node_modules instead of installing its default SDK.
+      - run: npm ci
+        if: steps.keys.outputs.present == 'true'
+
+      - uses: langfuse/experiment-action@c7c4efe432e37d4e3693a018de469233c0018de4 # v1.0.12
+        if: steps.keys.outputs.present == 'true'
+        env:
+          # The action exports LANGFUSE_HOST; relaydesk's code reads LANGFUSE_BASE_URL.
+          LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
+          # Optional. With it, the model writes the answers and the faithfulness judge runs.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          langfuse_public_key: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          langfuse_secret_key: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          langfuse_base_url: https://us.cloud.langfuse.com
+          experiment_path: eval/ci/${{ matrix.experiment }}.ts
+          dataset_name: relaydesk-${{ matrix.experiment }}
+          should_skip_sdk_installation: "true"
+          github_token: ${{ github.token }}
