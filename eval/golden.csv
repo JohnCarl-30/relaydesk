@@ -49,3 +49,23 @@ question,ground_truth,expected_slug
 "What is the rate limit on a workspace read key?","10 / second per read key.",api-keys
 "While Nimbus is retrying a declined card, can I still open dashboards?","During retries, dashboards stay readable.",failed-payment
 "Do API keys created before March 2025 have the same rate limits as new keys?","Keys created before March 2025 share a workspace-wide 50 rps cap; create a new key to get the current limits.",api-keys
+"Our marketing team only looks at dashboards. Do they still cost us money?","Every person with login access counts, including viewers.",billing-seats-events
+"If I pay for 10 people, how much data can we send each month?","Growth includes 10 seats and 10M events.",billing-plans
+"What's the cheapest plan and how many logins does it come with?","Starter is 3 seats and 1M events.",billing-plans
+"How much will I be charged for going 1 million events over my quota?","We invoice the overage on the next statement at $0.00012 per extra event, so 1M extra events is $120.",billing-plans
+"Na-decline yung card namin, mabubura ba yung data namin?","During retries, dashboards stay readable. New event writes pause only after day 14. Existing data is not deleted.",failed-payment
+"If I downgrade to Starter, will SSO keep working?","SSO is available on Growth and Scale.",sso
+"Can I set up SSO with Azure AD?","SSO supports Google Workspace or Okta.",sso
+"Our read key keeps getting rejected when we send events from the server.","Workspace read keys query data and cannot ingest events.",api-keys
+"When exactly do old events get wiped each day?","Raw events older than the retention window are deleted on a nightly job around 03:00 UTC.",data-retention
+"If retention deletes my events, do my saved funnels disappear too?","Saved funnel and chart definitions are kept; only the underlying events go away.",data-retention
+"Can my developer create API keys without being able to touch billing?","Editor: create charts, funnels, and keys. Cannot change billing.",inviting-teammates
+"Who on our team can delete the whole workspace?","Owner: billing, SSO, delete workspace.",inviting-teammates
+"Our chart filtered to paying customers is missing everyone on the free tier.","Check filters on the funnel (browser, country). A filter on `plan = pro` hides free users.",funnel-zeros
+"Which plan should I pick if I need data to stay unsampled?","Data is not sampled on Growth or Scale.",funnel-zeros
+"Is there a way to automatically pull our raw data out every night?","Use a workspace read key and the query API if you need a recurring dump.",csv-export
+"we acidentally trashed a projct yesterday, can we get it back?","For 7 days an owner can restore it from Settings → Recycle bin.",delete-project
+"Can I get a refund for seats we didn't use?","I don't have that in the Nimbus help center.",
+"How do I export my events to BigQuery?","I don't have that in the Nimbus help center.",
+"Does Nimbus store our data in the EU?","I don't have that in the Nimbus help center.",
+"What's the price of the Scale plan?","I don't have that in the Nimbus help center.",

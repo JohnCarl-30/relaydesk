@@ -22,14 +22,14 @@ const synced = (items: typeof golden): ExistingItem[] =>
 
 describe("dataset items", () => {
   it("turns every CSV row into one item with a unique id", () => {
-    assert.equal(golden.length, 50);
-    assert.equal(escalation.length, 15);
-    assert.equal(new Set([...golden, ...escalation].map((item) => item.id)).size, 65);
+    assert.equal(golden.length, 70);
+    assert.equal(escalation.length, 23);
+    assert.equal(new Set([...golden, ...escalation].map((item) => item.id)).size, 93);
   });
 
   it("keeps the expected slug, and null for out-of-corpus rows", () => {
     const slugs = golden.map((item) => (item.expectedOutput as { slug: string | null }).slug);
-    assert.equal(slugs.filter((slug) => slug !== null).length, 44);
+    assert.equal(slugs.filter((slug) => slug !== null).length, 60);
     const sso = golden.find(
       (item) => (item.input as { question: string }).question === "Is JIT provisioning on by default?",
     );
@@ -54,7 +54,7 @@ describe("dataset items", () => {
 describe("planSync", () => {
   it("creates everything on the first run", () => {
     const plan = planSync(golden, []);
-    assert.equal(plan.create.length, 50);
+    assert.equal(plan.create.length, 70);
     assert.equal(plan.update.length + plan.archive.length + plan.unchanged.length, 0);
   });
 
@@ -64,7 +64,7 @@ describe("planSync", () => {
       expectedOutput: Object.fromEntries(Object.entries(item.expectedOutput as object).reverse()),
     }));
     const plan = planSync(golden, existing);
-    assert.equal(plan.unchanged.length, 50);
+    assert.equal(plan.unchanged.length, 70);
     assert.equal(plan.create.length + plan.update.length + plan.archive.length, 0);
   });
 
@@ -76,7 +76,7 @@ describe("planSync", () => {
     const plan = planSync(edited, existing);
     assert.deepEqual(plan.update.map((item) => item.id), [golden[1].id]);
     assert.deepEqual(plan.archive.map((item) => item.id), [golden[0].id]);
-    assert.equal(plan.unchanged.length, 48);
+    assert.equal(plan.unchanged.length, 68);
   });
 
   it("reactivates an archived item that comes back", () => {
