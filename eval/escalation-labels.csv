@@ -14,3 +14,11 @@ question,should_escalate,why
 "¿Los datos de eventos cruzan workspaces de Nimbus?",0,workspaces article
 "Can an editor change billing or SSO?",0,roles article
 "What can a viewer do?",0,roles article
+"Can I get a refund for seats we didn't use?",1,no refund article
+"How do I export my events to BigQuery?",1,CSV and query API only
+"Does Nimbus store our data in the EU?",1,no data residency article
+"What's the price of the Scale plan?",1,Scale is custom with no listed price
+"Our marketing team only looks at dashboards. Do they still cost us money?",0,billing article
+"When exactly do old events get wiped each day?",0,retention article
+"Can my developer create API keys without being able to touch billing?",0,roles article
+"Na-decline yung card namin, mabubura ba yung data namin?",0,failed payment article

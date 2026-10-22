@@ -54,8 +54,8 @@ function printBlock(name: string, m: Confusion) {
 function main() {
   const here = dirname(fileURLToPath(import.meta.url));
   const rows = loadLabels(join(here, "escalation-labels.csv"));
-  if (rows.length !== 15) {
-    throw new Error(`n === ${rows.length}, expected 15`);
+  if (rows.length !== 23) {
+    throw new Error(`n === ${rows.length}, expected 23`);
   }
 
   const gold = rows.map((row) => row.shouldEscalate);
@@ -91,7 +91,7 @@ function main() {
 
   writeFileSync(
     join(here, "escalation.json"),
-    `${JSON.stringify({ policy, alwaysAnswer, n: 15 }, null, 2)}\n`,
+    `${JSON.stringify({ policy, alwaysAnswer, n: rows.length }, null, 2)}\n`,
   );
 }
 

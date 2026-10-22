@@ -1,6 +1,6 @@
 # Evals
 
-`golden.csv` is 50 Nimbus questions ([reasons.md](reasons.md)). Everything here is keyless and runs locally. CI runs only the unit and browser tests.
+`golden.csv` is 70 Nimbus questions ([reasons.md](reasons.md)). Rows 51–70 are phrased the way customers ask, so the scores below have room to fall. Everything here is keyless and runs locally. CI runs only the unit and browser tests.
 
 Until 2026-09-29, CI also scored a `POST /api/eval` endpoint with [rag-eval-harness](https://github.com/JohnCarl-30/rag-eval-harness) against a committed baseline. The gate, the endpoint, and the baseline were removed. The "lexical means" tables below are dated snapshots from it.
 
@@ -44,6 +44,8 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 
 2026-10-19, keyless (extractive answers, against a local Langfuse): hit@1 and hit@3 **1.0** (44/44), escalation precision and recall **1.0** (tp=7, fp=0, fn=0). These match `compare-retrievers.ts` and `escalation.ts`.
 
+2026-10-22, keyless, CSVs only, after the hard rows went in: hit@1 **0.8333** (50/60), hit@3 **0.9167** (55/60), escalation precision **1.0**, recall **0.6364** (tp=7, fp=0, fn=4).
+
 ## Retrieval
 
 Hit@k vs `expected_slug` (no server):
@@ -52,7 +54,9 @@ Hit@k vs `expected_slug` (no server):
 npx --yes tsx eval/compare-retrievers.ts
 ```
 
-After the 2026-09-11 corpus split, count is **44/44** hit@1 and hit@3 on the 44 labeled rows. Chunked is 42/44 and 43/44. Do not promote chunked. The tables below are the 2026-08-28 A/B snapshots.
+After the 2026-09-11 corpus split, count was **44/44** hit@1 and hit@3 on the 44 labeled rows, and chunked 42/44 and 43/44. With the hard rows (2026-10-22), count is **50/60** and **55/60**, chunked **46/60** and **49/60**. Do not promote chunked.
+
+The 10 count misses at hit@1 are all hard rows. Five still miss at hit@3: "pay for 10 people", "who can delete the whole workspace", "data to stay unsampled", "pull our raw data out every night" and the typo row. Most are vocabulary gaps, which a lexical retriever with no stemming can't close. That makes them the rows to watch when hybrid comes back. The tables below are the 2026-08-28 A/B snapshots.
 
 `compare-retrievers.ts` runs count and chunked. BM25 and hybrid below came from the old endpoint's variants; `retrieve(q, { mode: "bm25" })` and `retrieveHybrid()` in `src/lib/rag.ts` still exist to re-run them in code.
 
@@ -125,7 +129,7 @@ npx --yes tsx eval/generate.ts
 
 ## Escalation
 
-Whether to refuse is scored on its own 15-row labels. Policy recall is 1.0 on those 7 out-of-corpus rows. `always-answer` recall is 0. That is the drop. Chat opens the ticket. See [escalation.md](escalation.md).
+Whether to refuse is scored on its own 23-row labels. Policy recall is **0.6364**: 7 of the 11 rows that should escalate do. The 4 that don't are the near-miss rows added 2026-10-22 (refund, BigQuery, EU data, Scale price), which share enough words with an article to clear the coverage check. `always-answer` recall is 0. That is the drop. Chat opens the ticket. See [escalation.md](escalation.md).
 
 ```bash
 npx --yes tsx eval/escalation.ts

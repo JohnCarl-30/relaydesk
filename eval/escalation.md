@@ -6,15 +6,15 @@ Answer quality and escalation are different questions. Did we refuse Salesforce,
 
 A refuse line shares almost no words with the retrieved articles. When the old rag-eval-harness gate scored `/api/eval` on lexical faithfulness in CI, correct refusals scored near zero. Once the widget started refusing (4d717c1), faithfulness fell to 0.7049 against 0.7823, while that commit's 43 answered rows held at 0.785. The harness learned to skip refused rows, and on 2026-09-29 the gate was removed from this repo.
 
-Whether to refuse is judged here instead, on 15 labeled rows. It runs locally and does not gate CI. RAGAS stays out.
+Whether to refuse is judged here instead, on 23 labeled rows. It runs locally and does not gate CI. RAGAS stays out.
 
 ```bash
 npx --yes tsx eval/escalation.ts
 ```
 
-## The 15-row table of trust
+## The 23-row table of trust
 
-`eval/escalation-labels.csv` is 7 questions the help center cannot answer and 8 it can.
+`eval/escalation-labels.csv` is 11 questions the help center cannot answer and 12 it can. The last 8 rows were added 2026-10-22, from the hard rows in `golden.csv`.
 
 | question | should_escalate |
 | --- | --- |
@@ -33,19 +33,27 @@ npx --yes tsx eval/escalation.ts
 | ¿Los datos de eventos cruzan workspaces de Nimbus? | 0 |
 | Can an editor change billing or SSO? | 0 |
 | What can a viewer do? | 0 |
+| Can I get a refund for seats we didn't use? | 1 |
+| How do I export my events to BigQuery? | 1 |
+| Does Nimbus store our data in the EU? | 1 |
+| What's the price of the Scale plan? | 1 |
+| Our marketing team only looks at dashboards. Do they still cost us money? | 0 |
+| When exactly do old events get wiped each day? | 0 |
+| Can my developer create API keys without being able to touch billing? | 0 |
+| Na-decline yung card namin, mabubura ba yung data namin? | 0 |
 
 The in-corpus rows include the awkward ones. "What can a viewer do?" can retrieve a low score with high coverage. The policy still answers. Coverage is the point. A weak retrieve that overlaps the question is not Salesforce.
 
 ## The number
 
-`eval/escalation.json` from `npx tsx eval/escalation.ts`, n=15, 2026-08-28.
+`eval/escalation.json` from `npx tsx eval/escalation.ts`, n=23, 2026-10-22.
 
 | run | precision | recall | f1 | tp | fp | fn | tn |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| policy | 1.0 | 1.0 | 1.0 | 7 | 0 | 0 | 8 |
-| always-answer | 0 | 0 | 0 | 0 | 0 | 7 | 8 |
+| policy | 1.0 | 0.6364 | 0.7778 | 7 | 0 | 4 | 12 |
+| always-answer | 0 | 0 | 0 | 0 | 0 | 11 | 12 |
 
-Policy recall 1.0 means all 7 positives opened a ticket. always-answer recall 0 is the drop. Same retriever, `{ alwaysAnswer: true }`, quotes anyway.
+On the first 15 rows (2026-08-28) policy was 1.0 / 1.0, tp=7 fn=0. The four misses now are the near-miss rows. Each shares words with an article, so the top hit clears the coverage check, and the widget quotes the wrong thing: BigQuery gets the retention article, EU data gets the workspaces article. The Scale price row passes the price check because `billing-plans` lists the overage rate, though not a Scale price. The widget's real answer path, `answerQuestion`, answers all four too. always-answer recall 0 is the drop. Same retriever, `{ alwaysAnswer: true }`, quotes anyway.
 
 ## What you say in the interview
 

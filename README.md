@@ -8,8 +8,8 @@ The widget answers from the help center and cites the article. When the help cen
 
 | Eval | Result | Details |
 | --- | --- | --- |
-| Retrieval, 44 labeled questions | hit@1 44/44, hit@3 44/44 | [eval/README.md](eval/README.md) |
-| When to open a ticket, 15 labeled questions | precision 1.00, recall 1.00 (always answering: recall 0) | [eval/escalation.md](eval/escalation.md) |
+| Retrieval, 60 labeled questions | hit@1 50/60, hit@3 55/60 | [eval/README.md](eval/README.md) |
+| When to open a ticket, 23 labeled questions | precision 1.00, recall 0.64 (always answering: recall 0) | [eval/escalation.md](eval/escalation.md) |
 | Co-pilot triage, 13 replayed tickets | reason, topic and question 13/13 | [eval/copilot.ts](eval/copilot.ts) |
 | Cost, whole golden set | $0 without a key, about $0.007 with gpt-4o-mini | [eval/cost.md](eval/cost.md) |
 
