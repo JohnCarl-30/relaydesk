@@ -52,7 +52,18 @@ Two fixture tickets are already in the inbox so it isn't empty on first open.
 
 ## More than one business
 
-Nimbus is the demo business. Each business has its own articles, widget, inbox, and settings, and one business's staff can't open another's tickets or conversations. Until self-serve setup lands, add one from a JSON file of articles (`title`, `body`, and optional `slug`, `category`, `summary`):
+Nimbus is the demo business. Each business has its own articles, widget, inbox, and settings, and one business's staff can't open another's tickets or conversations.
+
+A shop owner sets up without you:
+
+1. **Sign up** at `/signup` with a business name, a link (`/h/<link>`), and their login. Set `RELAYDESK_SIGNUP_CODE` to make sign-up invite-only.
+2. **Add articles** in the inbox under **Articles**: one at a time, or paste an FAQ as Markdown (`## Question` then the answer) or JSON.
+3. **Try the chat** under **Setup**. It answers like the widget but saves nothing.
+4. **Go live.** Until then the help center, widget, and chat API return 404 to the public.
+5. **Copy the embed snippet** from **Setup** into their site.
+6. **Invite staff** under **Team**. Each invite is a one-time link that expires in 7 days; there's no email sending, so they send it themselves.
+
+To set a business up for someone, there's also a script that takes a JSON file of articles (`title`, `body`, and optional `slug`, `category`, `summary`). Businesses it creates are live:
 
 ```bash
 npx tsx scripts/add-business.ts --id acme --name "Acme Coffee" \

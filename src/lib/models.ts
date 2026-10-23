@@ -4,7 +4,20 @@ export type Business = {
   name: string;
   /** Bumped on every article change, so cached search indexes know to rebuild. */
   articles_version: number;
+  /** 1 once the business went live; before that only its staff see anything. */
+  live: number;
   created_at: string;
+};
+
+export type Invite = {
+  id: string;
+  business_id: string;
+  email: string;
+  /** Staff id of who sent it. */
+  invited_by: string;
+  created_at: string;
+  expires_at: string;
+  accepted_at: string | null;
 };
 
 export type Staff = {
@@ -83,5 +96,3 @@ export type AgentRun = {
   output_tokens: number;
   created_at: string;
 };
-
-export const AGENTS = ["You", "Sam"] as const;

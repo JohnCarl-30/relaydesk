@@ -7,7 +7,7 @@ import {
   getTicketByConversation,
   listMessages,
 } from "@/lib/db";
-import { loadHelpCenter, type HelpCenter } from "@/lib/business";
+import { loadLiveHelpCenter, type HelpCenter } from "@/lib/business";
 import { runCopilot } from "@/lib/copilot";
 import { PENDING_TICKET_EMAIL } from "@/lib/escalate";
 import { answerQuestion } from "@/lib/graph";
@@ -48,7 +48,7 @@ function unknownBusiness(business: string | undefined) {
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const business = params.get("business")?.trim();
-  const center = business ? loadHelpCenter(business) : undefined;
+  const center = business ? loadLiveHelpCenter(business) : undefined;
   if (!center) return unknownBusiness(business);
   const conversationId = params.get("conversationId")?.trim();
   if (!conversationId) {
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     email?: string;
   };
   const business = body.business?.trim();
-  const center = business ? loadHelpCenter(business) : undefined;
+  const center = business ? loadLiveHelpCenter(business) : undefined;
   if (!center) return unknownBusiness(business);
   const businessId = center.businessId;
   const text = body.message?.trim() ?? "";

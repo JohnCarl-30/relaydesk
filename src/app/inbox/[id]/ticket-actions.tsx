@@ -2,16 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { AGENTS } from "@/lib/models";
 
 export function TicketActions({
   ticketId,
   status,
   assignee,
+  staffNames,
 }: {
   ticketId: string;
   status: string;
   assignee: string | null;
+  /** The business's staff, who tickets can be given to. */
+  staffNames: string[];
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -42,7 +44,8 @@ export function TicketActions({
           className="rounded-md border border-line bg-paper px-2 py-1 text-xs text-ink outline-none"
         >
           <option value="">Unassigned</option>
-          {AGENTS.map((agent) => (
+          {/* Keep a former teammate's name selectable on tickets still assigned to them. */}
+          {[...new Set([...staffNames, ...(assignee ? [assignee] : [])])].map((agent) => (
             <option key={agent} value={agent}>
               {agent}
             </option>

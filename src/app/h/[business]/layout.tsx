@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Widget } from "@/components/Widget";
-import { helpCenterPath, loadHelpCenter } from "@/lib/business";
+import { helpCenterPath, loadLiveHelpCenter } from "@/lib/business";
 
 type Params = { params: Promise<{ business: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const center = loadHelpCenter((await params).business);
+  const center = loadLiveHelpCenter((await params).business);
   if (!center) return {};
   const title = `${center.name} help center`;
   return { title, description: `Answers from ${center.name}.`, openGraph: { title, siteName: center.name } };
@@ -18,7 +18,7 @@ export default async function HostedHelpLayout({
   children,
   params,
 }: Params & { children: React.ReactNode }) {
-  const center = loadHelpCenter((await params).business);
+  const center = loadLiveHelpCenter((await params).business);
   if (!center) notFound();
   const base = helpCenterPath(center.businessId);
   return (

@@ -4,7 +4,7 @@ import { formatClock, Initials, StatusPill } from "@/components/ui";
 import { currentStaff } from "@/lib/auth";
 import { helpCenterPath, loadHelpCenter } from "@/lib/business";
 import { copilotEnabled } from "@/lib/copilot";
-import { getPendingDraft, getTicket, listMessages, listRuns } from "@/lib/db";
+import { getPendingDraft, getTicket, listMessages, listRuns, listStaff } from "@/lib/db";
 import { slugForTitle } from "@/lib/help-center";
 import { DraftCard, type DraftView } from "./draft-card";
 import { ReplyForm } from "./reply-form";
@@ -63,6 +63,7 @@ export default async function TicketPage({
             ticketId={ticket.id}
             status={ticket.status}
             assignee={ticket.assignee}
+            staffNames={listStaff(staff.business_id).map((member) => member.name)}
           />
         </header>
 

@@ -31,6 +31,11 @@ export function loadHelpCenter(businessId: string): HelpCenter | undefined {
   return center;
 }
 
+/** The help center the public may see: undefined until the business goes live. */
+export function loadLiveHelpCenter(businessId: string): HelpCenter | undefined {
+  return getBusiness(businessId)?.live ? loadHelpCenter(businessId) : undefined;
+}
+
 /** Where a business's public help center lives. */
 export function helpCenterPath(businessId: string, slug?: string): string {
   const base = `/h/${businessId}`;

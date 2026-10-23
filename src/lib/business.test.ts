@@ -74,7 +74,7 @@ describe("one business never sees another's data", () => {
 
   it("cannot reply to or update another business's ticket", () => {
     const before = db.listMessages(nimbus.conversation.id).length;
-    assert.equal(db.replyToTicket(ACME, nimbus.ticket.id, "hello from acme"), undefined);
+    assert.equal(db.replyToTicket(ACME, nimbus.ticket.id, "hello from acme", "Ana"), undefined);
     assert.equal(db.updateTicket(ACME, nimbus.ticket.id, { status: "closed" }), undefined);
     assert.equal(db.listMessages(nimbus.conversation.id).length, before);
     assert.equal(db.getTicket(DEMO_BUSINESS_ID, nimbus.ticket.id)?.status, "open");

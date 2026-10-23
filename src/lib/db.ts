@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
@@ -10,13 +10,14 @@ import type {
   AgentRun,
   Business,
   Conversation,
+  Invite,
   Message,
   Staff,
   Ticket,
 } from "@/lib/models";
 import { hashPassword, verifyPassword } from "@/lib/passwords";
 
-export type { AgentDraft, AgentRun, Business, Conversation, Message, Staff, Ticket };
+export type { AgentDraft, AgentRun, Business, Conversation, Invite, Message, Staff, Ticket };
 
 /*
  * Every business's data lives in one database. Conversations and tickets carry
@@ -47,6 +48,8 @@ function open(): Database.Database {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       articles_version INTEGER NOT NULL DEFAULT 0,
+      -- 0 until the business goes live: its help center, widget, and chat API stay hidden.
+      live INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS staff (
@@ -67,6 +70,17 @@ function open(): Database.Database {
       position INTEGER NOT NULL,
       updated_at TEXT NOT NULL,
       PRIMARY KEY (business_id, slug)
+    );
+    CREATE TABLE IF NOT EXISTS invites (
+      id TEXT PRIMARY KEY,
+      business_id TEXT NOT NULL,
+      email TEXT NOT NULL,
+      -- sha256 of the token in the link; the token itself is shown once and never stored.
+      token_hash TEXT NOT NULL UNIQUE,
+      invited_by TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      accepted_at TEXT
     );
     CREATE TABLE IF NOT EXISTS business_settings (
       business_id TEXT NOT NULL,
@@ -159,6 +173,10 @@ function migrateTickets(db: Database.Database) {
  * get business_id "nimbus", and their co-pilot switch moves to Nimbus's settings.
  */
 function migrateToBusinesses(db: Database.Database) {
+  const businessCols = db.prepare("PRAGMA table_info(businesses)").all() as { name: string }[];
+  if (!businessCols.some((col) => col.name === "live")) {
+    db.exec("ALTER TABLE businesses ADD COLUMN live INTEGER NOT NULL DEFAULT 1");
+  }
   for (const table of ["conversations", "tickets"]) {
     const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
     if (cols.some((col) => col.name === "business_id")) continue;
@@ -449,7 +467,13 @@ export function getTicketByConversation(conversationId: string): Ticket | undefi
     .get(conversationId) as Ticket | undefined;
 }
 
-export function replyToTicket(businessId: string, id: string, body: string): Ticket | undefined {
+/** Posts a staff reply; an unassigned ticket goes to whoever replied. */
+export function replyToTicket(
+  businessId: string,
+  id: string,
+  body: string,
+  staffName: string,
+): Ticket | undefined {
   const ticket = getTicket(businessId, id);
   if (!ticket) return undefined;
   addMessage(ticket.conversation_id, "agent", body);
@@ -457,9 +481,9 @@ export function replyToTicket(businessId: string, id: string, body: string): Tic
   // A person answered, so the "needs a human" flag is settled.
   db()
     .prepare(
-      "UPDATE tickets SET status = 'waiting', assignee = COALESCE(assignee, 'You'), needs_human_reason = NULL, updated_at = ? WHERE id = ?",
+      "UPDATE tickets SET status = 'waiting', assignee = COALESCE(assignee, ?), needs_human_reason = NULL, updated_at = ? WHERE id = ?",
     )
-    .run(now, id);
+    .run(staffName, now, id);
   return getTicket(businessId, id);
 }
 
@@ -627,7 +651,7 @@ export function getBusiness(id: string): Business | undefined {
   return db().prepare("SELECT * FROM businesses WHERE id = ?").get(id) as Business | undefined;
 }
 
-export function createBusiness(business: { id: string; name: string }): Business {
+export function createBusiness(business: { id: string; name: string; live?: boolean }): Business {
   if (!BUSINESS_ID_PATTERN.test(business.id)) {
     throw new Error(
       `business id "${business.id}" must be lowercase letters, digits, and dashes (2-40 chars)`,
@@ -637,14 +661,41 @@ export function createBusiness(business: { id: string; name: string }): Business
     id: business.id,
     name: business.name.trim(),
     articles_version: 0,
+    live: business.live === false ? 0 : 1,
     created_at: new Date().toISOString(),
   };
   db()
     .prepare(
-      "INSERT INTO businesses (id, name, articles_version, created_at) VALUES (?, ?, ?, ?)",
+      "INSERT INTO businesses (id, name, articles_version, live, created_at) VALUES (?, ?, ?, ?, ?)",
     )
-    .run(row.id, row.name, row.articles_version, row.created_at);
+    .run(row.id, row.name, row.articles_version, row.live, row.created_at);
   return row;
+}
+
+export function setBusinessLive(id: string, live: boolean) {
+  db().prepare("UPDATE businesses SET live = ? WHERE id = ?").run(live ? 1 : 0, id);
+}
+
+/**
+ * Self-serve sign-up: a business that isn't live yet, and its first staff
+ * login. Both or neither, so a taken email doesn't leave an orphan business.
+ */
+export function signUpBusiness(input: {
+  businessId: string;
+  businessName: string;
+  name: string;
+  email: string;
+  password: string;
+}): Staff {
+  return db().transaction(() => {
+    createBusiness({ id: input.businessId, name: input.businessName, live: false });
+    return createStaff({
+      businessId: input.businessId,
+      email: input.email,
+      name: input.name,
+      password: input.password,
+    });
+  })();
 }
 
 export function listArticles(businessId: string): Article[] {
@@ -679,6 +730,55 @@ export function replaceArticles(businessId: string, articles: Article[]) {
   writeArticles(db(), businessId, articles);
 }
 
+function bumpArticlesVersion(conn: Database.Database, businessId: string) {
+  conn
+    .prepare("UPDATE businesses SET articles_version = articles_version + 1 WHERE id = ?")
+    .run(businessId);
+}
+
+/**
+ * Adds articles, or updates the ones whose slug already exists. With
+ * `replacing`, the article at that old slug is edited (its slug may change).
+ */
+export function saveArticles(
+  businessId: string,
+  articles: Article[],
+  options: { replacing?: string } = {},
+) {
+  const conn = db();
+  const now = new Date().toISOString();
+  conn.transaction(() => {
+    if (options.replacing) {
+      conn
+        .prepare("DELETE FROM articles WHERE business_id = ? AND slug = ?")
+        .run(businessId, options.replacing);
+    }
+    const { next } = conn
+      .prepare("SELECT COALESCE(MAX(position), -1) + 1 AS next FROM articles WHERE business_id = ?")
+      .get(businessId) as { next: number };
+    const upsert = conn.prepare(
+      `INSERT INTO articles (business_id, slug, title, category, summary, body, position, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(business_id, slug) DO UPDATE SET title = excluded.title,
+         category = excluded.category, summary = excluded.summary, body = excluded.body,
+         updated_at = excluded.updated_at`,
+    );
+    articles.forEach((a, i) =>
+      upsert.run(businessId, a.slug, a.title, a.category, a.summary, a.body, next + i, now),
+    );
+    bumpArticlesVersion(conn, businessId);
+  })();
+}
+
+export function deleteArticle(businessId: string, slug: string): boolean {
+  const conn = db();
+  const result = conn
+    .prepare("DELETE FROM articles WHERE business_id = ? AND slug = ?")
+    .run(businessId, slug);
+  if (result.changes > 0) bumpArticlesVersion(conn, businessId);
+  return result.changes > 0;
+}
+
 export function createStaff(staff: {
   businessId: string;
   email: string;
@@ -699,6 +799,28 @@ export function createStaff(staff: {
     )
     .run(row.id, row.business_id, row.email, row.name, hashPassword(staff.password), row.created_at);
   return row;
+}
+
+export function listStaff(businessId: string): Staff[] {
+  return db()
+    .prepare(
+      "SELECT id, business_id, email, name, created_at FROM staff WHERE business_id = ? ORDER BY created_at",
+    )
+    .all(businessId) as Staff[];
+}
+
+export function getStaffByEmail(email: string): Staff | undefined {
+  return db()
+    .prepare("SELECT id, business_id, email, name, created_at FROM staff WHERE email = ?")
+    .get(email.trim().toLowerCase()) as Staff | undefined;
+}
+
+/** Removes a login. Their open session stops working on the next request. */
+export function removeStaff(businessId: string, id: string): boolean {
+  return (
+    db().prepare("DELETE FROM staff WHERE business_id = ? AND id = ?").run(businessId, id)
+      .changes > 0
+  );
 }
 
 export function getStaff(businessId: string, id: string): Staff | undefined {
@@ -723,4 +845,86 @@ export function checkStaffLogin(email: string, password: string): Staff | undefi
   return db()
     .prepare("SELECT id, business_id, email, name, created_at FROM staff WHERE email = ?")
     .get(normalized) as Staff;
+}
+
+// Staff invites. The link carries a random token; only its hash is stored.
+
+export const INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+
+function tokenHash(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+/** Creates an invite and returns it with the one-time token for the link. */
+export function createInvite(input: {
+  businessId: string;
+  email: string;
+  invitedBy: string;
+}): { invite: Invite; token: string } {
+  const token = randomBytes(24).toString("base64url");
+  const now = Date.now();
+  const invite: Invite = {
+    id: `inv_${crypto.randomUUID().slice(0, 8)}`,
+    business_id: input.businessId,
+    email: input.email.trim().toLowerCase(),
+    invited_by: input.invitedBy,
+    created_at: new Date(now).toISOString(),
+    expires_at: new Date(now + INVITE_TTL_MS).toISOString(),
+    accepted_at: null,
+  };
+  db()
+    .prepare(
+      `INSERT INTO invites (id, business_id, email, token_hash, invited_by, created_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      invite.id, invite.business_id, invite.email, tokenHash(token),
+      invite.invited_by, invite.created_at, invite.expires_at,
+    );
+  return { invite, token };
+}
+
+/** Invites not yet accepted or expired. */
+export function listPendingInvites(businessId: string): Invite[] {
+  return db()
+    .prepare(
+      `SELECT id, business_id, email, invited_by, created_at, expires_at, accepted_at FROM invites
+       WHERE business_id = ? AND accepted_at IS NULL AND expires_at > ? ORDER BY created_at DESC`,
+    )
+    .all(businessId, new Date().toISOString()) as Invite[];
+}
+
+export function revokeInvite(businessId: string, id: string): boolean {
+  return (
+    db()
+      .prepare("DELETE FROM invites WHERE business_id = ? AND id = ? AND accepted_at IS NULL")
+      .run(businessId, id).changes > 0
+  );
+}
+
+/** The open invite behind a link's token, or undefined if it's unknown, used, or expired. */
+export function findInvite(token: string): Invite | undefined {
+  return db()
+    .prepare(
+      `SELECT id, business_id, email, invited_by, created_at, expires_at, accepted_at FROM invites
+       WHERE token_hash = ? AND accepted_at IS NULL AND expires_at > ?`,
+    )
+    .get(tokenHash(token), new Date().toISOString()) as Invite | undefined;
+}
+
+/** Turns an invite into a staff login for the invited email. Each link works once. */
+export function acceptInvite(token: string, input: { name: string; password: string }): Staff {
+  return db().transaction(() => {
+    const invite = findInvite(token);
+    if (!invite) throw new Error("This invite link is used, expired, or wrong.");
+    db()
+      .prepare("UPDATE invites SET accepted_at = ? WHERE id = ?")
+      .run(new Date().toISOString(), invite.id);
+    return createStaff({
+      businessId: invite.business_id,
+      email: invite.email,
+      name: input.name,
+      password: input.password,
+    });
+  })();
 }

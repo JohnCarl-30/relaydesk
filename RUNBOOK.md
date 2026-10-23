@@ -10,7 +10,8 @@ What to check and do when something is wrong. Relaydesk is not deployed anywhere
 | Data | SQLite `data/relaydesk.db` (+ `-wal`, `-shm`) | `RELAYDESK_DB_PATH` |
 | Traces | `eval/traces/live.jsonl`, one OpenTelemetry span per line | `RELAYDESK_TRACE_FILE` (a path, or `0` for none) |
 | Model | Optional. Without a key everything still works without a model. | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (default `gpt-4o-mini`) |
-| Businesses | `businesses`, `articles`, `staff` tables; Nimbus is seeded | `scripts/add-business.ts` |
+| Businesses | `businesses`, `articles`, `staff`, `invites` tables; Nimbus is seeded | `/signup` (gate it with `RELAYDESK_SIGNUP_CODE`), or `scripts/add-business.ts`. `businesses.live = 0` hides one from the public |
+| Public URL | Embed snippets and invite links | `RELAYDESK_PUBLIC_URL`, else the request's `Host` / `X-Forwarded-Host` |
 | Staff login | `/login`, email + password, signed 7-day cookie | Nimbus demo: `staff@nimbus.demo` / `RELAYDESK_ADMIN_PASSWORD` (default `nimbus-demo`). Signing key: `RELAYDESK_SESSION_SECRET`, else one generated into `settings` |
 | Co-pilot | Drafts on every new ticket | **AI drafts on/off** in the inbox header, or `business_settings` key `copilot` |
 | CI | `.github/workflows/test.yml` | `npm test`, `npm run test:e2e` |
@@ -101,7 +102,8 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
 
 - **Rotate the demo login:** change `RELAYDESK_ADMIN_PASSWORD` and restart; the Nimbus demo staff password is re-hashed on start.
 - **Sign everyone out:** change `RELAYDESK_SESSION_SECRET` (or, without it, delete the `session_secret` row from `settings`) and restart. Sessions are signed with it, so old cookies stop working.
-- **Known limit:** there is no password reset or staff invite UI yet (#16). Add a login with `scripts/add-business.ts --id <business> --staff-email <email>`.
+- **Remove someone:** **Team** → **Remove**, or `DELETE FROM staff WHERE email = '...'`. Their session stops working on the next request.
+- **Known limit:** there is no password reset. Remove the login and send a new invite, or add one with `scripts/add-business.ts --id <business> --staff-email <email>`.
 
 ## Rollback
 

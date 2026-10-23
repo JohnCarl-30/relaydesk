@@ -68,7 +68,13 @@ export default function LoginPage() {
           >
             Sign in
           </button>
-          <Link href="/" className="mt-6 block text-center text-sm text-muted hover:text-ink">
+          <p className="mt-6 text-center text-sm text-muted">
+            New business?{" "}
+            <Link href="/signup" className="text-forest underline underline-offset-2">
+              Set up your help center
+            </Link>
+          </p>
+          <Link href="/" className="mt-3 block text-center text-sm text-muted hover:text-ink">
             Back to Nimbus
           </Link>
         </form>
