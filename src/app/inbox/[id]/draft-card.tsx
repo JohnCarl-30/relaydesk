@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { helpHrefForTitle } from "@/lib/articles";
 import type { DraftKind } from "@/lib/models";
 
 export type DraftView = {
@@ -12,7 +11,8 @@ export type DraftView = {
   body: string;
   rationale: string;
   model: string;
-  related: string[];
+  /** Articles the draft drew on, with their help-center links. */
+  related: { title: string; href: string }[];
 };
 
 const REJECT_REASONS = [
@@ -119,8 +119,8 @@ export function DraftCard({
       {draft.related.length ? (
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
           Related:
-          {draft.related.map((title) => (
-            <Link key={title} href={helpHrefForTitle(title)} className="text-ink underline-offset-2 hover:text-forest hover:underline">
+          {draft.related.map(({ title, href }) => (
+            <Link key={title} href={href} className="text-ink underline-offset-2 hover:text-forest hover:underline">
               {title}
             </Link>
           ))}

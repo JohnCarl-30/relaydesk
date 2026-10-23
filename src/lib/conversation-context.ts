@@ -13,7 +13,13 @@ export type StandaloneQuestion = {
   prompt: string;
 };
 
-export const ACKNOWLEDGEMENT_REPLY = "Glad to help. Anything else about Nimbus?";
+export function acknowledgementReply(businessName: string): string {
+  return `Glad to help. Anything else about ${businessName}?`;
+}
+
+export const ACKNOWLEDGEMENT_REPLY = acknowledgementReply("Nimbus");
+
+const ACKNOWLEDGEMENT_REPLY_PATTERN = /^Glad to help\. Anything else about .+\?$/;
 
 const MAX_HISTORY_TURNS = 6;
 const MAX_TURN_CHARS = 600;
@@ -114,7 +120,7 @@ export function isAcknowledgement(text: string): boolean {
 function isAcknowledgementTurn(turn: ConversationTurn): boolean {
   return turn.role === "visitor"
     ? isAcknowledgement(turn.body)
-    : turn.body.trim() === ACKNOWLEDGEMENT_REPLY;
+    : ACKNOWLEDGEMENT_REPLY_PATTERN.test(turn.body.trim());
 }
 
 export function boundConversationHistory(

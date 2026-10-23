@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SiteNav } from "@/components/SiteNav";
 import { Widget } from "@/components/Widget";
 import { Logo } from "@/components/ui";
+import { DEMO_WIDGET } from "@/lib/demo";
 
 export default function NimbusLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -34,7 +35,7 @@ export default function NimbusLayout({ children }: { children: React.ReactNode }
       <div id="main" tabIndex={-1} className="outline-none">
         {children}
       </div>
-      <Widget />
+      <Widget {...DEMO_WIDGET} showInboxLink />
     </div>
   );
 }

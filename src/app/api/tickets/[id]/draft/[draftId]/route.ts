@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAdmin } from "@/lib/auth";
+import { currentStaff } from "@/lib/auth";
 import { decideDraft, getDraft, replyToTicket } from "@/lib/db";
 
 const REJECT_REASONS = ["wrong", "not_helpful", "tone", "other"] as const;
@@ -12,11 +12,12 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string; draftId: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const staff = await currentStaff();
+  if (!staff) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id, draftId } = await context.params;
-  const draft = getDraft(draftId);
+  const draft = getDraft(staff.business_id, draftId);
   if (!draft || draft.ticket_id !== id) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
@@ -27,7 +28,7 @@ export async function POST(
   const body = (await request.json()) as { action?: string; body?: string; reason?: string };
   if (body.action === "send") {
     const finalBody = body.body?.trim() || draft.body;
-    const ticket = replyToTicket(id, finalBody);
+    const ticket = replyToTicket(staff.business_id, id, finalBody);
     if (!ticket) return NextResponse.json({ error: "not found" }, { status: 404 });
     decideDraft(draft.id, {
       status: finalBody === draft.body ? "sent" : "edited",

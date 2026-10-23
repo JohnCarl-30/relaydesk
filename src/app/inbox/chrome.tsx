@@ -7,10 +7,12 @@ import { TicketList } from "./ticket-list";
 import type { Ticket } from "@/lib/models";
 
 export function InboxShell({
+  business,
   tickets,
   copilotOn,
   children,
 }: {
+  business: { name: string; helpHref: string };
   tickets: Ticket[];
   copilotOn: boolean;
   children: React.ReactNode;
@@ -25,11 +27,11 @@ export function InboxShell({
         className="flex w-14 shrink-0 flex-col items-center border-r border-forest-2/40 bg-forest py-3 text-paper"
       >
         <Link
-          href="/"
+          href={business.helpHref}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-paper/15 text-xs font-medium"
-          title="Nimbus"
+          title={business.name}
         >
-          N
+          {business.name.trim().charAt(0).toUpperCase()}
         </Link>
         <nav className="mt-6 flex flex-1 flex-col items-center gap-1">
           <Link
@@ -49,7 +51,7 @@ export function InboxShell({
             </svg>
           </Link>
           <Link
-            href="/help"
+            href={business.helpHref}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-paper/70 transition-colors hover:bg-paper/10 hover:text-paper"
             title="Help"
             aria-label="Help center"

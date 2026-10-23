@@ -5,17 +5,18 @@ import { useMemo, useState } from "react";
 import type { Article } from "@/lib/articles";
 import { IconChevron, IconSearch } from "@/components/ui";
 
-const CATEGORY_BLURB: Record<string, string> = {
-  "Getting started": "Workspaces, projects, first events.",
-  Billing: "Seats, event quotas, failed cards.",
-  Security: "SSO, Google Workspace, Okta.",
-  Developers: "Write keys, read keys, rate limits.",
-  Privacy: "Retention windows and exports.",
-  Team: "Invites, owners, editors, viewers.",
-  Charts: "Funnels, zeros, CSV dumps.",
-};
-
-export function HelpIndex({ articles }: { articles: Article[] }) {
+export function HelpIndex({
+  articles,
+  base,
+  intro,
+  categoryBlurbs = {},
+}: {
+  articles: Article[];
+  /** Path the article links hang off, e.g. "/help" or "/h/acme". */
+  base: string;
+  intro: string;
+  categoryBlurbs?: Record<string, string>;
+}) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
 
@@ -43,10 +44,7 @@ export function HelpIndex({ articles }: { articles: Article[] }) {
       <h1 className="text-center font-serif text-4xl tracking-tight sm:text-5xl">
         How can we help?
       </h1>
-      <p className="mx-auto mt-3 max-w-lg text-center text-muted">
-        These are the articles the widget searches. Billing, SSO, API keys,
-        empty funnels.
-      </p>
+      <p className="mx-auto mt-3 max-w-lg text-center text-muted">{intro}</p>
       <label className="relative mx-auto mt-8 block max-w-xl">
         <span className="sr-only">Search articles</span>
         <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted">
@@ -68,7 +66,7 @@ export function HelpIndex({ articles }: { articles: Article[] }) {
         <ul className="mx-auto mt-10 max-w-xl divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
           {groups.flatMap(([, list]) => list).map((article) => (
             <li key={article.slug}>
-              <Link href={`/help/${article.slug}`} className="block px-5 py-4 transition-colors hover:bg-paper">
+              <Link href={`${base}/${article.slug}`} className="block px-5 py-4 transition-colors hover:bg-paper">
                 <p className="text-[11px] uppercase tracking-widest text-copper">
                   {article.category}
                 </p>
@@ -87,7 +85,7 @@ export function HelpIndex({ articles }: { articles: Article[] }) {
             >
               <div>
                 <h2 className="font-medium">{category}</h2>
-                <p className="mt-1 text-sm text-muted">{CATEGORY_BLURB[category] ?? ""}</p>
+                <p className="mt-1 text-sm text-muted">{categoryBlurbs[category] ?? ""}</p>
                 <p className="mt-2 text-xs tabular-nums text-muted">
                   {list.length} {list.length === 1 ? "article" : "articles"}
                 </p>
@@ -96,7 +94,7 @@ export function HelpIndex({ articles }: { articles: Article[] }) {
                 {list.map((article) => (
                   <li key={article.slug}>
                     <Link
-                      href={`/help/${article.slug}`}
+                      href={`${base}/${article.slug}`}
                       className="group flex items-center justify-between gap-4 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-card"
                     >
                       <span>{article.title}</span>

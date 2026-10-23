@@ -1,5 +1,23 @@
+export type Business = {
+  /** URL-safe slug, e.g. "nimbus". Widget embeds and help-center links use it. */
+  id: string;
+  name: string;
+  /** Bumped on every article change, so cached search indexes know to rebuild. */
+  articles_version: number;
+  created_at: string;
+};
+
+export type Staff = {
+  id: string;
+  business_id: string;
+  email: string;
+  name: string;
+  created_at: string;
+};
+
 export type Conversation = {
   id: string;
+  business_id: string;
   visitor_email: string | null;
   created_at: string;
 };
@@ -15,6 +33,7 @@ export type Message = {
 
 export type Ticket = {
   id: string;
+  business_id: string;
   conversation_id: string;
   email: string;
   status: "open" | "waiting" | "closed";

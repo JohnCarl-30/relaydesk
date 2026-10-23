@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 import { COPILOT_SETTING, MAX_RUNS_PER_DAY, readTicket, runCopilot } from "./copilot";
 import * as db from "./db";
 import { REFUSE_LINE } from "./escalate";
+import { DEMO_BUSINESS_ID } from "./help-center";
 import { forceExtractiveAnswers } from "./keyless";
 
 forceExtractiveAnswers();
@@ -15,7 +16,7 @@ type Turn = ["visitor" | "assistant", string];
 
 /** Builds a conversation the way the chat route does, then opens a ticket on it. */
 function ticketFrom(turns: Turn[], email = "priya@northline.io") {
-  const conversation = db.createConversation(email);
+  const conversation = db.createConversation(DEMO_BUSINESS_ID, email);
   for (const [role, body] of turns) db.addMessage(conversation.id, role, body);
   return db.createTicket(conversation.id, email);
 }
@@ -79,7 +80,7 @@ describe("runCopilot without a model", () => {
     const ticket = ticketFrom(didntHelp);
     const before = db.listMessages(ticket.conversation_id).length;
 
-    const result = await runCopilot(ticket.id, "ticket_created");
+    const result = await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
 
     assert.equal(result.outcome, "holding");
     const draft = db.getPendingDraft(ticket.id);
@@ -87,7 +88,7 @@ describe("runCopilot without a model", () => {
     assert.equal(draft.kind, "holding");
     assert.equal(draft.model, "template");
     assert.match(draft.body, /^Hi Priya, thanks for letting us know the article didn't answer it\./);
-    const filed = db.getTicket(ticket.id);
+    const filed = db.getTicket(DEMO_BUSINESS_ID, ticket.id);
     assert.equal(filed?.topic, "Billing");
     assert.equal(filed?.summary, "Do pending invites count as billed seats?");
     assert.match(filed?.needs_human_reason ?? "", /didn't help/);
@@ -97,28 +98,28 @@ describe("runCopilot without a model", () => {
 
   it("keeps one pending draft per ticket; regenerating supersedes the old one", async () => {
     const ticket = ticketFrom(didntHelp);
-    const first = (await runCopilot(ticket.id, "ticket_created")).draft;
-    const second = (await runCopilot(ticket.id, "regenerate")).draft;
+    const first = (await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created")).draft;
+    const second = (await runCopilot(DEMO_BUSINESS_ID, ticket.id, "regenerate")).draft;
     assert.ok(first && second && first.id !== second.id);
-    assert.equal(db.getDraft(first.id)?.status, "superseded");
+    assert.equal(db.getDraft(DEMO_BUSINESS_ID, first.id)?.status, "superseded");
     assert.equal(db.getPendingDraft(ticket.id)?.id, second.id);
   });
 
   it("does nothing when switched off", async () => {
     const ticket = ticketFrom(didntHelp);
-    db.setSetting(COPILOT_SETTING, "off");
+    db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "off");
     try {
-      assert.equal((await runCopilot(ticket.id, "ticket_created")).outcome, "disabled");
+      assert.equal((await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created")).outcome, "disabled");
       assert.equal(db.getPendingDraft(ticket.id), undefined);
     } finally {
-      db.setSetting(COPILOT_SETTING, "on");
+      db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "on");
     }
   });
 
   it("stops after the daily run limit", async () => {
     const ticket = ticketFrom(didntHelp);
-    for (let i = 0; i < MAX_RUNS_PER_DAY; i += 1) await runCopilot(ticket.id, "regenerate");
-    assert.equal((await runCopilot(ticket.id, "regenerate")).outcome, "rate_limited");
+    for (let i = 0; i < MAX_RUNS_PER_DAY; i += 1) await runCopilot(DEMO_BUSINESS_ID, ticket.id, "regenerate");
+    assert.equal((await runCopilot(DEMO_BUSINESS_ID, ticket.id, "regenerate")).outcome, "rate_limited");
   });
 });
 
@@ -132,13 +133,13 @@ describe("runCopilot with a model (stub)", () => {
         ["visitor", "This didn't help"],
         ["assistant", REFUSED],
       ]);
-      const answer = await runCopilot(answerable.id, "ticket_created");
+      const answer = await runCopilot(DEMO_BUSINESS_ID, answerable.id, "ticket_created");
       assert.equal(answer.outcome, "answer");
       assert.equal(answer.draft?.model, "stub");
-      assert.equal(db.getTicket(answerable.id)?.needs_human_reason, null);
+      assert.equal(db.getTicket(DEMO_BUSINESS_ID, answerable.id)?.needs_human_reason, null);
 
       const refund = ticketFrom([["visitor", "Can I get a refund for unused seats?"], ["assistant", REFUSED]]);
-      assert.equal((await runCopilot(refund.id, "ticket_created")).outcome, "holding");
+      assert.equal((await runCopilot(DEMO_BUSINESS_ID, refund.id, "ticket_created")).outcome, "holding");
     } finally {
       delete process.env.RELAYDESK_STUB_LLM;
     }

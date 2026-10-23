@@ -1,4 +1,5 @@
-import { getArticle, type Article } from "./articles";
+import type { Article } from "./articles";
+import { loadHelpCenter } from "./business";
 import { isAcknowledgement, type ConversationTurn } from "./conversation-context";
 import {
   countRunsSince,
@@ -12,8 +13,9 @@ import {
   type Message,
   type Ticket,
 } from "./db";
-import { isVisitorEscalation, PENDING_TICKET_EMAIL, REFUSE_LINE } from "./escalate";
+import { isRefusal, isVisitorEscalation, PENDING_TICKET_EMAIL } from "./escalate";
 import { answerQuestion, chatModel, chatModelName, hasLlm } from "./graph";
+import { articleBySlug } from "./help-center";
 import { generationAttributes, withSpan } from "./trace";
 
 /*
@@ -59,8 +61,9 @@ const HOLDING_LINE: Record<EscalationReason, string> = {
     "thanks for your patience. I've passed this to the team so a person can look at your case.",
 };
 
-const DRAFT_SYSTEM =
-  "You draft replies for Nimbus support staff, who review every draft before it is sent. Write to the customer by first name. Use only the help articles and the conversation provided. Answer the customer's actual question; if the articles do not fully answer it, say a teammate will follow up. Never promise refunds, discounts, credits, dates, or features. Plain text, under 120 words, no sign-off.";
+function draftSystem(businessName: string): string {
+  return `You draft replies for ${businessName} support staff, who review every draft before it is sent. Write to the customer by first name. Use only the help articles and the conversation provided. Answer the customer's actual question; if the articles do not fully answer it, say a teammate will follow up. Never promise refunds, discounts, credits, dates, or features. Plain text, under 120 words, no sign-off.`;
+}
 
 export type TicketContext = {
   /** The customer's question the ticket is about. */
@@ -108,7 +111,7 @@ export function readTicket(ticket: Ticket, messages: Message[]): TicketContext {
       .find(Boolean) ?? null;
   const reason: EscalationReason = policyTerm
     ? "policy"
-    : reply?.body.startsWith(REFUSE_LINE)
+    : reply && isRefusal(reply.body)
       ? "not_in_help_center"
       : after.some((m) => m.role === "visitor" && DIDNT_HELP.test(m.body))
         ? "answer_didnt_help"
@@ -155,11 +158,15 @@ function holdingDraft(context: TicketContext, sources: Article[]): Drafted {
   };
 }
 
-async function modelDraft(context: TicketContext, sources: Article[]): Promise<Drafted | null> {
+async function modelDraft(
+  businessName: string,
+  context: TicketContext,
+  sources: Article[],
+): Promise<Drafted | null> {
   return withSpan("copilot.draft", {}, async (span) => {
     const articles = sources.map((a, i) => `[${i + 1}] ${a.title}\n${a.body}`).join("\n\n");
     const messages = [
-      { role: "system", content: DRAFT_SYSTEM },
+      { role: "system", content: draftSystem(businessName) },
       {
         role: "user",
         content: `Customer first name: ${context.name}\n\nConversation:\n${context.transcript}\n\nHelp articles:\n${articles}`,
@@ -188,11 +195,12 @@ async function modelDraft(context: TicketContext, sources: Article[]): Promise<D
   });
 }
 
-export function copilotEnabled(): boolean {
-  return getSetting(COPILOT_SETTING) !== "off";
+export function copilotEnabled(businessId: string): boolean {
+  return getSetting(businessId, COPILOT_SETTING) !== "off";
 }
 
 export async function runCopilot(
+  businessId: string,
   ticketId: string,
   trigger: CopilotTrigger,
 ): Promise<{ outcome: CopilotOutcome; draft?: AgentDraft }> {
@@ -209,10 +217,12 @@ export async function runCopilot(
       span.setAttribute("copilot.outcome", outcome);
     };
 
-    const ticket = getTicket(ticketId);
-    if (!ticket) return { outcome: "error" };
+    const ticket = getTicket(businessId, ticketId);
+    const center = loadHelpCenter(businessId);
+    if (!ticket || !center) return { outcome: "error" };
     span.setAttribute("session.id", ticket.conversation_id);
-    if (!copilotEnabled()) {
+    span.setAttribute("business.id", businessId);
+    if (!copilotEnabled(businessId)) {
       log("disabled", "Co-pilot is off.");
       return { outcome: "disabled" };
     }
@@ -227,9 +237,10 @@ export async function runCopilot(
       const result = await answerQuestion(context.question, {
         history: context.history,
         rewrite: false,
+        helpCenter: center,
       });
       const sources = result.citations
-        .map((c) => getArticle(c.slug))
+        .map((c) => articleBySlug(center, c.slug))
         .filter((a): a is Article => Boolean(a));
       const canAnswer =
         hasLlm() &&
@@ -237,7 +248,7 @@ export async function runCopilot(
         context.reason !== "policy" &&
         context.reason !== "not_in_help_center";
       const drafted =
-        (canAnswer ? await modelDraft(context, sources).catch(() => null) : null) ??
+        (canAnswer ? await modelDraft(center.name, context, sources).catch(() => null) : null) ??
         holdingDraft(context, sources);
 
       const draft = insertDraft({

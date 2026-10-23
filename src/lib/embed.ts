@@ -1,15 +1,18 @@
 import { join } from "node:path";
-import { ARTICLES, type Article } from "./articles";
-import { CHUNKS } from "./chunks";
+import type { Article } from "./articles";
+import type { Corpus } from "./rag";
 
 type Extractor = (text: string, opts: { pooling: string; normalize: boolean }) => Promise<{
   data: Float32Array | number[];
 }>;
 
 let extractorPromise: Promise<Extractor> | null = null;
-let articleCache: { article: Article; vec: number[]; text: string }[] | null = null;
-let chunkCache: { article: Article; vec: number[]; text: string; chunkId: string }[] | null =
-  null;
+type ArticleVec = { article: Article; vec: number[]; text: string };
+type ChunkVec = ArticleVec & { chunkId: string };
+
+// Keyed by corpus, so a business's edited articles get fresh vectors.
+const articleCache = new WeakMap<Corpus, ArticleVec[]>();
+const chunkCache = new WeakMap<Corpus, ChunkVec[]>();
 
 async function getExtractor(): Promise<Extractor> {
   extractorPromise ??= (async () => {
@@ -27,33 +30,33 @@ export async function embedQuery(text: string): Promise<number[]> {
   return Array.from(out.data);
 }
 
-export async function articleEmbeddings(): Promise<
-  { article: Article; vec: number[]; text: string }[]
-> {
-  if (articleCache) return articleCache;
-  articleCache = [];
-  for (const article of ARTICLES) {
+export async function articleEmbeddings(corpus: Corpus): Promise<ArticleVec[]> {
+  const cached = articleCache.get(corpus);
+  if (cached) return cached;
+  const rows: ArticleVec[] = [];
+  for (const article of corpus.articles) {
     const text = `${article.title}\n\n${article.body}`;
     const vec = await embedQuery(`${article.title}\n${article.summary}\n${article.body}`);
-    articleCache.push({ article, vec, text });
+    rows.push({ article, vec, text });
   }
-  return articleCache;
+  articleCache.set(corpus, rows);
+  return rows;
 }
 
-export async function chunkEmbeddings(): Promise<
-  { article: Article; vec: number[]; text: string; chunkId: string }[]
-> {
-  if (chunkCache) return chunkCache;
-  chunkCache = [];
-  for (const chunk of CHUNKS) {
+export async function chunkEmbeddings(corpus: Corpus): Promise<ChunkVec[]> {
+  const cached = chunkCache.get(corpus);
+  if (cached) return cached;
+  const rows: ChunkVec[] = [];
+  for (const chunk of corpus.chunks) {
     const text = `${chunk.article.title}\n\n${chunk.text}`;
     const vec = await embedQuery(text);
-    chunkCache.push({
+    rows.push({
       article: chunk.article,
       vec,
       text,
       chunkId: chunk.id,
     });
   }
-  return chunkCache;
+  chunkCache.set(corpus, rows);
+  return rows;
 }

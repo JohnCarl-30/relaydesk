@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { readTicket, runCopilot } from "../src/lib/copilot";
 import * as db from "../src/lib/db";
 import { answerQuestion } from "../src/lib/graph";
+import { DEMO_BUSINESS_ID } from "../src/lib/help-center";
 import { forceExtractiveAnswers } from "../src/lib/keyless";
 
 type Expect = { reason: string; topic: string; question: string };
@@ -24,7 +25,7 @@ forceExtractiveAnswers();
 process.env.RELAYDESK_DB_PATH = join(tmpdir(), `relaydesk-copilot-eval-${process.pid}-${Date.now()}.db`);
 
 async function replay(turns: string[]) {
-  const conversation = db.createConversation(null);
+  const conversation = db.createConversation(DEMO_BUSINESS_ID, null);
   let ticket: db.Ticket | undefined;
   for (const text of turns) {
     const history = db.listMessages(conversation.id).map(({ role, body }) => ({ role, body }));
@@ -58,8 +59,8 @@ async function main() {
       console.log("FAIL ".padEnd(5), c.id.padEnd(24), "no ticket was opened");
       continue;
     }
-    await runCopilot(ticket.id, "ticket_created");
-    const filed = db.getTicket(ticket.id);
+    await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
+    const filed = db.getTicket(DEMO_BUSINESS_ID, ticket.id);
     const context = readTicket(ticket, db.listMessages(ticket.conversation_id));
     const got: Expect = { reason: context.reason, topic: filed?.topic ?? "", question: context.question };
     const misses = fields.filter((f) => got[f] !== c.expect[f]);

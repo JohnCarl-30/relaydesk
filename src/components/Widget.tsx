@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { helpHrefForTitle } from "@/lib/articles";
 import { IconChat, IconClose, IconDoc, IconPerson, IconSend } from "@/components/ui";
+
+/** An article the answer cites; slug is null when the article was renamed or removed since. */
+type Citation = { title: string; slug: string | null };
 
 type ChatMessage = {
   id: string;
   role: "visitor" | "assistant" | "agent";
   body: string;
-  citations: string[];
+  citations: Citation[];
 };
 
 type ChatResponse = {
@@ -21,21 +23,36 @@ type ChatResponse = {
   escalated?: boolean;
 };
 
-const STORAGE_KEY = "relaydesk_conversation";
-const OPEN_CHAT_EVENT = "nimbus:open-chat";
+const OPEN_CHAT_EVENT = "relaydesk:open-chat";
+/** Posted to the host page when the embedded widget opens or closes, so embed.js can resize the iframe. */
+export const EMBED_RESIZE_MESSAGE = "relaydesk:widget";
 
 /** Open the widget from elsewhere on the page, e.g. a help article's "Still stuck?" button. */
 export function openChat() {
   window.dispatchEvent(new Event(OPEN_CHAT_EVENT));
 }
 
-const SUGGESTIONS = [
-  "Why does my invoice show extra seats?",
-  "SSO loops back to Google.",
-  "Where do I find API keys?",
-];
+export type WidgetProps = {
+  business: { id: string; name: string };
+  /** Where cited articles live, e.g. "/help" on the Nimbus site or "/h/acme" elsewhere. */
+  helpBase: string;
+  /** Starter questions on an empty thread. */
+  suggestions?: string[];
+  /** The demo links visitors to the staff inbox; a real business's widget does not. */
+  showInboxLink?: boolean;
+  /** Inside the embed iframe: links open in a new tab and open/close is posted to the host page. */
+  embedded?: boolean;
+};
 
-export function Widget() {
+export function Widget({
+  business,
+  helpBase,
+  suggestions = [],
+  showInboxLink = false,
+  embedded = false,
+}: WidgetProps) {
+  // One saved conversation per business, so two widgets on one origin never share a thread.
+  const storageKey = `relaydesk_conversation:${business.id}`;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [email, setEmail] = useState("");
@@ -47,13 +64,14 @@ export function Widget() {
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
+    const saved = window.localStorage.getItem(storageKey);
     if (!saved) return;
     conversationId.current = saved;
-    fetch(`/api/chat?conversationId=${encodeURIComponent(saved)}`)
+    const query = new URLSearchParams({ business: business.id, conversationId: saved });
+    fetch(`/api/chat?${query}`)
       .then(async (res) => {
         if (res.status === 404) {
-          window.localStorage.removeItem(STORAGE_KEY);
+          window.localStorage.removeItem(storageKey);
           conversationId.current = null;
           return;
         }
@@ -70,13 +88,18 @@ export function Widget() {
       .catch(() => {
         /* keep a blank thread; the next send will reuse or recreate */
       });
-  }, []);
+  }, [business.id, storageKey]);
 
   useEffect(() => {
     const onOpen = () => setOpen(true);
     window.addEventListener(OPEN_CHAT_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_CHAT_EVENT, onOpen);
   }, []);
+
+  useEffect(() => {
+    if (!embedded || window.parent === window) return;
+    window.parent.postMessage({ type: EMBED_RESIZE_MESSAGE, open }, "*");
+  }, [embedded, open]);
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -97,6 +120,7 @@ export function Widget() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          business: business.id,
           conversationId: conversationId.current,
           message: text,
         }),
@@ -104,7 +128,7 @@ export function Widget() {
       const data = (await res.json()) as ChatResponse & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Chat failed");
       conversationId.current = data.conversationId;
-      window.localStorage.setItem(STORAGE_KEY, data.conversationId);
+      window.localStorage.setItem(storageKey, data.conversationId);
       if (data.ticketId) setTicketId(data.ticketId);
       setMessages(
         data.messages.map((m) => ({
@@ -131,7 +155,7 @@ export function Widget() {
     const res = await fetch("/api/tickets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId: conversationId.current, email }),
+      body: JSON.stringify({ business: business.id, conversationId: conversationId.current, email }),
     });
     const data = (await res.json()) as { ticket?: { id: string }; error?: string };
     if (!res.ok) {
@@ -148,14 +172,14 @@ export function Widget() {
         onClick={() => setOpen((v) => !v)}
         className={`fixed bottom-5 right-5 z-40 h-14 w-14 items-center justify-center rounded-full bg-forest text-paper shadow-lift transition hover:bg-forest-2 active:scale-[0.97] ${open ? "hidden sm:flex" : "flex"}`}
         aria-expanded={open}
-        aria-label={open ? "Close chat" : "Ask Nimbus"}
+        aria-label={open ? "Close chat" : `Ask ${business.name}`}
       >
         {open ? <IconClose /> : <IconChat />}
       </button>
       {open ? (
         <div
           role="region"
-          aria-label="Nimbus support chat"
+          aria-label={`${business.name} support chat`}
           className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-card motion-safe:animate-rise sm:inset-auto sm:bottom-24 sm:right-5 sm:h-[min(36rem,76vh)] sm:w-[23rem] sm:origin-bottom-right sm:rounded-2xl sm:border sm:border-line sm:shadow-float"
         >
           <div data-surface="dark" className="flex items-center gap-3 bg-forest px-4 py-3.5 text-paper">
@@ -163,7 +187,7 @@ export function Widget() {
               <span className="h-2.5 w-2.5 rounded-full bg-paper" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Nimbus support</p>
+              <p className="text-sm font-medium">{business.name} support</p>
               <p className="flex items-center gap-1.5 text-xs text-paper/70">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#9fdbb6]" />
                 Answers from the help center
@@ -183,13 +207,15 @@ export function Widget() {
               <div className="pt-1">
                 <p className="font-serif text-2xl leading-tight">How can we help?</p>
                 <p className="mt-1.5 text-sm leading-6 text-muted">
-                  Answers come from the Nimbus help center, with the article they came from.
+                  Answers come from the {business.name} help center, with the article they came from.
                 </p>
-                <p className="mt-5 text-[11px] font-medium uppercase tracking-widest text-muted">
-                  Try asking
-                </p>
+                {suggestions.length > 0 ? (
+                  <p className="mt-5 text-[11px] font-medium uppercase tracking-widest text-muted">
+                    Try asking
+                  </p>
+                ) : null}
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {SUGGESTIONS.map((text) => (
+                  {suggestions.map((text) => (
                     <button
                       key={text}
                       type="button"
@@ -218,7 +244,7 @@ export function Widget() {
               return (
                 <div key={message.id} className="mr-8">
                   <p className={`mb-1 text-[11px] font-medium ${staff ? "text-copper" : "text-muted"}`}>
-                    {staff ? "Staff" : "Nimbus bot"}
+                    {staff ? "Staff" : `${business.name} bot`}
                   </p>
                   <div
                     className={
@@ -233,11 +259,12 @@ export function Widget() {
                     <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
                       Answer based on
                       <Link
-                        href={helpHrefForTitle(source)}
+                        href={source.slug ? `${helpBase}/${source.slug}` : helpBase}
+                        target={embedded ? "_blank" : undefined}
                         className="inline-flex items-center gap-1 rounded-md border border-line bg-card px-1.5 py-0.5 text-ink transition hover:border-forest/40 hover:text-forest"
                       >
                         <IconDoc className="h-3 w-3" />
-                        {source}
+                        {source.title}
                       </Link>
                     </p>
                   ) : null}
@@ -246,7 +273,7 @@ export function Widget() {
             })}
             {pending ? (
               <div role="status" className="mr-8">
-                <p className="mb-1 text-[11px] font-medium text-muted">Nimbus bot</p>
+                <p className="mb-1 text-[11px] font-medium text-muted">{business.name} bot</p>
                 <div className="inline-flex items-center gap-1 rounded-2xl rounded-tl-md bg-paper px-3.5 py-3">
                   {["[animation-delay:0ms]", "[animation-delay:150ms]", "[animation-delay:300ms]"].map((delay) => (
                     <span key={delay} className={`h-1.5 w-1.5 rounded-full bg-muted motion-safe:animate-typing ${delay}`} />
@@ -259,13 +286,19 @@ export function Widget() {
           </div>
           {ticketId ? (
             <div className="border-t border-line bg-forest/5 px-4 py-3">
-              <p className="text-xs leading-5">
-                Ticket <span className="font-mono">{ticketId}</span> is in the{" "}
-                <Link href="/inbox" className="text-forest underline underline-offset-2">
-                  staff inbox
-                </Link>
-                . Leave an email for the reply.
-              </p>
+              {showInboxLink ? (
+                <p className="text-xs leading-5">
+                  Ticket <span className="font-mono">{ticketId}</span> is in the{" "}
+                  <Link href="/inbox" className="text-forest underline underline-offset-2">
+                    staff inbox
+                  </Link>
+                  . Leave an email for the reply.
+                </p>
+              ) : (
+                <p className="text-xs leading-5">
+                  A person from {business.name} will reply here. Leave an email for the reply.
+                </p>
+              )}
               <form onSubmit={saveEmail} className="mt-2 flex gap-2">
                 <input
                   type="email"
