@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { HelpArticle } from "@/components/HelpArticle";
-import { helpCenterPath, loadHelpCenter } from "@/lib/business";
+import { helpCenterPath, loadLiveHelpCenter } from "@/lib/business";
 import { articleBySlug } from "@/lib/help-center";
 
 export default async function HostedHelpArticle({
@@ -9,7 +9,7 @@ export default async function HostedHelpArticle({
   params: Promise<{ business: string; slug: string }>;
 }) {
   const { business, slug } = await params;
-  const center = loadHelpCenter(business);
+  const center = loadLiveHelpCenter(business);
   const article = center && articleBySlug(center, slug);
   if (!center || !article) notFound();
   return (

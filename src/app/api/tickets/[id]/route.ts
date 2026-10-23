@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getTicket, listMessages, updateTicket } from "@/lib/db";
+import { getTicket, listMessages, listStaff, updateTicket } from "@/lib/db";
 import { currentStaff } from "@/lib/auth";
-import { AGENTS, type Ticket } from "@/lib/models";
+import type { Ticket } from "@/lib/models";
 
 export async function GET(
   _request: Request,
@@ -42,7 +42,8 @@ export async function PATCH(
     patch.status = body.status;
   }
   if (body.assignee !== undefined) {
-    if (body.assignee !== null && !AGENTS.includes(body.assignee as (typeof AGENTS)[number])) {
+    const names = listStaff(staff.business_id).map((member) => member.name);
+    if (body.assignee !== null && !names.includes(body.assignee)) {
       return NextResponse.json({ error: "bad assignee" }, { status: 400 });
     }
     patch.assignee = body.assignee;

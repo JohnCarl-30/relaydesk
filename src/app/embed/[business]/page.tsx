@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Widget } from "@/components/Widget";
-import { helpCenterPath, loadHelpCenter } from "@/lib/business";
+import { helpCenterPath, loadLiveHelpCenter } from "@/lib/business";
 
 /**
  * The widget alone, for the iframe public/embed.js puts on a business's own
@@ -11,7 +11,7 @@ export default async function EmbedPage({
 }: {
   params: Promise<{ business: string }>;
 }) {
-  const center = loadHelpCenter((await params).business);
+  const center = loadLiveHelpCenter((await params).business);
   if (!center) notFound();
   return (
     <>

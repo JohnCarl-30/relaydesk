@@ -16,7 +16,7 @@ export async function POST(
   if (!text) {
     return NextResponse.json({ error: "body required" }, { status: 400 });
   }
-  const ticket = replyToTicket(staff.business_id, id, text);
+  const ticket = replyToTicket(staff.business_id, id, text, staff.name);
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }

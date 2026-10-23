@@ -11,36 +11,13 @@
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { z } from "zod";
+import { parseJsonArticles } from "../src/lib/article-import";
 import { helpCenterPath } from "../src/lib/business";
 import { createBusiness, createStaff, getBusiness, replaceArticles } from "../src/lib/db";
 
-const ArticleInput = z.object({
-  slug: z.string().regex(/^[a-z0-9-]+$/).optional(),
-  title: z.string().min(1),
-  category: z.string().min(1).default("General"),
-  summary: z.string().default(""),
-  body: z.string().min(1),
-});
-
-function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60);
-}
-
 /** Reads a JSON array of articles; a missing slug comes from the title. */
 export function readArticles(file: string) {
-  const parsed = z.array(ArticleInput).min(1).parse(JSON.parse(readFileSync(file, "utf8")));
-  const articles = parsed.map((a) => ({ ...a, slug: a.slug ?? slugify(a.title) }));
-  const seen = new Set<string>();
-  for (const { slug } of articles) {
-    if (seen.has(slug)) throw new Error(`two articles share the slug "${slug}"`);
-    seen.add(slug);
-  }
-  return articles;
+  return parseJsonArticles(readFileSync(file, "utf8"));
 }
 
 function main() {

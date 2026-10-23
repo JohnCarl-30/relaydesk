@@ -28,7 +28,7 @@ export async function POST(
   const body = (await request.json()) as { action?: string; body?: string; reason?: string };
   if (body.action === "send") {
     const finalBody = body.body?.trim() || draft.body;
-    const ticket = replyToTicket(staff.business_id, id, finalBody);
+    const ticket = replyToTicket(staff.business_id, id, finalBody, staff.name);
     if (!ticket) return NextResponse.json({ error: "not found" }, { status: 404 });
     decideDraft(draft.id, {
       status: finalBody === draft.body ? "sent" : "edited",
