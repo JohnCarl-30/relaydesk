@@ -24,6 +24,7 @@
     "@opentelemetry/resources": "^2.10.0",
     "@opentelemetry/sdk-trace-base": "^2.10.0",
     "@opentelemetry/sdk-trace-node": "^2.10.0",
+    "aws4fetch": "^1.0.20",
     "better-sqlite3": "^13.0.3",
     "next": "16.3.2",
     "react": "19.2.8",

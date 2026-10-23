@@ -1,0 +1,15 @@
+# Overlay for scripts/restore-drill.sh: a throwaway S3 bucket, and backups pointed at it.
+services:
+  s3:
+    image: adobe/s3mock:4.7.0
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: drill-backups
+  relaydesk:
+    environment: &drill-env
+      RELAYDESK_BACKUP_S3_ENDPOINT: http://s3:9090
+      RELAYDESK_BACKUP_S3_BUCKET: drill-backups
+      RELAYDESK_BACKUP_S3_ACCESS_KEY_ID: drill
+      RELAYDESK_BACKUP_S3_SECRET_ACCESS_KEY: drill
+      RELAYDESK_SIGNUP_CODE: ""
+  backup:
+    environment: *drill-env

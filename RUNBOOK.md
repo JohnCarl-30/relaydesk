@@ -1,13 +1,15 @@
 # Relaydesk runbook
 
-What to check and do when something is wrong. Relaydesk is not deployed anywhere yet. The commands assume one Node server started with `npm run build && npm run start`, with `HOST` standing for its address.
+What to check and do when something is wrong, and how to host it. Production is `docker compose` on one machine (see [Hosting](#hosting)). `HOST` below stands for its address, e.g. `http://127.0.0.1:3000` on the machine itself.
 
 ## Where things are
 
 | Thing | Where | Control |
 | --- | --- | --- |
-| App | Next.js 16 | `npm run build && npm run start` |
-| Data | SQLite `data/relaydesk.db` (+ `-wal`, `-shm`) | `RELAYDESK_DB_PATH` |
+| App | Next.js 16 in Docker, service `relaydesk` | `docker compose up -d --build`; `/api/health` is its health check |
+| Data | SQLite `/data/relaydesk.db` (+ `-wal`, `-shm`) in the `relaydesk-data` volume (`data/relaydesk.db` without Docker) | `RELAYDESK_DB_PATH` |
+| Backups | Service `backup`: daily snapshot to `/data/backups` (last 7), plus an S3-compatible bucket if set | `RELAYDESK_BACKUP_*`; last result in `/data/backups/last.json` |
+| Secrets | `.env.docker` on the host, never in git or the image | Copy `.env.example` |
 | Traces | `eval/traces/live.jsonl`, one OpenTelemetry span per line | `RELAYDESK_TRACE_FILE` (a path, or `0` for none) |
 | Model | Optional. Without a key everything still works without a model. | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (default `gpt-4o-mini`) |
 | Businesses | `businesses`, `articles`, `staff`, `invites` tables; Nimbus is seeded | `/signup` (gate it with `RELAYDESK_SIGNUP_CODE`), or `scripts/add-business.ts`. `businesses.live = 0` hides one from the public |
@@ -88,15 +90,8 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
 
 ### Database locked, corrupt, or disk full
 
-- **Back up**, safe while the app runs:
-  ```bash
-  mkdir -p backups && sqlite3 data/relaydesk.db ".backup 'backups/relaydesk-$(date +%F-%H%M).db'"
-  ```
-- **Restore:**
-  1. Stop the app.
-  2. Copy the backup over `data/relaydesk.db`.
-  3. Delete `relaydesk.db-wal` and `relaydesk.db-shm`.
-  4. Start the app.
+- **Back up now**, safe while the app runs: `docker compose run --rm --no-deps backup node scripts/backup.mjs --once`
+- **Restore:** see [Restore a backup](#restore-a-backup).
 - **Schema changes are additive.** New tables and columns are created when the app opens the database, and older code ignores them. So a code rollback never needs a database rollback. One exception in behavior, not schema: code from before businesses ignores `business_id` and shows every business's tickets in one inbox. Don't roll back past that change once a real business is on the database.
 
 ### Staff login problems or a leaked password
@@ -118,8 +113,64 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
   1. Keep a backup: `git branch backup/main-<reason> <old-sha>`.
   2. Push with the exact old tip as the lease: `git push --force-with-lease=main:<old-sha> origin main`.
   3. Check `git rev-parse main^{tree}` matches the backup's tree when only messages changed.
-- **Data:** restore from a backup (above).
+- **Deployed code:** on the host, `git checkout <good-sha> && docker compose up -d --build`. The database needs nothing, because schema changes are additive (see above).
+- **Data:** [Restore a backup](#restore-a-backup).
 - **Before deploying to Vercel:** move data off SQLite first, because a serverless function's filesystem doesn't keep writes. Then Vercel's Instant Rollback becomes the code rollback.
+
+## Hosting
+
+One machine running `docker compose`: the app, a `backup` service, and (optionally) a Cloudflare Tunnel for HTTPS. The same files work on any of these:
+
+| Where | Cost | Good for | Catch |
+| --- | --- | --- | --- |
+| Your own computer + Cloudflare Tunnel | Free | The first pilot shop | Down whenever the computer sleeps or is off |
+| Oracle Cloud Always Free (Ampere A1) | Free | Always-on | Card for sign-up; free capacity can run out in a region |
+| Any VPS, 2 GB RAM (optionally with Dokploy) | ~$5–7/month | Paying customers | Costs money |
+
+### First deploy
+
+1. Install Docker (Docker Desktop on a Mac; `curl -fsSL https://get.docker.com | sh` on a Linux VM), then `git clone` the repo.
+2. `cp .env.example .env.docker` and set at least:
+   - `RELAYDESK_SESSION_SECRET`: `openssl rand -base64 32`
+   - `RELAYDESK_SIGNUP_CODE`: so strangers can't create businesses
+   - `RELAYDESK_ADMIN_PASSWORD`: the Nimbus demo login is public otherwise
+   - `RELAYDESK_PUBLIC_URL`: the `https://` address people will use
+   - `OPENAI_API_KEY`: optional; without it answers quote the articles
+3. `docker compose up -d --build`. Check `curl -s 127.0.0.1:3000/api/health` returns `{"ok":true}`.
+4. Run the [health check](#health-check) against `http://127.0.0.1:3000`.
+
+### HTTPS with a Cloudflare Tunnel
+
+No open ports or public IP needed, so it works from home and behind CGNAT.
+
+1. Put the domain's DNS on Cloudflare (free plan).
+2. Cloudflare dashboard → Zero Trust → Networks → Tunnels → **Create a tunnel** (cloudflared). Copy its token into `.env.docker` as `TUNNEL_TOKEN`.
+3. In the tunnel's **Public hostname**, add e.g. `relaydesk.example.com` → service `http://relaydesk:3000`.
+4. `docker compose --profile tunnel up -d`. Then `curl -s https://relaydesk.example.com/api/health` should return `{"ok":true}`.
+
+On a VPS with Dokploy instead, deploy this `docker-compose.yml` as a Compose app, put the `.env.docker` values in Dokploy's environment settings, and use Dokploy's domain settings for HTTPS rather than the tunnel.
+
+### Backups
+
+- **When:** daily at `RELAYDESK_BACKUP_AT` (HH:MM UTC, default 18:00, which is 02:00 in Manila). The last 7 snapshots stay in `/data/backups`.
+- **Off the machine:** set the four `RELAYDESK_BACKUP_S3_*` values (Cloudflare R2, Backblaze B2, or any S3-compatible bucket) and add a lifecycle rule on the bucket to delete objects after 30 days. A snapshot only on the same disk doesn't survive losing the disk.
+- **Check:** `docker compose exec backup cat /data/backups/last.json` should show `"ok":true` from the last day. `docker compose logs backup` has a line per run.
+- **Back up now:** `docker compose run --rm --no-deps backup node scripts/backup.mjs --once`
+
+### Restore a backup
+
+1. `docker compose stop relaydesk`. Restoring under a running app loses what it writes next.
+2. Run one of these:
+   - newest on disk: `docker compose run --rm --no-deps backup node scripts/restore.mjs --latest --yes`
+   - newest in the bucket: `docker compose run --rm --no-deps backup node scripts/restore.mjs --from-s3 --yes`
+   - a specific one: `... restore.mjs --file /data/backups/<name>.db.gz --yes`
+
+   Without `--yes` it only prints what it would do. It checks the backup's integrity first and keeps the replaced database as `relaydesk.db.before-restore-<time>`.
+3. `docker compose up -d relaydesk`, then sign in and check the newest tickets are there.
+
+### Restore drill
+
+`scripts/restore-drill.sh` does all of this on real Docker against a throwaway bucket: it makes a business, an article, and a ticket, backs up off the machine, deletes the database and the local snapshots, restores from the bucket, and checks the login, ticket, and help center are back. It uses its own project and port (3420), so a running relaydesk isn't touched. Run it after changing anything about backups, and before trusting a new host.
 
 ## After an incident
 
