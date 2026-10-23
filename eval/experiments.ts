@@ -147,6 +147,23 @@ export const escalationPrecisionRecall: RunEvaluator = async ({ itemResults }) =
   ];
 };
 
+/** The lowest value a run score may have before the CI gate fails. */
+export type Threshold = {
+  name: string;
+  min: number;
+  /** Skip the check when the score is missing, as faithfulness is without a model. */
+  optional?: boolean;
+};
+
+/** One line per run score that is below its threshold, or missing when it is required. Empty means the gate passes. */
+export function regressions(evaluations: Evaluation[], thresholds: Threshold[]): string[] {
+  return thresholds.flatMap(({ name, min, optional }) => {
+    const value = evaluations.find((e) => e.name === name)?.value;
+    if (typeof value !== "number") return optional ? [] : [`${name} missing (needs >= ${min})`];
+    return value < min ? [`${name} ${value.toFixed(4)} < ${min}`] : [];
+  });
+}
+
 export type LocalResult = {
   itemResults: ExperimentItemResult[];
   runEvaluations: Evaluation[];

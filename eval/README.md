@@ -40,7 +40,25 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 - **Faithfulness** is an LLM judge. It gives each answer a score from 0 to 1 for how well the articles it cites support it. Escalations and answers without citations get no score.
 - **Model use:** with `OPENAI_API_KEY` set, the model writes the answers, as in the widget, and also runs the judge. Without the key, answers are extractive and the judge is skipped.
 - **Without Langfuse keys**, the script runs the same task and evaluators on the CSVs and prints the scores without recording anything.
-- **Failure:** the script exits non-zero when an item fails or a run score is missing.
+- **Failure:** the script exits non-zero when an item fails, a run score is missing, or a run score is below its threshold.
+
+### PR gate
+
+`.github/workflows/experiments.yml` runs `eval/ci/golden.ts` and `eval/ci/escalation.ts` on every pull request through [`langfuse/experiment-action`](https://github.com/langfuse/experiment-action). It posts one comment with both runs and fails the check when a run score drops below its threshold in `eval/suite.ts`:
+
+| Score | Threshold | main, 2026-10-22 |
+| --- | --- | --- |
+| `hit_at_1` | 0.83 | 0.8333 (50/60) |
+| `hit_at_3` | 0.91 | 0.9167 (55/60) |
+| `escalation_precision` | 1.0 | 1.0 (7/7) |
+| `escalation_recall` | 0.63 | 0.6364 (7/11) |
+| `faithfulness` | 0.8 | not scored yet |
+
+- **How strict:** retrieval and escalation are deterministic, so each threshold sits at main's score and a single extra miss fails the check. When a change raises a score, raise its threshold in the same PR.
+- **Faithfulness:** checked only when the `OPENAI_API_KEY` secret is set. Without it, answers are extractive and the score is absent.
+- **Secrets:** the workflow needs `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`. Fork PRs and runs without them skip with a notice. `experiments.test.ts` checks the same thresholds on the CSVs in `npm test`, so forks are still covered.
+- **Rows:** adding rows to `golden.csv` or `escalation-labels.csv` changes the ratios. Update the thresholds and run `upload-datasets.ts` after merging.
+- **Traces:** the action runs its own OpenTelemetry setup. CI traces hold the item, its scores and any model calls, but not the widget's `relaydesk` spans. For those, use `run-experiments.ts`.
 
 2026-10-19, keyless (extractive answers, against a local Langfuse): hit@1 and hit@3 **1.0** (44/44), escalation precision and recall **1.0** (tp=7, fp=0, fn=0). These match `compare-retrievers.ts` and `escalation.ts`.
 

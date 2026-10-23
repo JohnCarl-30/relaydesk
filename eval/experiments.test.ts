@@ -9,9 +9,11 @@ import {
   hitAtK,
   meanOf,
   parseJudgeReply,
+  regressions,
   runLocal,
   type AnswerOutput,
 } from "./experiments";
+import { experimentSuite } from "./suite";
 
 function output(partial: Partial<AnswerOutput>): AnswerOutput {
   return { answer: "", citations: [], escalated: false, usedLlm: false, retrieved: [], ...partial };
@@ -122,5 +124,38 @@ describe("answer task", () => {
     const out = (await task({ input: { question: "What is the CSV export row cap?" } })) as AnswerOutput;
     assert.deepEqual(out.citations, ["csv-export"]);
     assert.equal(out.retrieved[0], "csv-export");
+  });
+});
+
+describe("gate thresholds", () => {
+  const thresholds = [
+    { name: "hit_at_1", min: 0.83 },
+    { name: "faithfulness", min: 0.8, optional: true },
+  ];
+
+  it("passes at or above every threshold", () => {
+    assert.deepEqual(regressions([{ name: "hit_at_1", value: 50 / 60 }, { name: "faithfulness", value: 0.8 }], thresholds), []);
+  });
+
+  it("names each score below its threshold", () => {
+    assert.deepEqual(regressions([{ name: "hit_at_1", value: 49 / 60 }, { name: "faithfulness", value: 0.5 }], thresholds), [
+      "hit_at_1 0.8167 < 0.83",
+      "faithfulness 0.5000 < 0.8",
+    ]);
+  });
+
+  it("fails a missing required score and skips a missing optional one", () => {
+    assert.deepEqual(regressions([], thresholds), ["hit_at_1 missing (needs >= 0.83)"]);
+  });
+});
+
+describe("experiment suite", () => {
+  it("passes its own thresholds on the CSVs", async () => {
+    const { experiments, task } = experimentSuite();
+    for (const experiment of experiments) {
+      const data = experiment.localItems().map(({ input, expectedOutput }) => ({ input, expectedOutput }));
+      const { runEvaluations } = await runLocal({ data, task, ...experiment });
+      assert.deepEqual(regressions(runEvaluations, experiment.thresholds), [], experiment.dataset);
+    }
   });
 });
