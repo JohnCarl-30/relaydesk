@@ -19,6 +19,14 @@ function stamp(date = new Date()) {
   return date.toISOString().replace(/[:.]/g, "-");
 }
 
+/**
+ * A copy of the live database is in WAL mode too, so even a read-only open
+ * creates `-wal` and `-shm` beside it. Removing the file alone leaves those.
+ */
+function removeSidecars(file) {
+  for (const suffix of ["-wal", "-shm"]) fs.rmSync(`${file}${suffix}`, { force: true });
+}
+
 /** "ok", or SQLite's first complaint. */
 export function integrityOf(file) {
   const db = new Database(file, { readonly: true, fileMustExist: true });
@@ -74,6 +82,7 @@ export async function createBackup(dbPath, dir, now = new Date()) {
     return { file, name, bytes: fs.statSync(file).size, counts };
   } finally {
     fs.rmSync(raw, { force: true });
+    removeSidecars(raw);
   }
 }
 
@@ -110,6 +119,9 @@ export async function restoreBackup(backupFile, dbPath, now = new Date()) {
   } catch (err) {
     fs.rmSync(incoming, { force: true });
     throw err;
+  } finally {
+    // The check only read it, so these are empty; the file itself is renamed below.
+    removeSidecars(incoming);
   }
   let keptAs = null;
   if (fs.existsSync(dbPath)) {
