@@ -50,6 +50,18 @@ OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/trac
 
 Two fixture tickets are already in the inbox so it isn't empty on first open.
 
+## Ask by voice
+
+Tap the mic in the widget and ask out loud. The browser turns speech into text, the text goes through the same answer loop as a typed message, and the answer is read back. It keeps its citation in the chat, and a question the help center can't answer still opens a ticket. The voice says it passed the question to the team rather than reading the ticket id.
+
+- **No key, no new service.** It uses the browser's own `SpeechRecognition` and `speechSynthesis`. Chrome, Edge and Safari support it. Firefox has no speech recognition, so the mic doesn't appear there and typing works as before.
+- **Speaking interrupts the bot.** Tapping the mic while an answer is being read stops it and listens, as it would on a call.
+- **Spoken answers are trimmed for listening** by `spokenText` in [`src/lib/voice.ts`](src/lib/voice.ts): no links or markdown read aloud, and long answers stop at a sentence with "The rest is in the chat."
+- **Traces say which was which.** Voice questions carry `channel=voice` on the `support.answer` span and in Langfuse trace metadata, since their text is a speech-to-text transcript and can be misheard.
+- **Language** follows the widget's `voiceLang` prop, `en-US` by default. Chrome also recognizes `en-PH` and `fil-PH`.
+
+[`e2e/voice.spec.ts`](e2e/voice.spec.ts) drives it in Chromium with a fake recognizer that "hears" a set question, and records what would be read aloud.
+
 ## Work the inbox from Claude (MCP)
 
 `/api/mcp` is an MCP server (Streamable HTTP) over the inbox, so staff can say "summarize the open tickets" or "draft replies for the billing ones" in Claude, Cursor, or any MCP client. It follows the co-pilot's rule: an agent can read, triage, and **draft**, but nothing reaches the customer until a person presses **Send** in `/inbox`. There is no tool that posts a message.

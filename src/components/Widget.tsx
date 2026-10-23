@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { IconChat, IconClose, IconDoc, IconPerson, IconSend } from "@/components/ui";
+import { IconChat, IconClose, IconDoc, IconMic, IconPerson, IconSend, IconStop } from "@/components/ui";
+import { useVoice } from "@/components/useVoice";
+import { spokenText, type Channel } from "@/lib/voice";
 
 /** An article the answer cites; slug is null when the article was renamed or removed since. */
 type Citation = { title: string; slug: string | null };
@@ -42,6 +44,8 @@ export type WidgetProps = {
   showInboxLink?: boolean;
   /** Inside the embed iframe: links open in a new tab and open/close is posted to the host page. */
   embedded?: boolean;
+  /** Language for speech in and out, e.g. "en-PH" or "fil-PH". */
+  voiceLang?: string;
 };
 
 export function Widget({
@@ -50,6 +54,7 @@ export function Widget({
   suggestions = [],
   showInboxLink = false,
   embedded = false,
+  voiceLang = "en-US",
 }: WidgetProps) {
   // One saved conversation per business, so two widgets on one origin never share a thread.
   const storageKey = `relaydesk_conversation:${business.id}`;
@@ -62,6 +67,7 @@ export function Widget({
   const [error, setError] = useState<string | null>(null);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
+  const voice = useVoice({ lang: voiceLang, onError: setError });
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
@@ -106,7 +112,7 @@ export function Widget({
     bottom.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
   }, [messages, pending, open]);
 
-  async function sendText(text: string) {
+  async function sendText(text: string, channel: Channel = "text") {
     if (!text || pending) return;
     setInput("");
     setError(null);
@@ -123,6 +129,7 @@ export function Widget({
           business: business.id,
           conversationId: conversationId.current,
           message: text,
+          channel,
         }),
       });
       const data = (await res.json()) as ChatResponse & { error?: string };
@@ -136,6 +143,8 @@ export function Widget({
           citations: m.citations ?? [],
         })),
       );
+      // A spoken question gets a spoken answer. Typed ones stay quiet.
+      if (channel === "voice") voice.speak(spokenText(data.reply));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chat failed");
     } finally {
@@ -146,6 +155,20 @@ export function Widget({
   async function send(event?: React.FormEvent) {
     event?.preventDefault();
     await sendText(input.trim());
+  }
+
+  function toggleVoice() {
+    if (voice.state === "listening") {
+      voice.stopListening();
+      return;
+    }
+    setError(null);
+    voice.listen((heard) => void sendText(heard, "voice"));
+  }
+
+  function close() {
+    voice.stopAll();
+    setOpen(false);
   }
 
   async function saveEmail(event: React.FormEvent) {
@@ -169,7 +192,7 @@ export function Widget({
     <>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (open ? close() : setOpen(true))}
         className={`fixed bottom-5 right-5 z-40 h-14 w-14 items-center justify-center rounded-full bg-forest text-paper shadow-lift transition hover:bg-forest-2 active:scale-[0.97] ${open ? "hidden sm:flex" : "flex"}`}
         aria-expanded={open}
         aria-label={open ? "Close chat" : `Ask ${business.name}`}
@@ -195,7 +218,7 @@ export function Widget({
             </div>
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={close}
               aria-label="Close chat"
               className="flex h-9 w-9 items-center justify-center rounded-full text-paper/80 transition hover:bg-paper/10 hover:text-paper sm:hidden"
             >
@@ -326,20 +349,50 @@ export function Widget({
             <div className="flex items-center gap-2">
               <input
                 aria-label="Message"
-                value={input}
+                value={voice.state === "listening" ? voice.interim : input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type a message"
+                readOnly={voice.state === "listening"}
+                placeholder={voice.state === "listening" ? "Listening…" : "Type a message"}
                 className="flex-1 rounded-xl border border-line bg-paper px-3.5 py-2.5 text-sm outline-none ring-forest/20 transition focus:border-forest/40 focus:ring-2"
               />
+              {voice.canListen ? (
+                <button
+                  type="button"
+                  onClick={toggleVoice}
+                  disabled={pending}
+                  aria-pressed={voice.state === "listening"}
+                  aria-label={voice.state === "listening" ? "Stop listening" : "Ask by voice"}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition active:scale-[0.97] disabled:opacity-50 ${
+                    voice.state === "listening"
+                      ? "border-copper bg-copper text-paper motion-safe:animate-pulse"
+                      : "border-line bg-paper text-ink hover:border-forest/40 hover:text-forest"
+                  }`}
+                >
+                  {voice.state === "listening" ? <IconStop /> : <IconMic />}
+                </button>
+              ) : null}
               <button
                 type="submit"
-                disabled={pending}
+                disabled={pending || voice.state === "listening"}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-forest text-paper transition hover:bg-forest-2 active:scale-[0.97] disabled:opacity-50"
                 aria-label="Send"
               >
                 <IconSend />
               </button>
             </div>
+            <p aria-live="polite" className="sr-only">
+              {voice.state === "listening" ? "Listening. Ask your question, then pause." : voice.state === "speaking" ? "Reading the answer aloud." : ""}
+            </p>
+            {voice.state === "speaking" ? (
+              <button
+                type="button"
+                onClick={voice.stopSpeaking}
+                className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted transition hover:text-ink"
+              >
+                <IconStop className="h-3 w-3" />
+                Stop reading aloud
+              </button>
+            ) : null}
             {messages.length > 0 && !ticketId ? (
               <button
                 type="button"

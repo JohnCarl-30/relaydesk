@@ -12,6 +12,7 @@ import { runCopilot } from "@/lib/copilot";
 import { PENDING_TICKET_EMAIL } from "@/lib/escalate";
 import { answerQuestion } from "@/lib/graph";
 import { slugForTitle } from "@/lib/help-center";
+import { parseChannel } from "@/lib/voice";
 
 /*
  * The widget's API. Every call names the business whose widget sent it, and a
@@ -70,6 +71,8 @@ export async function POST(request: Request) {
     conversationId?: string;
     message?: string;
     email?: string;
+    /** "voice" when the widget transcribed the message from speech. */
+    channel?: string;
   };
   const business = body.business?.trim();
   const center = business ? loadLiveHelpCenter(business) : undefined;
@@ -94,6 +97,7 @@ export async function POST(request: Request) {
     history,
     sessionId: conversationId,
     helpCenter: center,
+    channel: parseChannel(body.channel),
   });
   const conversation = getConversation(businessId, conversationId);
   let ticket = getTicketByConversation(conversationId);

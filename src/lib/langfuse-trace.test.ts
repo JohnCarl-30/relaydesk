@@ -121,6 +121,14 @@ describe("answerQuestion traces", () => {
     assert.equal(root.attributes["session.id"], "conv_123");
     assert.equal(root.attributes["langfuse.observation.input"], "What is the write-key rate limit?");
     assert.equal(root.attributes["langfuse.observation.output"], result.answer);
+    assert.equal(root.attributes.channel, "text");
+  });
+
+  it("tags a spoken question as voice, so Langfuse can filter voice conversations", async () => {
+    await answerQuestion("What is the write-key rate limit?", { rewrite: false, channel: "voice" });
+    const root = named(await spans(), "support.answer");
+    assert.equal(root.attributes.channel, "voice");
+    assert.equal(root.attributes["langfuse.trace.metadata.channel"], "voice");
   });
 });
 

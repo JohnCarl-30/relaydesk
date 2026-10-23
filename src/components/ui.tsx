@@ -81,6 +81,23 @@ export function IconSend({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
+export function IconMic({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
+      <rect x="5.5" y="2" width="5" height="8" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconStop({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className} aria-hidden>
+      <rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function IconChat({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden>
