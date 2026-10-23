@@ -6,6 +6,7 @@ import { trace as otel } from "@opentelemetry/api";
 import { LangfuseSpanProcessor } from "@langfuse/otel";
 import { runCopilot } from "./copilot";
 import * as db from "./db";
+import { DEMO_BUSINESS_ID } from "./help-center";
 import { answerQuestion } from "./graph";
 import {
   dumpSpans,
@@ -129,13 +130,13 @@ describe("runCopilot traces", () => {
   });
 
   it("puts the draft model call in its own generation span under the conversation's session", async () => {
-    const conversation = db.createConversation("priya@northline.io");
+    const conversation = db.createConversation(DEMO_BUSINESS_ID, "priya@northline.io");
     db.addMessage(conversation.id, "visitor", "Do pending invites count as billed seats?");
     db.addMessage(conversation.id, "assistant", "Pending invites do not count until they accept.");
     db.addMessage(conversation.id, "visitor", "This didn't help");
     const ticket = db.createTicket(conversation.id, "priya@northline.io");
 
-    const { outcome } = await runCopilot(ticket.id, "ticket_created");
+    const { outcome } = await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
     assert.equal(outcome, "answer");
     const rows = await spans();
     assert.equal(named(rows, "copilot.run").attributes["session.id"], conversation.id);

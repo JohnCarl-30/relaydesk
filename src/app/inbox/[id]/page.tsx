@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { formatClock, Initials, StatusPill } from "@/components/ui";
-import { helpHrefForTitle } from "@/lib/articles";
+import { currentStaff } from "@/lib/auth";
+import { helpCenterPath, loadHelpCenter } from "@/lib/business";
 import { copilotEnabled } from "@/lib/copilot";
 import { getPendingDraft, getTicket, listMessages, listRuns } from "@/lib/db";
+import { slugForTitle } from "@/lib/help-center";
 import { DraftCard, type DraftView } from "./draft-card";
 import { ReplyForm } from "./reply-form";
 import { TicketActions } from "./ticket-actions";
@@ -22,8 +24,13 @@ export default async function TicketPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ticket = getTicket(id);
-  if (!ticket) notFound();
+  const staff = await currentStaff();
+  if (!staff) redirect("/login");
+  const ticket = getTicket(staff.business_id, id);
+  const center = loadHelpCenter(staff.business_id);
+  if (!ticket || !center) notFound();
+  const helpHref = (title: string) =>
+    helpCenterPath(center.businessId, slugForTitle(center, title) ?? undefined);
   const messages = listMessages(ticket.conversation_id);
   const name = ticket.email.split("@")[0];
   const pending = getPendingDraft(ticket.id);
@@ -34,7 +41,9 @@ export default async function TicketPage({
         body: pending.body,
         rationale: pending.rationale,
         model: pending.model,
-        related: pending.citations ? (JSON.parse(pending.citations) as string[]) : [],
+        related: (pending.citations ? (JSON.parse(pending.citations) as string[]) : []).map(
+          (title) => ({ title, href: helpHref(title) }),
+        ),
       }
     : null;
   const runs = listRuns(ticket.id, 4);
@@ -109,7 +118,7 @@ export default async function TicketPage({
                     <p className="mt-1.5 text-[11px] text-muted">
                       Answer based on{" "}
                       <Link
-                        href={helpHrefForTitle(source)}
+                        href={helpHref(source)}
                         className="text-ink underline-offset-2 hover:text-forest hover:underline"
                       >
                         {source}
@@ -133,7 +142,7 @@ export default async function TicketPage({
               ticketId={ticket.id}
               draft={draft}
               needsHumanReason={ticket.needs_human_reason}
-              enabled={copilotEnabled()}
+              enabled={copilotEnabled(staff.business_id)}
             />
             <ReplyForm ticketId={ticket.id} email={ticket.email} />
           </>

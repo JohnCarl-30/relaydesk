@@ -1,9 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { clearAdminCookie } from "@/lib/auth";
+import { endSession } from "@/lib/auth";
 
 export async function logout() {
-  await clearAdminCookie();
+  await endSession();
   redirect("/login");
 }

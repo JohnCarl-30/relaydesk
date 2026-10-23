@@ -14,7 +14,7 @@ const newsreader = Newsreader({
 });
 
 const description =
-  "Relaydesk demo. The widget cites Nimbus help articles. Staff inbox password is nimbus-demo.";
+  "Relaydesk demo. The widget cites Nimbus help articles. Staff inbox: staff@nimbus.demo / nimbus-demo.";
 
 export const metadata: Metadata = {
   title: "Nimbus, product analytics",

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { replyToTicket } from "@/lib/db";
-import { isAdmin } from "@/lib/auth";
+import { currentStaff } from "@/lib/auth";
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const staff = await currentStaff();
+  if (!staff) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
@@ -15,7 +16,7 @@ export async function POST(
   if (!text) {
     return NextResponse.json({ error: "body required" }, { status: 400 });
   }
-  const ticket = replyToTicket(id, text);
+  const ticket = replyToTicket(staff.business_id, id, text);
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }

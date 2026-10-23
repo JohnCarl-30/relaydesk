@@ -5,7 +5,21 @@ export { tokenize } from "./tokenize";
 export const CONFIDENT_MIN_SCORE = 6;
 export const COVERAGE_ESCALATE_BELOW = 0.5;
 export const PENDING_TICKET_EMAIL = "unassigned@nimbus.demo";
-export const REFUSE_LINE = "I don't have that in the Nimbus help center.";
+
+/** What the bot says when the business's help center has no answer. */
+export function refuseLine(businessName: string): string {
+  return `I don't have that in the ${businessName} help center.`;
+}
+
+export const REFUSE_LINE = refuseLine("Nimbus");
+
+/** True for any business's refuse line, so ticket reading works the same everywhere. */
+export function isRefusal(text: string): boolean {
+  return /^I don't have that in the .+ help center\./.test(text);
+}
+
+/** The demo's name, which says nothing about which article a question needs. */
+const DEFAULT_IGNORE_TERMS = ["nimbus"];
 
 // Requests for a person. Each phrase needs an intent ("talk to", "need a",
 // "please"), so a question that only mentions a person or an agent ("a
@@ -30,8 +44,13 @@ export function isVisitorEscalation(text: string): boolean {
   return VISITOR_ESCALATE.test(text.trim());
 }
 
-export function questionCoverage(question: string, hitText: string): number {
-  const q = tokenize(question).filter((t) => t !== "nimbus");
+export function questionCoverage(
+  question: string,
+  hitText: string,
+  ignoreTerms: string[] = DEFAULT_IGNORE_TERMS,
+): number {
+  const ignore = new Set(ignoreTerms);
+  const q = tokenize(question).filter((t) => !ignore.has(t));
   if (q.length === 0) return 1;
   const hit = new Set(tokenize(hitText));
   return q.filter((t) => hit.has(t)).length / q.length;
@@ -42,12 +61,16 @@ export function questionCoverage(question: string, hitText: string): number {
  * Empty hits, visitor asked for a human, or a weak retrieve whose top hit
  * barely overlaps the question (Salesforce scoring 5 against workspaces).
  */
-export function shouldEscalate(question: string, hits: ScoredText[]): boolean {
+export function shouldEscalate(
+  question: string,
+  hits: ScoredText[],
+  ignoreTerms?: string[],
+): boolean {
   if (isVisitorEscalation(question)) return true;
   if (hits.length === 0) return true;
   const top = hits[0];
   if (top.score >= CONFIDENT_MIN_SCORE) return false;
-  return questionCoverage(question, top.text) < COVERAGE_ESCALATE_BELOW;
+  return questionCoverage(question, top.text, ignoreTerms) < COVERAGE_ESCALATE_BELOW;
 }
 
 // "how much" asks a price only when a verb follows ("how much does it…");

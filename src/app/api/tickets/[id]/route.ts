@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { getTicket, listMessages, updateTicket } from "@/lib/db";
-import { isAdmin } from "@/lib/auth";
+import { currentStaff } from "@/lib/auth";
 import { AGENTS, type Ticket } from "@/lib/models";
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const staff = await currentStaff();
+  if (!staff) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
-  const ticket = getTicket(id);
+  const ticket = getTicket(staff.business_id, id);
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
@@ -23,7 +24,8 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const staff = await currentStaff();
+  if (!staff) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
@@ -46,7 +48,7 @@ export async function PATCH(
     patch.assignee = body.assignee;
   }
 
-  const ticket = updateTicket(id, patch);
+  const ticket = updateTicket(staff.business_id, id, patch);
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }

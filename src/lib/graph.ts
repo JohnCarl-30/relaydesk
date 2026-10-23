@@ -1,7 +1,6 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
 import {
-  ACKNOWLEDGEMENT_REPLY,
   boundConversationHistory,
   heuristicStandaloneQuestion,
   isAcknowledgement,
@@ -13,10 +12,16 @@ import {
 import {
   CONFIDENT_MIN_SCORE,
   isVisitorEscalation,
-  REFUSE_LINE,
   shouldEscalate,
   unsupportedPriceQuestion,
 } from "./escalate";
+import {
+  centerAcknowledgement,
+  centerRefuseLine,
+  DEMO_HELP_CENTER,
+  nameTerms,
+  type HelpCenter,
+} from "./help-center";
 import {
   extractiveAnswer,
   retrieve,
@@ -45,6 +50,7 @@ function asAsked(question: string): ResolvedQuestion {
 }
 
 const SupportState = Annotation.Root({
+  center: Annotation<HelpCenter>,
   resolved: Annotation<ResolvedQuestion>,
   query: Annotation<string>,
   hits: Annotation<Hit[]>,
@@ -91,8 +97,9 @@ class StubChatModel implements ChatLike {
   }
 }
 
-const GENERATE_SYSTEM =
-  "You are the Nimbus support assistant on a customer site. Answer only from the provided help articles. Be short. If the articles do not contain the answer, say you are unsure and suggest talking to a human. Mention article titles naturally. Do not invent policies, prices, or product behavior.";
+function generateSystem(businessName: string): string {
+  return `You are the ${businessName} support assistant on a customer site. Answer only from the provided help articles. Be short. If the articles do not contain the answer, say you are unsure and suggest talking to a human. Mention article titles naturally. Do not invent policies, prices, or product behavior.`;
+}
 
 export function hasLlm(): boolean {
   return Boolean(process.env.OPENAI_API_KEY) || process.env.RELAYDESK_STUB_LLM === "1";
@@ -128,6 +135,7 @@ export function chatModel(): ChatLike {
 }
 
 function resolveQuestion(
+  center: HelpCenter,
   question: string,
   history: ConversationTurn[],
 ): ResolvedQuestion {
@@ -142,7 +150,7 @@ function resolveQuestion(
     search: standalone.search,
     prompt: standalone.prompt,
     contextualized: true,
-    topicSlug: retrieve(standalone.topic)[0]?.article.slug,
+    topicSlug: retrieve(standalone.topic, { corpus: center.corpus })[0]?.article.slug,
   };
 }
 
@@ -163,7 +171,7 @@ function tokenAttrs(response: ChatResponse): Record<string, number> {
 async function retrieveNode(state: SupportStateType) {
   const query = state.query?.trim() || state.resolved.search;
   return withSpan("retrieve", { "retrieve.query": query }, (span) => {
-    const retrieved = retrieve(query);
+    const retrieved = retrieve(query, { corpus: state.center.corpus });
     const { contextualized, topicSlug, asked } = state.resolved;
     const hits = contextualized ? preferTopic(retrieved, topicSlug, asked) : retrieved;
     span.setAttribute("retrieve.topic_slug", topicSlug ?? "");
@@ -184,9 +192,12 @@ type SpanAttrs = Record<string, string | number | boolean>;
  * the A/B measures what the widget runs.
  */
 async function answerFromHits(
+  center: HelpCenter,
   resolved: ResolvedQuestion,
   hits: Hit[],
 ): Promise<{ result: RagResult; attrs: SpanAttrs }> {
+  const refuseLine = centerRefuseLine(center);
+  const ignoreTerms = nameTerms(center);
   const explicitEscalation = isVisitorEscalation(resolved.asked);
   const unsupportedAnchors = resolved.contextualized
     ? unsupportedExplicitAnchors(resolved.asked, hits)
@@ -201,7 +212,7 @@ async function answerFromHits(
   if (explicitEscalation || unsupportedAnchors.length > 0 || unpricedQuestion) {
     return {
       result: {
-        answer: REFUSE_LINE,
+        answer: refuseLine,
         citations: [],
         confident: false,
         usedLlm: false,
@@ -214,9 +225,11 @@ async function answerFromHits(
   const extractive = () =>
     extractiveAnswer(resolved.search, hits, {
       focus: resolved.contextualized ? resolved.asked : undefined,
+      refuseLine,
+      ignoreTerms,
     });
 
-  if (!hasLlm() || hits.length === 0 || shouldEscalate(resolved.search, hits)) {
+  if (!hasLlm() || hits.length === 0 || shouldEscalate(resolved.search, hits, ignoreTerms)) {
     return { result: extractive(), attrs };
   }
 
@@ -226,7 +239,7 @@ async function answerFromHits(
 
   try {
     const messages = [
-      { role: "system", content: GENERATE_SYSTEM },
+      { role: "system", content: generateSystem(center.name) },
       {
         role: "user",
         content: `Question: ${resolved.prompt}\n\nHelp articles:\n${context}`,
@@ -271,7 +284,7 @@ async function generateNode(state: SupportStateType) {
     "generate",
     { "generate.attempts": attempts, "llm.stub": usingStubLlm() },
     async (span) => {
-      const { result, attrs } = await answerFromHits(state.resolved, hits);
+      const { result, attrs } = await answerFromHits(state.center, state.resolved, hits);
       for (const [key, value] of Object.entries(attrs)) span.setAttribute(key, value);
       const patch = { ...result, attempts };
       const next = nextAfterGenerate({ ...state, ...patch } as SupportStateType);
@@ -291,7 +304,7 @@ async function rewriteNode(state: SupportStateType) {
       {
         role: "system",
         content:
-          "Rewrite the visitor question as a short help-center search query. Return only the query. Keep product words like seats, SSO, invoice, funnel, API key.",
+          `Rewrite the visitor question as a short help-center search query. Return only the query. ${state.center.searchHint}`,
       },
       { role: "user", content: state.resolved.prompt },
     ];
@@ -345,8 +358,9 @@ function supportGraph() {
 export async function generateFromHits(
   question: string,
   hits: Hit[],
+  center: HelpCenter = DEMO_HELP_CENTER,
 ): Promise<RagResult> {
-  return (await answerFromHits(asAsked(question), hits)).result;
+  return (await answerFromHits(center, asAsked(question), hits)).result;
 }
 
 export async function answerQuestion(
@@ -356,12 +370,16 @@ export async function answerQuestion(
     history?: ConversationTurn[];
     /** Groups a conversation's traces into one Langfuse session. */
     sessionId?: string;
+    /** The business whose articles answer. Defaults to the Nimbus demo. */
+    helpCenter?: HelpCenter;
   } = {},
 ): Promise<RagResult> {
   initTracing();
   stubSession = undefined;
+  const center = options.helpCenter ?? DEMO_HELP_CENTER;
   const attrs = {
     question,
+    "business.id": center.businessId,
     "session.id": options.sessionId,
     "langfuse.observation.input": question,
   };
@@ -369,9 +387,10 @@ export async function answerQuestion(
     const acknowledgement = isAcknowledgement(question);
     span.setAttribute("acknowledgement", acknowledgement);
     if (acknowledgement) {
-      span.setAttribute("langfuse.observation.output", ACKNOWLEDGEMENT_REPLY);
+      const reply = centerAcknowledgement(center);
+      span.setAttribute("langfuse.observation.output", reply);
       return {
-        answer: ACKNOWLEDGEMENT_REPLY,
+        answer: reply,
         citations: [],
         confident: false,
         usedLlm: false,
@@ -379,10 +398,11 @@ export async function answerQuestion(
       };
     }
 
-    const resolved = resolveQuestion(question, options.history ?? []);
+    const resolved = resolveQuestion(center, question, options.history ?? []);
     span.setAttribute("contextualized", resolved.contextualized);
     span.setAttribute("resolved.search", resolved.search);
     const state = await supportGraph().invoke({
+      center,
       resolved,
       allowRewrite: options.rewrite !== false,
     });

@@ -1,0 +1,16 @@
+[
+  {
+    "slug": "delivery-areas",
+    "title": "Where do you deliver?",
+    "category": "Orders",
+    "summary": "Metro Manila in 1 to 2 days, elsewhere by courier.",
+    "body": "We deliver within Metro Manila in 1 to 2 days. Orders outside Metro Manila ship by courier and take 3 to 5 days.\n\nYou get a tracking link by SMS once the rider or courier has the order."
+  },
+  {
+    "slug": "store-hours",
+    "title": "What are your store hours?",
+    "category": "Store",
+    "summary": "7 am to 9 pm every day.",
+    "body": "Our Makati branch is open 7 am to 9 pm every day, including holidays."
+  }
+]

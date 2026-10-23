@@ -8,6 +8,7 @@ import { Logo } from "@/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -17,10 +18,10 @@ export default function LoginPage() {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ email, password }),
     });
     if (!res.ok) {
-      setError("Wrong password. Demo default is nimbus-demo.");
+      setError("Wrong email or password.");
       return;
     }
     router.push("/inbox");
@@ -36,17 +37,28 @@ export default function LoginPage() {
         <form onSubmit={onSubmit} className="m-auto w-full max-w-sm py-16">
           <h1 className="text-2xl font-medium tracking-tight">Staff inbox</h1>
           <p className="mt-2 text-sm text-muted">
-            Demo password is{" "}
+            Nimbus demo: <code className="text-ink">staff@nimbus.demo</code> with password{" "}
             <code className="text-ink">nimbus-demo</code>.
           </p>
           <label className="mt-8 block text-sm">
+            <span className="text-muted">Email</span>
+            <input
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none ring-forest/20 focus:ring-2"
+              autoFocus
+            />
+          </label>
+          <label className="mt-4 block text-sm">
             <span className="text-muted">Password</span>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               className="mt-1.5 w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-sm outline-none ring-forest/20 focus:ring-2"
-              autoFocus
             />
           </label>
           {error ? <p className="mt-2 text-sm text-copper">{error}</p> : null}

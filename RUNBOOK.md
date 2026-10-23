@@ -10,8 +10,9 @@ What to check and do when something is wrong. Relaydesk is not deployed anywhere
 | Data | SQLite `data/relaydesk.db` (+ `-wal`, `-shm`) | `RELAYDESK_DB_PATH` |
 | Traces | `eval/traces/live.jsonl`, one OpenTelemetry span per line | `RELAYDESK_TRACE_FILE` (a path, or `0` for none) |
 | Model | Optional. Without a key everything still works without a model. | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (default `gpt-4o-mini`) |
-| Staff login | `/login` | `RELAYDESK_ADMIN_PASSWORD` (default `nimbus-demo`) |
-| Co-pilot | Drafts on every new ticket | **AI drafts on/off** in the inbox header, or `settings` key `copilot` |
+| Businesses | `businesses`, `articles`, `staff` tables; Nimbus is seeded | `scripts/add-business.ts` |
+| Staff login | `/login`, email + password, signed 7-day cookie | Nimbus demo: `staff@nimbus.demo` / `RELAYDESK_ADMIN_PASSWORD` (default `nimbus-demo`). Signing key: `RELAYDESK_SESSION_SECRET`, else one generated into `settings` |
+| Co-pilot | Drafts on every new ticket | **AI drafts on/off** in the inbox header, or `business_settings` key `copilot` |
 | CI | `.github/workflows/test.yml` | `npm test`, `npm run test:e2e` |
 
 ## Health check
@@ -24,12 +25,12 @@ curl -s -o /dev/null -w "%{http_code}\n" "$HOST/"
 
 # 2. The widget answers and cites: expect citations to include api-keys and escalated false
 curl -s -X POST "$HOST/api/chat" -H 'content-type: application/json' \
-  -d '{"message":"What is the write-key rate limit?"}' \
+  -d '{"business":"nimbus","message":"What is the write-key rate limit?"}' \
   | jq '{escalated, citations: [.citations[].slug]}'
 
 # 3. Escalation opens a ticket: expect escalated true and a ticketId
 curl -s -X POST "$HOST/api/chat" -H 'content-type: application/json' \
-  -d '{"message":"How do I connect Nimbus to Salesforce?"}' | jq '{escalated, ticketId}'
+  -d '{"business":"nimbus","message":"How do I connect Nimbus to Salesforce?"}' | jq '{escalated, ticketId}'
 
 # 4. The co-pilot ran on that ticket: expect holding or answer, not error
 sqlite3 data/relaydesk.db \
@@ -70,7 +71,7 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
 - **Mitigate:** turn it off. Pending drafts stay; reject them from each ticket. Any of these works:
   - **Inbox:** click **AI drafts on** in the header.
   - **API:** `POST /api/copilot` with `{"enabled": false}` (needs a staff session).
-  - **SQL:** `sqlite3 data/relaydesk.db "INSERT INTO settings (key, value) VALUES ('copilot','off') ON CONFLICT(key) DO UPDATE SET value='off';"`
+  - **SQL:** `sqlite3 data/relaydesk.db "INSERT INTO business_settings (business_id, key, value) VALUES ('nimbus','copilot','off') ON CONFLICT(business_id, key) DO UPDATE SET value='off';"` (swap in the business id)
 - **Check:**
   ```bash
   sqlite3 data/relaydesk.db "SELECT outcome, COUNT(*) FROM agent_runs GROUP BY outcome;"
@@ -94,12 +95,13 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
   2. Copy the backup over `data/relaydesk.db`.
   3. Delete `relaydesk.db-wal` and `relaydesk.db-shm`.
   4. Start the app.
-- **Schema changes are additive.** New tables and columns are created when the app opens the database, and older code ignores them. So a code rollback never needs a database rollback.
+- **Schema changes are additive.** New tables and columns are created when the app opens the database, and older code ignores them. So a code rollback never needs a database rollback. One exception in behavior, not schema: code from before businesses ignores `business_id` and shows every business's tickets in one inbox. Don't roll back past that change once a real business is on the database.
 
 ### Staff login problems or a leaked password
 
-- **Rotate:** change `RELAYDESK_ADMIN_PASSWORD` and restart.
-- **Known limit:** the staff session is an unsigned cookie (`relaydesk_admin=1`, 7 days). Rotating the password doesn't sign anyone out, and the cookie can be forged. Treat the inbox as demo-only, and don't expose `/inbox` publicly until auth is replaced.
+- **Rotate the demo login:** change `RELAYDESK_ADMIN_PASSWORD` and restart; the Nimbus demo staff password is re-hashed on start.
+- **Sign everyone out:** change `RELAYDESK_SESSION_SECRET` (or, without it, delete the `session_secret` row from `settings`) and restart. Sessions are signed with it, so old cookies stop working.
+- **Known limit:** there is no password reset or staff invite UI yet (#16). Add a login with `scripts/add-business.ts --id <business> --staff-email <email>`.
 
 ## Rollback
 

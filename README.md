@@ -27,7 +27,7 @@ Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
 - `/` customer site and widget
 - `/help` the articles the widget searches
-- `/inbox` staff inbox, password `nimbus-demo`
+- `/inbox` staff inbox, sign in as `staff@nimbus.demo` with `nimbus-demo`
 
 Or run the production build in Docker:
 
@@ -49,6 +49,27 @@ OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/trac
 4. Reply from `/inbox`.
 
 Two fixture tickets are already in the inbox so it isn't empty on first open.
+
+## More than one business
+
+Nimbus is the demo business. Each business has its own articles, widget, inbox, and settings, and one business's staff can't open another's tickets or conversations. Until self-serve setup lands, add one from a JSON file of articles (`title`, `body`, and optional `slug`, `category`, `summary`):
+
+```bash
+npx tsx scripts/add-business.ts --id acme --name "Acme Coffee" \
+  --articles acme-articles.json --staff-email owner@acme.ph --staff-name Ana
+```
+
+It prints a one-time staff password. The business then has:
+
+- `/h/acme`, its public help center with the widget
+- `/inbox`, where its staff sign in and see only Acme tickets
+- the widget on its own site, from one script tag:
+
+```html
+<script src="https://YOUR-RELAYDESK-HOST/embed.js" data-business="acme" async></script>
+```
+
+Run the script again with `--articles` to replace the help center. The next chat answers from the new articles.
 
 ## Inbox co-pilot
 

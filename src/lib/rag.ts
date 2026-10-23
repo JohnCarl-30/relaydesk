@@ -26,6 +26,10 @@ export type RagResult = {
 
 export type AnswerOptions = {
   alwaysAnswer?: boolean;
+  /** The business's "not in the help center" line. Defaults to Nimbus's. */
+  refuseLine?: string;
+  /** Words to ignore when checking coverage, e.g. the business's own name. */
+  ignoreTerms?: string[];
   /** Text whose words pick the quoted sentences first, e.g. the follow-up inside a contextualized question. */
   focus?: string;
 };
@@ -34,6 +38,8 @@ export type RetrieveMode = "count" | "bm25" | "hybrid";
 export type RetrieveUnit = "article" | "chunk";
 
 export type RetrieveOptions = {
+  /** The articles to search. Defaults to the Nimbus demo help center. */
+  corpus?: Corpus;
   k?: number;
   titleWeight?: number;
   mode?: RetrieveMode;
@@ -93,7 +99,25 @@ function buildIndex(articles: Article[]) {
   };
 }
 
-const INDEX = buildIndex(ARTICLES);
+type Index = ReturnType<typeof buildIndex>;
+
+/** One business's searchable articles: the articles, their chunks, and the BM25 index. */
+export type Corpus = {
+  articles: Article[];
+  chunks: Chunk[];
+  index: Index;
+};
+
+export function buildCorpus(articles: Article[]): Corpus {
+  return { articles, chunks: chunkArticles(articles), index: buildIndex(articles) };
+}
+
+/** The Nimbus demo help center. Evals and tests run against it. */
+export const DEMO_CORPUS: Corpus = {
+  articles: ARTICLES,
+  chunks: CHUNKS,
+  index: buildIndex(ARTICLES),
+};
 
 function articleText(article: Article): string {
   return `${article.title}\n\n${article.body}`;
@@ -125,11 +149,12 @@ function scoreCount(
 }
 
 function retrieveCountArticles(
+  corpus: Corpus,
   questionTokens: string[],
   k: number,
   titleWeight: number,
 ): Hit[] {
-  const scored = ARTICLES.map((article) => ({
+  const scored = corpus.articles.map((article) => ({
     article,
     score: scoreCount(questionTokens, article.title, article.body, titleWeight),
     text: articleText(article),
@@ -141,11 +166,12 @@ function retrieveCountArticles(
 }
 
 function retrieveCountChunks(
+  corpus: Corpus,
   questionTokens: string[],
   k: number,
   titleWeight: number,
 ): Hit[] {
-  const scored = CHUNKS.map((chunk) => ({
+  const scored = corpus.chunks.map((chunk) => ({
     article: chunk.article,
     score: scoreCount(questionTokens, chunk.article.title, chunk.text, titleWeight),
     text: `${chunk.article.title}\n\n${chunk.text}`,
@@ -158,22 +184,24 @@ function retrieveCountChunks(
 }
 
 function retrieveBm25(
+  corpus: Corpus,
   questionTokens: string[],
   k: number,
   titleWeight: number,
 ): Hit[] {
-  const scored = INDEX.docs.map((doc) => {
+  const { index } = corpus;
+  const scored = index.docs.map((doc) => {
     let score = 0;
     for (const term of questionTokens) {
-      const df = INDEX.df.get(term) ?? 0;
+      const df = index.df.get(term) ?? 0;
       if (df === 0) continue;
-      const weight = idf(df, INDEX.n);
+      const weight = idf(df, index.n);
       const titleTf = doc.title.tf.get(term) ?? 0;
       const bodyTf = doc.body.tf.get(term) ?? 0;
       score +=
         weight *
-        (titleWeight * bm25Tf(titleTf, doc.title.len, INDEX.avgTitleLen) +
-          bm25Tf(bodyTf, doc.body.len, INDEX.avgBodyLen));
+        (titleWeight * bm25Tf(titleTf, doc.title.len, index.avgTitleLen) +
+          bm25Tf(bodyTf, doc.body.len, index.avgBodyLen));
     }
     return { article: doc.article, score, text: articleText(doc.article) };
   });
@@ -184,6 +212,7 @@ function retrieveBm25(
 }
 
 export function retrieve(question: string, options: RetrieveOptions = {}): Hit[] {
+  const corpus = options.corpus ?? DEMO_CORPUS;
   const k = options.k ?? 3;
   const titleWeight = options.titleWeight ?? 4;
   const mode = options.mode ?? "count";
@@ -197,12 +226,12 @@ export function retrieve(question: string, options: RetrieveOptions = {}): Hit[]
     if (unit === "chunk") {
       throw new Error("bm25 is article-level only; use count or hybrid for chunks");
     }
-    return retrieveBm25(q, k, titleWeight);
+    return retrieveBm25(corpus, q, k, titleWeight);
   }
   if (unit === "chunk") {
-    return retrieveCountChunks(q, k, titleWeight);
+    return retrieveCountChunks(corpus, q, k, titleWeight);
   }
-  return retrieveCountArticles(q, k, titleWeight);
+  return retrieveCountArticles(corpus, q, k, titleWeight);
 }
 
 function rrfScore(rank: number): number {
@@ -255,6 +284,7 @@ export async function retrieveHybrid(
   question: string,
   options: RetrieveOptions = {},
 ): Promise<Hit[]> {
+  const corpus = options.corpus ?? DEMO_CORPUS;
   const k = options.k ?? 3;
   const titleWeight = options.titleWeight ?? 4;
   const unit = options.unit ?? "article";
@@ -263,12 +293,12 @@ export async function retrieveHybrid(
   const embed = await import("./embed");
   const [queryVec, denseRows] = await Promise.all([
     embed.embedQuery(question),
-    unit === "chunk" ? embed.chunkEmbeddings() : embed.articleEmbeddings(),
+    unit === "chunk" ? embed.chunkEmbeddings(corpus) : embed.articleEmbeddings(corpus),
   ]);
   const lexical =
     unit === "chunk"
-      ? retrieveCountChunks(q, CHUNKS.length, titleWeight)
-      : retrieveCountArticles(q, ARTICLES.length, titleWeight);
+      ? retrieveCountChunks(corpus, q, corpus.chunks.length, titleWeight)
+      : retrieveCountArticles(corpus, q, corpus.articles.length, titleWeight);
   const dense = retrieveDenseFromVecs(queryVec, denseRows);
   return fuseRrf(lexical, dense, k);
 }
@@ -289,10 +319,12 @@ export function extractiveAnswer(
   hits: Hit[],
   options: AnswerOptions = {},
 ): RagResult {
-  const escalated = !options.alwaysAnswer && shouldEscalate(question, hits);
+  const refuseLine = options.refuseLine ?? REFUSE_LINE;
+  const escalated =
+    !options.alwaysAnswer && shouldEscalate(question, hits, options.ignoreTerms);
   if (escalated) {
     return {
-      answer: REFUSE_LINE,
+      answer: refuseLine,
       citations: [],
       confident: false,
       usedLlm: false,
@@ -301,7 +333,7 @@ export function extractiveAnswer(
   }
   if (hits.length === 0) {
     return {
-      answer: REFUSE_LINE,
+      answer: refuseLine,
       citations: [],
       confident: false,
       usedLlm: false,
