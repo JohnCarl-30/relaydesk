@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import { CopyField, Section } from "@/components/admin";
 import { currentStaff } from "@/lib/auth";
 import { helpCenterPath } from "@/lib/business";
-import { getBusiness, listArticles, listStaff } from "@/lib/db";
+import { getBusiness, listArticles, listMcpTokens, listStaff } from "@/lib/db";
 import { embedSnippet, publicOrigin } from "@/lib/origin";
 import { GoLive } from "./go-live";
+import { McpTokens } from "./mcp-tokens";
 import { PreviewChat } from "./preview-chat";
 
 export default async function SetupPage() {
@@ -91,6 +92,13 @@ export default async function SetupPage() {
               {helpCenterPath(business.id)}
             </span>
           </p>
+        </Section>
+
+        <Section
+          title="Work the inbox from an AI assistant"
+          description="Connect Claude, Cursor, or any MCP client. It can read tickets, search your articles, assign tickets, and save reply drafts. It can't message customers: drafts wait in this inbox for someone to send them."
+        >
+          <McpTokens tokens={listMcpTokens(business.id)} />
         </Section>
       </div>
     </main>

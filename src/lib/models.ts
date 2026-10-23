@@ -9,6 +9,16 @@ export type Business = {
   created_at: string;
 };
 
+export type McpToken = {
+  id: string;
+  business_id: string;
+  /** What the person called it, e.g. "Claude on Ana's laptop". */
+  name: string;
+  created_by: string;
+  created_at: string;
+  last_used_at: string | null;
+};
+
 export type Invite = {
   id: string;
   business_id: string;

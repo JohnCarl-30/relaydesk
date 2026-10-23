@@ -10,3 +10,6 @@ export const ACME = {
   email: "owner@acme.test",
   password: "acme-e2e-password",
 };
+
+/** RELAYDESK_MCP_TOKEN on the e2e server: the Nimbus demo's MCP token. */
+export const MCP_TOKEN = "e2e-mcp-token";

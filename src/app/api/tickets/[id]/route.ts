@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getTicket, listMessages, listStaff, updateTicket } from "@/lib/db";
+import { getTicket, listMessages, updateTicket } from "@/lib/db";
+import { checkTicketPatch } from "@/lib/ticket-patch";
 import { currentStaff } from "@/lib/auth";
-import type { Ticket } from "@/lib/models";
 
 export async function GET(
   _request: Request,
@@ -29,27 +29,13 @@ export async function PATCH(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
-  const body = (await request.json()) as {
-    status?: Ticket["status"];
-    assignee?: string | null;
-  };
-
-  const patch: { status?: Ticket["status"]; assignee?: string | null } = {};
-  if (body.status !== undefined) {
-    if (body.status !== "open" && body.status !== "waiting" && body.status !== "closed") {
-      return NextResponse.json({ error: "bad status" }, { status: 400 });
-    }
-    patch.status = body.status;
-  }
-  if (body.assignee !== undefined) {
-    const names = listStaff(staff.business_id).map((member) => member.name);
-    if (body.assignee !== null && !names.includes(body.assignee)) {
-      return NextResponse.json({ error: "bad assignee" }, { status: 400 });
-    }
-    patch.assignee = body.assignee;
+  const body = (await request.json()) as { status?: unknown; assignee?: unknown };
+  const checked = checkTicketPatch(staff.business_id, body);
+  if ("error" in checked) {
+    return NextResponse.json({ error: checked.error }, { status: 400 });
   }
 
-  const ticket = updateTicket(staff.business_id, id, patch);
+  const ticket = updateTicket(staff.business_id, id, checked.patch);
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
