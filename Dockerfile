@@ -21,11 +21,13 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
+# Backup and restore run from this image too (the `backup` service in docker-compose.yml).
+COPY --from=build /app/scripts/backup-lib.mjs /app/scripts/backup.mjs /app/scripts/restore.mjs ./scripts/
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME /data
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
-  CMD node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 # Run next directly so docker stop's SIGTERM reaches node, not an npx wrapper.
 CMD ["node", "node_modules/next/dist/bin/next", "start", "--hostname", "0.0.0.0"]

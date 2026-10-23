@@ -1,15 +1,53 @@
-# docker compose up --build, then open http://127.0.0.1:3000.
-# Secrets come from .env.local (OPENAI_API_KEY, RELAYDESK_ADMIN_PASSWORD); it is optional.
+# Relaydesk in production, on any Docker host: your laptop, a free Oracle VM,
+# or a paid VPS. RUNBOOK.md "Hosting" walks through each.
+#
+#   docker compose up -d --build                      app + daily backups, on 127.0.0.1:3000
+#   docker compose --profile tunnel up -d --build     ...and a Cloudflare Tunnel for HTTPS on your domain
+#
+# Secrets come from .env.docker (copy .env.example). It is git- and docker-ignored, and
+# named so Next.js never loads it on its own the way it would .env.production.
 services:
   relaydesk:
     build: .
+    image: relaydesk:local
     ports:
-      - "3000:3000"
+      # Loopback only: the public way in is the tunnel or a reverse proxy, not a raw port.
+      - "127.0.0.1:${RELAYDESK_PORT:-3000}:3000"
     env_file:
-      - path: .env.local
+      - path: .env.docker
         required: false
     volumes:
       - relaydesk-data:/data
+    restart: unless-stopped
+
+  # Same image, so it has the same better-sqlite3 build. Snapshots go to the
+  # same volume (/data/backups) and, with RELAYDESK_BACKUP_S3_* set, off the machine.
+  backup:
+    image: relaydesk:local
+    depends_on:
+      relaydesk:
+        condition: service_healthy
+    command: ["node", "scripts/backup.mjs"]
+    env_file:
+      - path: .env.docker
+        required: false
+    volumes:
+      - relaydesk-data:/data
+    restart: unless-stopped
+
+  # HTTPS on your own domain without opening ports or having a public IP.
+  # Needs TUNNEL_TOKEN in .env.docker; RUNBOOK.md has the steps.
+  tunnel:
+    image: cloudflare/cloudflared:2026.9.0
+    profiles: ["tunnel"]
+    command: ["tunnel", "--no-autoupdate", "run"]
+    # cloudflared reads TUNNEL_TOKEN from here.
+    env_file:
+      - path: .env.docker
+        required: true
+    depends_on:
+      relaydesk:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
