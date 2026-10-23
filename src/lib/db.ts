@@ -11,13 +11,24 @@ import type {
   Business,
   Conversation,
   Invite,
+  McpToken,
   Message,
   Staff,
   Ticket,
 } from "@/lib/models";
 import { hashPassword, verifyPassword } from "@/lib/passwords";
 
-export type { AgentDraft, AgentRun, Business, Conversation, Invite, Message, Staff, Ticket };
+export type {
+  AgentDraft,
+  AgentRun,
+  Business,
+  Conversation,
+  Invite,
+  McpToken,
+  Message,
+  Staff,
+  Ticket,
+};
 
 /*
  * Every business's data lives in one database. Conversations and tickets carry
@@ -81,6 +92,16 @@ function open(): Database.Database {
       created_at TEXT NOT NULL,
       expires_at TEXT NOT NULL,
       accepted_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS mcp_tokens (
+      id TEXT PRIMARY KEY,
+      business_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      -- sha256 of the bearer token; the token is shown once when created.
+      token_hash TEXT NOT NULL UNIQUE,
+      created_by TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT
     );
     CREATE TABLE IF NOT EXISTS business_settings (
       business_id TEXT NOT NULL,
@@ -927,4 +948,61 @@ export function acceptInvite(token: string, input: { name: string; password: str
       password: input.password,
     });
   })();
+}
+
+// MCP access tokens: one per assistant a business connects. Only the hash is kept.
+
+export function createMcpToken(input: {
+  businessId: string;
+  name: string;
+  createdBy: string;
+}): { token: string; row: McpToken } {
+  const token = `rdk_${randomBytes(24).toString("base64url")}`;
+  const row: McpToken = {
+    id: `mcp_${crypto.randomUUID().slice(0, 8)}`,
+    business_id: input.businessId,
+    name: input.name.trim(),
+    created_by: input.createdBy,
+    created_at: new Date().toISOString(),
+    last_used_at: null,
+  };
+  db()
+    .prepare(
+      `INSERT INTO mcp_tokens (id, business_id, name, token_hash, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .run(row.id, row.business_id, row.name, tokenHash(token), row.created_by, row.created_at);
+  return { token, row };
+}
+
+export function listMcpTokens(businessId: string): McpToken[] {
+  return db()
+    .prepare(
+      `SELECT id, business_id, name, created_by, created_at, last_used_at FROM mcp_tokens
+       WHERE business_id = ? ORDER BY created_at DESC`,
+    )
+    .all(businessId) as McpToken[];
+}
+
+export function revokeMcpToken(businessId: string, id: string): boolean {
+  return (
+    db().prepare("DELETE FROM mcp_tokens WHERE business_id = ? AND id = ?").run(businessId, id)
+      .changes > 0
+  );
+}
+
+export function countMcpTokens(): number {
+  return (db().prepare("SELECT COUNT(*) AS n FROM mcp_tokens").get() as { n: number }).n;
+}
+
+/** The business a bearer token belongs to, recording that it was used. */
+export function redeemMcpToken(token: string): { businessId: string; tokenId: string } | undefined {
+  const row = db()
+    .prepare("SELECT id, business_id FROM mcp_tokens WHERE token_hash = ?")
+    .get(tokenHash(token)) as { id: string; business_id: string } | undefined;
+  if (!row) return undefined;
+  db()
+    .prepare("UPDATE mcp_tokens SET last_used_at = ? WHERE id = ?")
+    .run(new Date().toISOString(), row.id);
+  return { businessId: row.business_id, tokenId: row.id };
 }

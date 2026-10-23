@@ -50,6 +50,35 @@ OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/trac
 
 Two fixture tickets are already in the inbox so it isn't empty on first open.
 
+## Work the inbox from Claude (MCP)
+
+`/api/mcp` is an MCP server (Streamable HTTP) over the inbox, so staff can say "summarize the open tickets" or "draft replies for the billing ones" in Claude, Cursor, or any MCP client. It follows the co-pilot's rule: an agent can read, triage, and **draft**, but nothing reaches the customer until a person presses **Send** in `/inbox`. There is no tool that posts a message.
+
+| Tool | Does | Writes |
+| --- | --- | --- |
+| `list_tickets` | Tickets, filtered by `status`, `assignee`, `has_draft` | no |
+| `get_ticket` | The conversation, pending draft, and recent co-pilot runs | no |
+| `search_help_center` | The widget's retrieval, with slugs to cite | no |
+| `get_article` | One article by slug | no |
+| `update_ticket` | Status and assignee, with the inbox's own checks | the ticket |
+| `draft_reply` | Saves a draft for review, replacing the pending one | a draft |
+| `regenerate_draft` | Runs the co-pilot, with its on/off switch and daily limit | a draft |
+
+Each business makes its own token under **Setup → Work the inbox from an AI assistant**, and every tool only sees that business. For the Nimbus demo, set `RELAYDESK_MCP_TOKEN` instead. With neither, `/api/mcp` returns 404.
+
+```bash
+claude mcp add --transport http relaydesk http://127.0.0.1:3000/api/mcp \
+  --header "Authorization: Bearer $RELAYDESK_MCP_TOKEN"
+```
+
+A recorded Claude Code run, after asking the widget "How do I connect Nimbus to Salesforce?":
+
+> **You:** What's open in the relaydesk inbox? Draft a reply for the Salesforce one.
+>
+> **Claude:** *calls `list_tickets {status: "open"}`, `get_ticket`, then `search_help_center` three times ("Salesforce integration", "integrations", "CRM API webhook Zapier connect").* There's no Salesforce article, so the draft says there's no built-in connector and offers the read-key query API or a CSV export one way, and write-key events the other. *calls `draft_reply` with `citations: ["api-keys", "csv-export"]`.*
+
+The draft replaced the co-pilot's holding reply as the ticket's pending draft. The conversation still held only the customer's question and the bot's refusal. Open the ticket in `/inbox`: the draft is in the **Suggested reply** card, and **Send** posts it to the customer. Every tool call is an `mcp.<tool>` span, so it shows up in Langfuse next to chat and co-pilot runs.
+
 ## More than one business
 
 Nimbus is the demo business. Each business has its own articles, widget, inbox, and settings, and one business's staff can't open another's tickets or conversations.

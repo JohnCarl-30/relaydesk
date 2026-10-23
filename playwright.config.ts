@@ -1,7 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
-import { ACME, ADMIN_PASSWORD } from "./e2e/env";
+import { ACME, ADMIN_PASSWORD, MCP_TOKEN } from "./e2e/env";
 
 // Uncommon default so other local apps on 3000/3100 do not block the run.
 const PORT = Number(process.env.E2E_PORT ?? 3217);
@@ -40,6 +40,7 @@ export default defineConfig({
       RELAYDESK_DB_PATH: process.env.RELAYDESK_E2E_DB,
       RELAYDESK_ADMIN_PASSWORD: ADMIN_PASSWORD,
       RELAYDESK_NEW_STAFF_PASSWORD: ACME.password,
+      RELAYDESK_MCP_TOKEN: MCP_TOKEN,
     },
   },
 });

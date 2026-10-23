@@ -11,6 +11,7 @@ What to check and do when something is wrong. Relaydesk is not deployed anywhere
 | Traces | `eval/traces/live.jsonl`, one OpenTelemetry span per line | `RELAYDESK_TRACE_FILE` (a path, or `0` for none) |
 | Model | Optional. Without a key everything still works without a model. | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (default `gpt-4o-mini`) |
 | Businesses | `businesses`, `articles`, `staff`, `invites` tables; Nimbus is seeded | `/signup` (gate it with `RELAYDESK_SIGNUP_CODE`), or `scripts/add-business.ts`. `businesses.live = 0` hides one from the public |
+| MCP | `/api/mcp`, Streamable HTTP, stateless | Per-business tokens in `mcp_tokens` (hashed; **Setup** to create or revoke). `RELAYDESK_MCP_TOKEN` is the Nimbus demo's. 404 when neither exists |
 | Public URL | Embed snippets and invite links | `RELAYDESK_PUBLIC_URL`, else the request's `Host` / `X-Forwarded-Host` |
 | Staff login | `/login`, email + password, signed 7-day cookie | Nimbus demo: `staff@nimbus.demo` / `RELAYDESK_ADMIN_PASSWORD` (default `nimbus-demo`). Signing key: `RELAYDESK_SESSION_SECRET`, else one generated into `settings` |
 | Co-pilot | Drafts on every new ticket | **AI drafts on/off** in the inbox header, or `business_settings` key `copilot` |
