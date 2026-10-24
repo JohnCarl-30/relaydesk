@@ -5,9 +5,11 @@ import { currentStaff } from "@/lib/auth";
 import { helpCenterPath } from "@/lib/business";
 import { getBusiness, listArticles, listMcpTokens, listStaff } from "@/lib/db";
 import { embedSnippet, publicOrigin } from "@/lib/origin";
+import { voiceStatus } from "@/lib/server-voice";
 import { GoLive } from "./go-live";
 import { McpTokens } from "./mcp-tokens";
 import { PreviewChat } from "./preview-chat";
+import { VoiceSetting } from "./voice-setting";
 
 export default async function SetupPage() {
   const staff = await currentStaff();
@@ -92,6 +94,13 @@ export default async function SetupPage() {
               {helpCenterPath(business.id)}
             </span>
           </p>
+        </Section>
+
+        <Section
+          title="Voice"
+          description="Visitors can tap the mic and ask out loud. The browser's own voice is free. ElevenLabs sounds more natural and works in every browser, Firefox included, but it is paid by the minute, so there is a monthly cap. When the minutes run out, the widget switches back to the browser's voice."
+        >
+          <VoiceSetting status={voiceStatus(business.id)} />
         </Section>
 
         <Section

@@ -30,6 +30,7 @@ import {
   type RagResult,
 } from "./rag";
 import { generationAttributes, initTracing, withSpan } from "./trace";
+import type { Channel } from "./voice";
 
 /** The visitor's question and the forms the graph uses it in. */
 type ResolvedQuestion = {
@@ -372,6 +373,8 @@ export async function answerQuestion(
     sessionId?: string;
     /** The business whose articles answer. Defaults to the Nimbus demo. */
     helpCenter?: HelpCenter;
+    /** "voice" when the widget transcribed the question from speech. */
+    channel?: Channel;
   } = {},
 ): Promise<RagResult> {
   initTracing();
@@ -381,6 +384,9 @@ export async function answerQuestion(
     question,
     "business.id": center.businessId,
     "session.id": options.sessionId,
+    channel: options.channel ?? "text",
+    // Lets Langfuse filter voice conversations, whose questions are speech-to-text transcripts.
+    "langfuse.trace.metadata.channel": options.channel ?? "text",
     "langfuse.observation.input": question,
   };
   return withSpan("support.answer", attrs, async (span) => {

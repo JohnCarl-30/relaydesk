@@ -50,6 +50,28 @@ OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/trac
 
 Two fixture tickets are already in the inbox so it isn't empty on first open.
 
+## Ask by voice
+
+Tap the mic in the widget and ask out loud. The speech becomes text, the text goes through the same answer loop as a typed message, and the answer is read back. It keeps its citation in the chat, and a question the help center can't answer still opens a ticket. The voice says it passed the question to the team rather than reading the ticket id.
+
+- **No key, no new service by default.** It uses the browser's own `SpeechRecognition` and `speechSynthesis`. Chrome, Edge and Safari support it. Firefox has no speech recognition, so the mic doesn't appear there unless the business uses ElevenLabs.
+- **Speaking interrupts the bot.** Tapping the mic while an answer is being read stops it and listens, as it would on a call.
+- **Spoken answers are trimmed for listening** by `spokenText` in [`src/lib/voice.ts`](src/lib/voice.ts): no links or markdown read aloud, and long answers stop at a sentence with "The rest is in the chat."
+- **Traces say which was which.** Voice questions carry `channel=voice` on the `support.answer` span and in Langfuse trace metadata, since their text is a speech-to-text transcript and can be misheard.
+- **Language** follows the widget's `voiceLang` prop, `en-US` by default. Chrome also recognizes `en-PH` and `fil-PH`.
+
+### ElevenLabs, per business
+
+With `ELEVENLABS_API_KEY` on the server, a business can switch its widget to ElevenLabs under **Setup → Voice**. The widget then records the question, ElevenLabs Scribe (`scribe_v2`) transcribes it, and the answer plays in an ElevenLabs voice. That works in every browser with a microphone, Firefox included. The browser's voice stays the default and the fallback.
+
+- **The key never reaches the browser.** The widget only talks to relaydesk: `GET /api/voice` says which voice to use, `POST /api/transcribe` takes the recording, and `GET /api/speech` streams the answer. `/api/speech` only reads a stored answer from that business's conversation, never text the caller sends, and each answer at most twice.
+- **A monthly cap per business stops runaway cost.** Speech in and out both count, as minutes per calendar month (UTC), `RELAYDESK_VOICE_MINUTES` (300 by default). Speech in is timed from Scribe's transcript. Speech out is estimated at 15 characters a second, since ElevenLabs bills it by character. Setup shows the minutes used. When they run out, the widget switches back to the browser's voice until the 1st.
+- **It stops when the visitor pauses**, like the browser's recognizer, or when they tap stop. Questions are capped at 30 seconds.
+- **Anything that fails falls back.** If a transcription fails, the visitor is asked to try again. If ElevenLabs is off or out of minutes, the next question uses the browser's recognizer. If the answer's audio can't play, the browser reads it.
+- **Voice and model** are set by `ELEVENLABS_VOICE_ID` and `ELEVENLABS_MODEL`. See [`.env.example`](.env.example).
+
+[`e2e/voice.spec.ts`](e2e/voice.spec.ts) drives both in Chromium: a fake recognizer that "hears" a set question for the browser's voice, and a fake microphone and stubbed `/api/voice`, `/api/transcribe` and `/api/speech` for ElevenLabs. The e2e server has no key, so the real routes are checked to refuse.
+
 ## Work the inbox from Claude (MCP)
 
 `/api/mcp` is an MCP server (Streamable HTTP) over the inbox, so staff can say "summarize the open tickets" or "draft replies for the billing ones" in Claude, Cursor, or any MCP client. It follows the co-pilot's rule: an agent can read, triage, and **draft**, but nothing reaches the customer until a person presses **Send** in `/inbox`. There is no tool that posts a message.
