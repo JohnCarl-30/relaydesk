@@ -162,6 +162,13 @@ function open(): Database.Database {
       output_tokens INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL
     );
+    -- Seconds of ElevenLabs speech, in and out, per business per calendar month (UTC).
+    CREATE TABLE IF NOT EXISTS voice_usage (
+      business_id TEXT NOT NULL,
+      month TEXT NOT NULL,
+      seconds REAL NOT NULL DEFAULT 0,
+      PRIMARY KEY (business_id, month)
+    );
     -- App-wide values, like the session signing secret. Per-business ones live in business_settings.
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
@@ -649,6 +656,28 @@ export function setSetting(businessId: string, key: string, value: string) {
        ON CONFLICT(business_id, key) DO UPDATE SET value = excluded.value`,
     )
     .run(businessId, key, value);
+}
+
+/** "2026-10" for any time in October 2026, UTC. Voice minutes reset on the first of each month. */
+export function usageMonth(at = new Date()): string {
+  return at.toISOString().slice(0, 7);
+}
+
+export function voiceSecondsUsed(businessId: string, month = usageMonth()): number {
+  const row = db()
+    .prepare("SELECT seconds FROM voice_usage WHERE business_id = ? AND month = ?")
+    .get(businessId, month) as { seconds: number } | undefined;
+  return row?.seconds ?? 0;
+}
+
+export function addVoiceSeconds(businessId: string, seconds: number, month = usageMonth()) {
+  if (!(seconds > 0)) return;
+  db()
+    .prepare(
+      `INSERT INTO voice_usage (business_id, month, seconds) VALUES (?, ?, ?)
+       ON CONFLICT(business_id, month) DO UPDATE SET seconds = seconds + excluded.seconds`,
+    )
+    .run(businessId, month, seconds);
 }
 
 /** Signs staff sessions. RELAYDESK_SESSION_SECRET wins; otherwise one is made once and kept here. */
