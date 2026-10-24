@@ -28,6 +28,11 @@ services:
       relaydesk:
         condition: service_healthy
     command: ["node", "scripts/backup.mjs"]
+    # The image's HEALTHCHECK fetches the app's /api/health, which this
+    # container doesn't serve, so it would always read unhealthy. Whether
+    # backups work is in /data/backups/last.json (RUNBOOK.md → Backups).
+    healthcheck:
+      disable: true
     env_file:
       - path: .env.docker
         required: false

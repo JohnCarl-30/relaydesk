@@ -54,6 +54,12 @@ describe("backups", () => {
     }
   });
 
+  it("leaves only the snapshot behind, not the temp copy's -wal and -shm", async () => {
+    const dir = join(root, "clean");
+    const backup = await createBackup(dbPath, dir, new Date("2026-10-23T19:00:00Z"));
+    assert.deepEqual(fs.readdirSync(dir), [backup.name]);
+  });
+
   it("keeps only the newest snapshots", async () => {
     for (const day of ["24", "25", "26"]) {
       await createBackup(dbPath, backups, new Date(`2026-10-${day}T18:00:00Z`));
@@ -80,6 +86,8 @@ describe("backups", () => {
     const kept = new Database(result.keptAs, { readonly: true });
     assert.equal((kept.prepare("SELECT COUNT(*) AS n FROM businesses").get() as { n: number }).n, 2);
     kept.close();
+    const leftovers = fs.readdirSync(join(root, "live")).filter((name) => name.startsWith(".restore-"));
+    assert.deepEqual(leftovers, [], "the incoming copy's -wal and -shm go too");
   });
 
   it("refuses a damaged backup and leaves the database alone", async () => {
