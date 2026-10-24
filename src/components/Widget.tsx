@@ -67,7 +67,29 @@ export function Widget({
   const [error, setError] = useState<string | null>(null);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
-  const voice = useVoice({ lang: voiceLang, onError: setError });
+  // True when this business talks through ElevenLabs; asked of /api/voice each time the widget opens.
+  const [serverVoice, setServerVoice] = useState(false);
+  const voice = useVoice({
+    lang: voiceLang,
+    onError: setError,
+    server: serverVoice ? { business: business.id, onUnavailable: () => setServerVoice(false) } : null,
+  });
+  // The question is being heard or transcribed, so the box shows it rather than what was typed.
+  const hearing = voice.state === "listening" || voice.state === "transcribing";
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch(`/api/voice?business=${encodeURIComponent(business.id)}`)
+      .then((res) => (res.ok ? (res.json() as Promise<{ provider?: string }>) : null))
+      .then((data) => {
+        if (!cancelled) setServerVoice(data?.provider === "elevenlabs");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, business.id]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
@@ -144,7 +166,7 @@ export function Widget({
         })),
       );
       // A spoken question gets a spoken answer. Typed ones stay quiet.
-      if (channel === "voice") voice.speak(spokenText(data.reply));
+      if (channel === "voice") voice.speak(spokenText(data.reply), serverVoice ? speechUrl(data) : undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chat failed");
     } finally {
@@ -155,6 +177,13 @@ export function Widget({
   async function send(event?: React.FormEvent) {
     event?.preventDefault();
     await sendText(input.trim());
+  }
+
+  function speechUrl(data: ChatResponse): string | undefined {
+    const answer = data.messages.findLast((m) => m.role === "assistant");
+    if (!answer) return undefined;
+    const params = new URLSearchParams({ business: business.id, conversationId: data.conversationId, messageId: answer.id });
+    return `/api/speech?${params}`;
   }
 
   function toggleVoice() {
@@ -349,18 +378,19 @@ export function Widget({
             <div className="flex items-center gap-2">
               <input
                 aria-label="Message"
-                value={voice.state === "listening" ? voice.interim : input}
+                value={hearing ? voice.interim : input}
                 onChange={(e) => setInput(e.target.value)}
-                readOnly={voice.state === "listening"}
-                placeholder={voice.state === "listening" ? "Listening…" : "Type a message"}
+                readOnly={hearing}
+                placeholder={voice.state === "listening" ? "Listening…" : voice.state === "transcribing" ? "Catching that…" : "Type a message"}
                 className="flex-1 rounded-xl border border-line bg-paper px-3.5 py-2.5 text-sm outline-none ring-forest/20 transition focus:border-forest/40 focus:ring-2"
               />
               {voice.canListen ? (
                 <button
                   type="button"
                   onClick={toggleVoice}
-                  disabled={pending}
+                  disabled={pending || voice.state === "transcribing"}
                   aria-pressed={voice.state === "listening"}
+                  data-voice={voice.hearsWith}
                   aria-label={voice.state === "listening" ? "Stop listening" : "Ask by voice"}
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition active:scale-[0.97] disabled:opacity-50 ${
                     voice.state === "listening"
@@ -373,7 +403,7 @@ export function Widget({
               ) : null}
               <button
                 type="submit"
-                disabled={pending || voice.state === "listening"}
+                disabled={pending || hearing}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-forest text-paper transition hover:bg-forest-2 active:scale-[0.97] disabled:opacity-50"
                 aria-label="Send"
               >
@@ -381,7 +411,13 @@ export function Widget({
               </button>
             </div>
             <p aria-live="polite" className="sr-only">
-              {voice.state === "listening" ? "Listening. Ask your question, then pause." : voice.state === "speaking" ? "Reading the answer aloud." : ""}
+              {voice.state === "listening"
+                ? "Listening. Ask your question, then pause."
+                : voice.state === "transcribing"
+                  ? "Got it. Working out what you said."
+                  : voice.state === "speaking"
+                    ? "Reading the answer aloud."
+                    : ""}
             </p>
             {voice.state === "speaking" ? (
               <button
