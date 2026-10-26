@@ -11,6 +11,7 @@ import {
 } from "./conversation-context";
 import {
   CONFIDENT_MIN_SCORE,
+  isRefusal,
   isVisitorEscalation,
   shouldEscalate,
   unsupportedPriceQuestion,
@@ -98,8 +99,8 @@ class StubChatModel implements ChatLike {
   }
 }
 
-function generateSystem(businessName: string): string {
-  return `You are the ${businessName} support assistant on a customer site. Answer only from the provided help articles. Be short. If the articles do not contain the answer, say you are unsure and suggest talking to a human. Mention article titles naturally. Do not invent policies, prices, or product behavior.`;
+function generateSystem(businessName: string, refuseLine: string): string {
+  return `You are the ${businessName} support assistant on a customer site. Answer only from the provided help articles. Be short. Answer whatever the articles let you answer, including answers you can infer from them (for example, a feature limited to some plans is not on the others). If nothing in the articles bears on the question, reply with exactly: ${refuseLine} Mention article titles naturally. Do not invent policies, prices, or product behavior.`;
 }
 
 export function hasLlm(): boolean {
@@ -240,7 +241,7 @@ async function answerFromHits(
 
   try {
     const messages = [
-      { role: "system", content: generateSystem(center.name) },
+      { role: "system", content: generateSystem(center.name, refuseLine) },
       {
         role: "user",
         content: `Question: ${resolved.prompt}\n\nHelp articles:\n${context}`,
@@ -260,6 +261,14 @@ async function answerFromHits(
       }),
     );
     if (!text) return { result: extractive(), attrs };
+    // The model found no answer in the articles, so a person should see it.
+    if (isRefusal(text)) {
+      attrs["generate.model_refused"] = true;
+      return {
+        result: { answer: refuseLine, citations: [], confident: false, usedLlm: true, escalated: true },
+        attrs,
+      };
+    }
     return {
       result: {
         answer: text,

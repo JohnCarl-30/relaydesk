@@ -53,7 +53,7 @@ The in-corpus rows include the awkward ones. "What can a viewer do?" can retriev
 | policy | 1.0 | 0.6364 | 0.7778 | 7 | 0 | 4 | 12 |
 | always-answer | 0 | 0 | 0 | 0 | 0 | 11 | 12 |
 
-On the first 15 rows (2026-08-28) policy was 1.0 / 1.0, tp=7 fn=0. The four misses now are the near-miss rows. Each shares words with an article, so the top hit clears the coverage check, and the widget quotes the wrong thing: BigQuery gets the retention article, EU data gets the workspaces article. The Scale price row passes the price check because `billing-plans` lists the overage rate, though not a Scale price. The widget's real answer path, `answerQuestion`, answers all four too. always-answer recall 0 is the drop. Same retriever, `{ alwaysAnswer: true }`, quotes anyway.
+On the first 15 rows (2026-08-28) policy was 1.0 / 1.0, tp=7 fn=0. The four misses now are the near-miss rows. Each shares words with an article, so the top hit clears the coverage check, and the widget quotes the wrong thing: BigQuery gets the retention article, EU data gets the workspaces article. The Scale price row passes the price check because `billing-plans` lists the overage rate, though not a Scale price. With a model key, `answerQuestion` escalates all four: the model replies with the refuse line when the articles don't cover the question, and that opens a ticket (2026-10-26, Langfuse run `escalate-on-unsure-v2`: precision 1.0, recall 1.0). This table is the keyless path, which still misses them. always-answer recall 0 is the drop. Same retriever, `{ alwaysAnswer: true }`, quotes anyway.
 
 ## What you say in the interview
 
