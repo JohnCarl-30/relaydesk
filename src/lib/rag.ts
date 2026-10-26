@@ -214,7 +214,7 @@ function retrieveBm25(
 export function retrieve(question: string, options: RetrieveOptions = {}): Hit[] {
   const corpus = options.corpus ?? DEMO_CORPUS;
   const k = options.k ?? 3;
-  const titleWeight = options.titleWeight ?? 4;
+  const titleWeight = options.titleWeight ?? 0;
   const mode = options.mode ?? "count";
   const unit = options.unit ?? "article";
   const q = tokenize(question);
@@ -286,7 +286,7 @@ export async function retrieveHybrid(
 ): Promise<Hit[]> {
   const corpus = options.corpus ?? DEMO_CORPUS;
   const k = options.k ?? 3;
-  const titleWeight = options.titleWeight ?? 4;
+  const titleWeight = options.titleWeight ?? 0;
   const unit = options.unit ?? "article";
   const q = tokenize(question);
   if (q.length === 0) return [];
