@@ -40,7 +40,7 @@ test("an agent drafts over MCP and staff send it from the inbox", async ({ page,
   expect(init.status()).toBe(200);
   expect(((await init.json()) as { result: { serverInfo: { name: string } } }).result.serverInfo.name).toBe("relaydesk");
 
-  await page.goto("/");
+  await page.goto("/demo");
   await openChat(page);
   const reply = await ask(page, "How do I connect Nimbus to Salesforce?");
   const ticketId = reply.ticketId!;

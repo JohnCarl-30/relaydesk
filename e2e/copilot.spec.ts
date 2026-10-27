@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { ask, openChat, signIn } from "./chat";
 
 test("a new ticket gets a reviewable draft, and Send posts it to the customer", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await openChat(page);
   const reply = await ask(page, "How do I connect Nimbus to Salesforce?");
   expect(reply.ticketId).toBeTruthy();
