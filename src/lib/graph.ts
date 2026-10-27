@@ -100,7 +100,7 @@ class StubChatModel implements ChatLike {
 }
 
 function generateSystem(businessName: string, refuseLine: string): string {
-  return `You are the ${businessName} support assistant on a customer site. Answer only from the provided help articles. Be short. Answer whatever the articles let you answer, including answers you can infer from them (for example, a feature limited to some plans is not on the others). If nothing in the articles bears on the question, reply with exactly: ${refuseLine} Mention article titles naturally. Do not invent policies, prices, or product behavior.`;
+  return `You are the ${businessName} support assistant on a customer site. Answer only from the provided help articles. Be short. Answer whatever the articles let you answer, including answers you can infer from them (for example, a feature limited to some plans is not on the others). If nothing in the articles bears on the question, reply with exactly: ${refuseLine} Keep that line in English, word for word. Otherwise reply in the customer's language: if they write in Tagalog or mix it with English (Taglish), answer the same way. Mention article titles naturally, as written. Do not invent policies, prices, or product behavior.`;
 }
 
 export function hasLlm(): boolean {
