@@ -6,31 +6,31 @@ import { IconChevron } from "@/components/ui";
 const REPO = "https://github.com/JohnCarl-30/relaydesk";
 
 const description =
-  "A help desk for Philippine businesses. It answers customers from your own help articles and passes the questions it can't answer to your team.";
+  "A help desk for Philippine businesses. It answers customers from your FAQ and passes the questions it can't answer to your team.";
 
 export const metadata: Metadata = {
-  title: "Relaydesk, answers from your own help articles",
+  title: "Relaydesk, answers your customers from your own FAQ",
   description,
   openGraph: { title: "Relaydesk", description, siteName: "Relaydesk", type: "website" },
 };
 
 const PROMISES = [
   {
-    title: "Answers from your articles",
-    body: "Every reply links the article it came from, so customers can check it and you can see why it said what it said.",
+    title: "Answers from your FAQ",
+    body: "Every reply links the FAQ entry it came from, so customers can check it and you can see why it said what it said.",
   },
   {
-    title: "Built for how your customers type",
-    body: "They can ask in English or Taglish, typed or by voice, on the website they're already on.",
+    title: "Taglish is fine",
+    body: "Customers can ask in English or Taglish, typed or by voice, in the chat on your site.",
   },
   {
-    title: "Hands off instead of guessing",
-    body: "When your articles don't cover a question, the customer leaves an email and your team gets a ticket with the whole conversation.",
+    title: "Passes on what it can't answer",
+    body: "When your FAQ doesn't cover a question, the customer leaves an email and your team gets a ticket with the whole conversation.",
   },
 ];
 
 const STEPS = [
-  { title: "Paste your FAQ", body: "Or import the help articles you already have. That's what it answers from." },
+  { title: "Paste your FAQ", body: "Or import a Markdown file where each heading is a question. Relaydesk answers only from what's in it." },
   { title: "Add the widget", body: "Copy one script tag into your site. The chat bubble shows up in the corner." },
   { title: "Work the inbox", body: "Only the questions it couldn't answer land here, with the conversation attached." },
 ];
@@ -112,15 +112,15 @@ export default function LandingPage() {
               className="mt-4 font-serif text-[2.6rem] leading-[1.04] tracking-tight sm:text-5xl xl:text-[3.25rem]"
               lines={[
                 "Answers your customers",
-                "from your own help articles.",
+                "from your own FAQ.",
                 <em key="hand-off" className="text-forest">
                   The hard ones come to you.
                 </em>,
               ]}
             />
             <p className={`mt-6 max-w-md leading-7 text-muted delay-500 ${fadeUp}`}>
-              Relaydesk sits on your website and replies with the article it used. If the answer isn&apos;t in your
-              articles, it doesn&apos;t make one up. It opens a ticket for your team instead.
+              Relaydesk sits on your website, answers from your FAQ, and links the entry it used. When your FAQ
+              doesn&apos;t cover a question, it opens a ticket for your team.
             </p>
             <div className={`mt-8 flex flex-wrap items-center gap-3 delay-[600ms] ${fadeUp}`}>
               <PrimaryCta />
@@ -165,7 +165,7 @@ export default function LandingPage() {
             <div>
               <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">How it works</p>
               <h2 className="mt-3 max-w-sm font-serif text-3xl tracking-tight sm:text-4xl">
-                Live on your site in an afternoon.
+                Set up in three steps.
               </h2>
               <div className="mt-8">
                 <PrimaryCta />

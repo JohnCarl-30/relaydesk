@@ -76,7 +76,7 @@ const CHAT: Line[] = [
   { from: "customer", text: "May discount ba kung buong pamilya kami, 5 kami?" },
   {
     from: "bot",
-    text: "Our help articles don't cover group discounts, so I've passed this to the team. They'll email you.",
+    text: "I don't have an answer on group discounts, so I've passed this to the team. They'll email you.",
   },
 ];
 
@@ -84,7 +84,7 @@ const TRANSCRIPT =
   "Example conversation. Customer: Hi po! Pwede ba i-move yung cleaning ko bukas sa Saturday? " +
   "Assistant: Yes. You can reschedule up to 24 hours before your appointment from My Bookings, Reschedule. Source: Rescheduling an appointment. " +
   "Customer: May discount ba kung buong pamilya kami, 5 kami? " +
-  "Assistant: Our help articles don't cover group discounts, so I've passed this to the team. They'll email you. " +
+  "Assistant: I don't have an answer on group discounts, so I've passed this to the team. They'll email you. " +
   "A new ticket, Group discount for 5, lands in the staff inbox.";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
