@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { HeroChat, InboxSwitch, Reveal, RevealHeadline } from "@/components/landing";
 import { IconChevron } from "@/components/ui";
+import { Brand } from "@/components/Brand";
 
 const REPO = "https://github.com/JohnCarl-30/relaydesk";
 
@@ -41,17 +42,6 @@ const UNDER_THE_HOOD = [
   { stat: "Every PR", label: "gated by Langfuse experiments before it can merge", href: `${REPO}/blob/main/.github/workflows/experiments.yml` },
   { stat: "Docker", label: "self-hosting with daily backups and a tested restore", href: `${REPO}/blob/main/RUNBOOK.md` },
 ];
-
-function Brand() {
-  return (
-    <span className="inline-flex items-center gap-2 font-medium tracking-tight text-forest">
-      <span className="relative inline-block h-4 w-4 rounded-[5px] bg-forest">
-        <span className="absolute -bottom-1 -right-1 h-2 w-2 rounded-full border-2 border-paper bg-copper" />
-      </span>
-      Relaydesk
-    </span>
-  );
-}
 
 function PrimaryCta() {
   return (
