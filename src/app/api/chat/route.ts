@@ -12,6 +12,8 @@ import { runCopilot } from "@/lib/copilot";
 import { PENDING_TICKET_EMAIL } from "@/lib/escalate";
 import { answerQuestion } from "@/lib/graph";
 import { slugForTitle } from "@/lib/help-center";
+import { notifyNewTicket } from "@/lib/notify";
+import { publicOrigin } from "@/lib/origin";
 import { parseChannel } from "@/lib/voice";
 
 /*
@@ -111,6 +113,12 @@ export async function POST(request: Request) {
       ticket = created;
       // Draft after the response is sent, so the visitor never waits on it.
       after(async () => {
+        await notifyNewTicket({
+          businessId,
+          businessName: center.name,
+          ticket: created,
+          origin: await publicOrigin(),
+        });
         await runCopilot(businessId, created.id, "ticket_created");
       });
     }
