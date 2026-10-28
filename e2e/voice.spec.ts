@@ -61,7 +61,7 @@ async function fakeSpeech(page: Page, heard: string, error: string | null = null
 
 test("answers a spoken question in the chat and reads the answer aloud", async ({ page }) => {
   await fakeSpeech(page, "How long does Starter keep raw events?");
-  await page.goto("/");
+  await page.goto("/demo");
   await openChat(page);
 
   const reply = page.waitForResponse((res) => res.url().endsWith("/api/chat") && res.request().method() === "POST");
@@ -81,7 +81,7 @@ test("answers a spoken question in the chat and reads the answer aloud", async (
 
 test("a spoken question the help center can't answer opens a ticket, and says so without the id", async ({ page }) => {
   await fakeSpeech(page, "How do I connect Nimbus to Salesforce?");
-  await page.goto("/");
+  await page.goto("/demo");
   await openChat(page);
 
   const reply = page.waitForResponse((res) => res.url().endsWith("/api/chat") && res.request().method() === "POST");
@@ -98,7 +98,7 @@ test("a spoken question the help center can't answer opens a ticket, and says so
 
 test("typed questions are not read aloud", async ({ page }) => {
   await fakeSpeech(page, "unused");
-  await page.goto("/");
+  await page.goto("/demo");
   await openChat(page);
 
   const reply = page.waitForResponse((res) => res.url().endsWith("/api/chat") && res.request().method() === "POST");
@@ -111,7 +111,7 @@ test("typed questions are not read aloud", async ({ page }) => {
 
 test("a blocked microphone explains itself and leaves typing available", async ({ page }) => {
   await fakeSpeech(page, "", "not-allowed");
-  await page.goto("/");
+  await page.goto("/demo");
   await openChat(page);
 
   await chat(page).getByRole("button", { name: "Ask by voice" }).click();
@@ -124,7 +124,7 @@ test("browsers without speech recognition get no mic button", async ({ page }) =
     delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
     delete (window as unknown as { SpeechRecognition?: unknown }).SpeechRecognition;
   });
-  await page.goto("/");
+  await page.goto("/demo");
   await openChat(page);
   await expect(chat(page).getByRole("button", { name: "Send" })).toBeVisible();
   await expect(chat(page).getByRole("button", { name: "Ask by voice" })).toHaveCount(0);
@@ -190,7 +190,7 @@ function silentWav(): Buffer {
 
 /** Opens the chat and waits until the widget knows it should use ElevenLabs. */
 async function openServerVoiceChat(page: Page) {
-  await page.goto("/");
+  await page.goto("/demo");
   await openChat(page);
   await expect(chat(page).getByRole("button", { name: "Ask by voice" })).toHaveAttribute("data-voice", "elevenlabs");
 }

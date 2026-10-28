@@ -1,12 +1,12 @@
 import Link from "next/link";
+import { Brand } from "@/components/Brand";
 
 /** The frame around sign-up and invite forms. */
 export function AuthCard({ title, intro, children }: { title: string; intro: React.ReactNode; children: React.ReactNode }) {
   return (
     <main className="flex min-h-dvh flex-col bg-card px-6 py-8">
       <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium tracking-tight">
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-forest" />
-        Relaydesk
+        <Brand />
       </Link>
       <div className="m-auto w-full max-w-sm py-12">
         <h1 className="text-2xl font-medium tracking-tight">{title}</h1>

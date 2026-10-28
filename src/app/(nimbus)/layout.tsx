@@ -15,7 +15,7 @@ export default function NimbusLayout({ children }: { children: React.ReactNode }
       </a>
       <header className="sticky top-0 z-30 border-b border-line/80 bg-paper/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="text-sm">
+          <Link href="/demo" className="text-sm">
             <Logo />
           </Link>
           <SiteNav />

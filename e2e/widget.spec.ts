@@ -4,7 +4,7 @@ import { ask, chat, nextChatReply, openChat, signIn } from "./chat";
 const RETENTION_QUESTION = "How long does Starter keep raw events?";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/demo");
   await openChat(page);
 });
 

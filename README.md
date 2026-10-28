@@ -25,7 +25,8 @@ npm run dev
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
-- `/` customer site and widget
+- `/` the Relaydesk landing page
+- `/demo` Nimbus, a fake customer site with the widget
 - `/help` the articles the widget searches
 - `/inbox` staff inbox, sign in as `staff@nimbus.demo` with `nimbus-demo`
 
