@@ -74,7 +74,7 @@ export default function LoginPage() {
               Set up your help center
             </Link>
           </p>
-          <Link href="/" className="mt-3 block text-center text-sm text-muted hover:text-ink">
+          <Link href="/demo" className="mt-3 block text-center text-sm text-muted hover:text-ink">
             Back to Nimbus
           </Link>
         </form>

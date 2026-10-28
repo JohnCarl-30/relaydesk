@@ -4,7 +4,7 @@ import { Logo } from "@/components/ui";
 export default function NotFound() {
   return (
     <main className="flex min-h-dvh flex-col bg-paper px-6 py-8 text-ink">
-      <Link href="/" className="text-sm">
+      <Link href="/demo" className="text-sm">
         <Logo />
       </Link>
       <div className="my-auto max-w-md py-16">
@@ -20,7 +20,7 @@ export default function NotFound() {
           >
             Browse the help center
           </Link>
-          <Link href="/" className="text-muted underline-offset-4 hover:text-ink hover:underline">
+          <Link href="/demo" className="text-muted underline-offset-4 hover:text-ink hover:underline">
             Back to Nimbus
           </Link>
         </div>
