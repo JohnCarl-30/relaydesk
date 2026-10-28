@@ -14,6 +14,7 @@ import { answerQuestion } from "@/lib/graph";
 import { slugForTitle } from "@/lib/help-center";
 import { notifyNewTicket } from "@/lib/notify";
 import { publicOrigin } from "@/lib/origin";
+import { allowRequest, CHAT_PER_MINUTE, clientIp } from "@/lib/rate-limit";
 import { parseChannel } from "@/lib/voice";
 
 /*
@@ -68,6 +69,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Before any work, so a flood never reaches the model.
+  if (!allowRequest(clientIp(request.headers), Number(process.env.RELAYDESK_CHAT_PER_MINUTE) || CHAT_PER_MINUTE)) {
+    return NextResponse.json(
+      { error: "You're sending messages too fast. Wait a minute and try again." },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
   const body = (await request.json()) as {
     business?: string;
     conversationId?: string;
