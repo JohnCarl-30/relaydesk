@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "npx --yes tsx --test \"src/**/*.test.ts\" \"eval/**/*.test.ts\"",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "bench": "vitest bench --run"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
@@ -32,6 +33,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@codspeed/vitest-plugin": "^6.1.0",
     "@langfuse/client": "^6.0.0",
     "@langfuse/core": "^6.0.0",
     "@opentelemetry/sdk-node": "^0.221.0",
@@ -45,6 +47,7 @@
     "eslint-config-next": "16.3.2",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.12"
   }
 }

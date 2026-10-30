@@ -1,5 +1,7 @@
 # Relaydesk
 
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/JohnCarl-30/relaydesk?utm_source=badge)
+
 A support bot that knows when to hand off to a person, and evals that show it.
 
 The widget answers from the help center and cites the article. When the help center has no answer, it says so and opens a ticket. In the staff inbox, a co-pilot triages the ticket and drafts a reply, and a person sends it. Nimbus is the fake analytics company it runs on.
@@ -169,6 +171,12 @@ npx --yes tsx eval/copilot.ts             # co-pilot triage on replayed tickets
 ```
 
 Details and past results: [eval/README.md](eval/README.md). Escalation: [eval/escalation.md](eval/escalation.md). Rewrite on vs off: [eval/rewrite.md](eval/rewrite.md). Extractive vs generate: [eval/generate.md](eval/generate.md). Latency and $: [eval/cost.md](eval/cost.md).
+
+CPU benchmarks for retrieval, escalation, conversation context, redaction, and article import live in [`bench/`](bench) and run on [CodSpeed](https://app.codspeed.io/JohnCarl-30/relaydesk) for every push and PR:
+
+```bash
+npm run bench     # vitest bench, keyless
+```
 
 ## Operations
 
