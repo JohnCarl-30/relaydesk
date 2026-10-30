@@ -63,9 +63,11 @@ Tap the mic in the widget and ask out loud. The speech becomes text, the text go
 - **Traces say which was which.** Voice questions carry `channel=voice` on the `support.answer` span and in Langfuse trace metadata, since their text is a speech-to-text transcript and can be misheard.
 - **Language** follows the widget's `voiceLang` prop, `en-US` by default. Chrome also recognizes `en-PH` and `fil-PH`.
 
-### Email when a ticket opens
+### Email when a ticket opens, and when staff reply
 
 With `RESEND_API_KEY` on the server, every staff member of a business gets an email when Relaydesk opens a ticket. The email has the customer's question, their email if they left one, and a link to the ticket. Set `RELAYDESK_EMAIL_FROM` to a sender on a domain you verified in Resend. If the email fails, the ticket is still in `/inbox` and the chat carries on.
+
+When staff reply, the customer gets the reply by email too, if they left an address in the widget. If the chat is still open, the reply also shows up there within 15 seconds.
 
 ### ElevenLabs, per business
 

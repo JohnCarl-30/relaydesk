@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { PENDING_TICKET_EMAIL } from "./escalate";
-import { newTicketRequest, notifyNewTicket, resendConfig } from "./notify";
+import { newTicketRequest, notifyCustomerReply, notifyNewTicket, replyRequest, resendConfig } from "./notify";
 
 describe("resendConfig", () => {
   it("is off without a key", () => {
@@ -54,5 +54,37 @@ describe("notifyNewTicket", () => {
     const config = { apiKey: "re_1", from: "x@y.z", baseUrl: "http://127.0.0.1:9" };
     const ticket = { id: "tkt_1", email: "a@b.c", preview: "hi" } as Parameters<typeof notifyNewTicket>[0]["ticket"];
     assert.equal(await notifyNewTicket({ businessId: "nimbus", businessName: "Nimbus", ticket, origin: "" }, config), false);
+  });
+});
+
+describe("replyRequest", () => {
+  it("mails the staff reply to the customer, with their question below it", () => {
+    const config = { apiKey: "re_1", from: "Luma <help@luma.ph>", baseUrl: "https://api.resend.com" };
+    const { url, init } = replyRequest(config, {
+      businessName: "Luma Dental",
+      ticket: { email: "ana@example.ph", preview: "May discount ba kung 5 kami?" },
+      body: "Yes, 10% off for groups of 5.",
+    });
+    assert.equal(url, "https://api.resend.com/emails");
+    const body = JSON.parse(init.body as string);
+    assert.deepEqual(body.to, ["ana@example.ph"]);
+    assert.equal(body.subject, "Luma Dental replied: May discount ba kung 5 kami?");
+    assert.match(body.text, /^Yes, 10% off for groups of 5\./);
+    assert.match(body.text, /You asked Luma Dental: "May discount ba kung 5 kami\?"/);
+  });
+});
+
+describe("notifyCustomerReply", () => {
+  const config = { apiKey: "re_1", from: "x@y.z", baseUrl: "http://127.0.0.1:9" };
+  const ticket = (email: string) => ({ id: "tkt_1", email, preview: "hi" }) as Parameters<typeof notifyCustomerReply>[0]["ticket"];
+
+  it("skips customers who left no email", async () => {
+    const input = { businessId: "luma", businessName: "Luma", ticket: ticket(PENDING_TICKET_EMAIL), body: "ok" };
+    assert.equal(await notifyCustomerReply(input, config), false);
+  });
+
+  it("never mails the demo's made-up customers", async () => {
+    const input = { businessId: "nimbus", businessName: "Nimbus", ticket: ticket("a@b.c"), body: "ok" };
+    assert.equal(await notifyCustomerReply(input, config), false);
   });
 });

@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { currentStaff } from "@/lib/auth";
-import { decideDraft, getDraft, replyToTicket } from "@/lib/db";
+import { decideDraft, getBusiness, getDraft, replyToTicket } from "@/lib/db";
+import { notifyCustomerReply } from "@/lib/notify";
 
 const REJECT_REASONS = ["wrong", "not_helpful", "tone", "other"] as const;
 
@@ -34,6 +35,8 @@ export async function POST(
       status: finalBody === draft.body ? "sent" : "edited",
       finalBody,
     });
+    const businessName = getBusiness(staff.business_id)?.name ?? staff.business_id;
+    after(() => notifyCustomerReply({ businessId: staff.business_id, businessName, ticket, body: finalBody }));
     return NextResponse.json({ ticket });
   }
   if (body.action === "reject") {

@@ -59,3 +59,19 @@ test("'This didn't help' opens a ticket", async ({ page }) => {
   expect((await reply).ticketId).toBeTruthy();
   await expect(chat(page).getByRole("link", { name: "staff inbox" })).toBeVisible();
 });
+
+test("a staff reply shows up in the open chat without a reload", async ({ page, browser }) => {
+  const reply = await ask(page, "How do I connect Nimbus to Salesforce?");
+  expect(reply.ticketId).toBeTruthy();
+
+  const staff = await (await browser.newContext()).newPage();
+  await signIn(staff);
+  const sent = await staff.request.post(`/api/tickets/${reply.ticketId}/reply`, {
+    data: { body: "Salesforce sync is on our roadmap for Q1." },
+  });
+  expect(sent.ok()).toBe(true);
+
+  // The widget checks every 15 seconds.
+  await expect(chat(page).getByText("Salesforce sync is on our roadmap for Q1.")).toBeVisible({ timeout: 20_000 });
+  await staff.context().close();
+});
