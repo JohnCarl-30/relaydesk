@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
-import { replyToTicket } from "@/lib/db";
+import { after, NextResponse } from "next/server";
+import { getBusiness, replyToTicket } from "@/lib/db";
 import { currentStaff } from "@/lib/auth";
+import { notifyCustomerReply } from "@/lib/notify";
 
 export async function POST(
   request: Request,
@@ -20,5 +21,7 @@ export async function POST(
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
+  const businessName = getBusiness(staff.business_id)?.name ?? staff.business_id;
+  after(() => notifyCustomerReply({ businessId: staff.business_id, businessName, ticket, body: text }));
   return NextResponse.json({ ticket });
 }

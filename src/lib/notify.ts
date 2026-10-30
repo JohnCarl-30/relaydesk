@@ -68,3 +68,39 @@ export async function notifyNewTicket(
   console.error("ticket email failed", res instanceof Response ? `${res.status} ${await res.text()}` : res);
   return false;
 }
+
+/** The Resend call that sends a staff reply to the customer who asked. */
+export function replyRequest(
+  config: ResendConfig,
+  input: { businessName: string; ticket: Pick<Ticket, "email" | "preview">; body: string },
+): { url: string; init: RequestInit } {
+  const { ticket } = input;
+  const text = [input.body, ``, `---`, `You asked ${input.businessName}: "${ticket.preview}"`].join("\n");
+  return {
+    url: `${config.baseUrl}/emails`,
+    init: {
+      method: "POST",
+      headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: config.from,
+        to: [ticket.email],
+        subject: `${input.businessName} replied: ${ticket.preview.slice(0, 60)}`,
+        text,
+      }),
+    },
+  };
+}
+
+/** Emails a staff reply to the customer, if they left an email. Never throws: the reply is already in the chat. */
+export async function notifyCustomerReply(
+  input: { businessId: string; businessName: string; ticket: Ticket; body: string },
+  config = resendConfig(),
+): Promise<boolean> {
+  // Demo tickets carry made-up customer addresses.
+  if (!config || input.businessId === DEMO_BUSINESS_ID || input.ticket.email === PENDING_TICKET_EMAIL) return false;
+  const { url, init } = replyRequest(config, input);
+  const res = await fetch(url, init).catch((error: unknown) => error as Error);
+  if (res instanceof Response && res.ok) return true;
+  console.error("reply email failed", res instanceof Response ? `${res.status} ${await res.text()}` : res);
+  return false;
+}

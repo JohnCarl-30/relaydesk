@@ -118,6 +118,31 @@ export function Widget({
       });
   }, [business.id, storageKey]);
 
+  // Staff answer tickets from /inbox, so check for their reply while the chat is open.
+  useEffect(() => {
+    if (!open || !ticketId || pending) return;
+    let cancelled = false;
+    const timer = window.setInterval(() => {
+      if (!conversationId.current) return;
+      const query = new URLSearchParams({ business: business.id, conversationId: conversationId.current });
+      fetch(`/api/chat?${query}`)
+        .then((res) => (res.ok ? (res.json() as Promise<{ messages?: ChatMessage[] }>) : null))
+        .then((data) => {
+          const fresh = data?.messages;
+          if (cancelled || !fresh) return;
+          // Same length means nothing new; keeping prev avoids a scroll jump every poll.
+          setMessages((prev) =>
+            fresh.length === prev.length ? prev : fresh.map((m) => ({ ...m, citations: m.citations ?? [] })),
+          );
+        })
+        .catch(() => {});
+    }, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [open, ticketId, pending, business.id]);
+
   useEffect(() => {
     const onOpen = () => setOpen(true);
     window.addEventListener(OPEN_CHAT_EVENT, onOpen);
