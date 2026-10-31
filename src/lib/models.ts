@@ -78,6 +78,14 @@ export type Ticket = {
   has_draft?: number;
 };
 
+/** What the inbox calls each intent. Lives here, not in intent.ts, so client components can import it without the tracing code. */
+export const INTENT_LABEL: Record<NonNullable<Ticket["intent"]>, string> = {
+  lead: "Sales lead",
+  upgrade: "Upgrade",
+  churn_risk: "Churn risk",
+  none: "No sales signal",
+};
+
 /** "answer" is grounded in help articles; "holding" only says a person is on it. */
 export type DraftKind = "answer" | "holding";
 export type DraftStatus = "pending" | "sent" | "edited" | "rejected" | "superseded";

@@ -1,5 +1,5 @@
 import type { ChatLike } from "./graph";
-import type { Ticket } from "./models";
+import { INTENT_LABEL, type Ticket } from "./models";
 import { generationAttributes, withSpan } from "./trace";
 
 /*
@@ -13,12 +13,6 @@ export type Intent = NonNullable<Ticket["intent"]>;
 export type IntentResult = { intent: Intent; reason: string };
 
 export const INTENTS = ["lead", "upgrade", "churn_risk", "none"] as const satisfies readonly Intent[];
-export const INTENT_LABEL: Record<Intent, string> = {
-  lead: "Sales lead",
-  upgrade: "Upgrade",
-  churn_risk: "Churn risk",
-  none: "No sales signal",
-};
 
 // Checked in this order: a customer who is leaving is a churn risk even when
 // they also ask about plans, and a customer growing is an upgrade even when

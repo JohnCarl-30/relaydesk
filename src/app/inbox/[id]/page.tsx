@@ -6,7 +6,7 @@ import { helpCenterPath, loadHelpCenter } from "@/lib/business";
 import { copilotEnabled } from "@/lib/copilot";
 import { getPendingDraft, getTicket, listMessages, listRuns, listStaff } from "@/lib/db";
 import { slugForTitle } from "@/lib/help-center";
-import { INTENT_LABEL } from "@/lib/intent";
+import { INTENT_LABEL } from "@/lib/models";
 import { DraftCard, type DraftView } from "./draft-card";
 import { ReplyForm } from "./reply-form";
 import { TicketActions } from "./ticket-actions";

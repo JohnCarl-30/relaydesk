@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { formatRelative, IconSearch, Initials, StatusPill } from "@/components/ui";
-import { INTENT_LABEL } from "@/lib/intent";
-import type { Ticket } from "@/lib/models";
+import { INTENT_LABEL, type Ticket } from "@/lib/models";
 
 const FILTERS = ["all", "review", "open", "waiting", "closed"] as const;
 
