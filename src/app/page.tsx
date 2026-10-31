@@ -5,9 +5,11 @@ import { IconChevron } from "@/components/ui";
 import { Brand } from "@/components/Brand";
 
 const REPO = "https://github.com/JohnCarl-30/relaydesk";
+// Until the product has its own domain and mailbox (#18), the maker's address.
+const CONTACT_EMAIL = "johncarlsantos30@gmail.com";
 
 const description =
-  "A help desk for Philippine businesses. It answers customers from your FAQ and passes the questions it can't answer to your team.";
+  "A help desk for Philippine clinics, online brands, and service businesses. It answers customers from your FAQ and passes the questions it can't answer to your team.";
 
 export const metadata: Metadata = {
   title: "Relaydesk, answers your customers from your own FAQ",
@@ -79,6 +81,9 @@ export default function LandingPage() {
             <Link href="/demo" className="hidden px-2 py-1.5 text-muted transition-colors hover:text-ink sm:block">
               Demo
             </Link>
+            <a href="#contact" className="hidden px-2 py-1.5 text-muted transition-colors hover:text-ink sm:block">
+              Contact
+            </a>
             <Link href="/login" className="px-2 py-1.5 text-muted transition-colors hover:text-ink">
               Log in
             </Link>
@@ -96,7 +101,7 @@ export default function LandingPage() {
         <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-14 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:pt-20">
           <Reveal>
             <p className={`text-sm font-medium text-copper ${fadeUp}`}>
-              For Philippine businesses that answer the same questions all day
+              For clinics, online brands, and service businesses that answer the same questions all day
             </p>
             <RevealHeadline
               className="mt-4 font-serif text-[2.6rem] leading-[1.04] tracking-tight sm:text-5xl xl:text-[3.25rem]"
@@ -207,6 +212,38 @@ export default function LandingPage() {
             </ul>
           </div>
         </section>
+
+        <section id="contact" className="scroll-mt-14 border-t border-line">
+          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-20">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Get in touch</p>
+              <h2 className="mt-3 max-w-sm font-serif text-3xl tracking-tight sm:text-4xl">
+                Run it on your questions for free.
+              </h2>
+            </div>
+            <div>
+              <p className="max-w-lg leading-7 text-muted">
+                Relaydesk is looking for its first few pilots: a dental or medical clinic with a receptionist, a Facebook or
+                Instagram brand with one to three people on chat, or a salon, repair shop, or tutoring centre. The pilot
+                is free. In return, the conversations it handles, with customer details removed, become the test set that
+                keeps it honest.
+              </p>
+              <p className="mt-4 max-w-lg leading-7 text-muted">
+                Send the questions your customers ask most and a link to your page, and you&apos;ll get a working help desk
+                on them within the week.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <a
+                  href={`mailto:${CONTACT_EMAIL}?subject=Relaydesk%20pilot`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-forest px-5 py-3 text-sm font-medium text-paper transition hover:bg-forest-2 active:scale-[0.97]"
+                >
+                  Email about a pilot
+                </a>
+                <span className="text-sm text-muted">{CONTACT_EMAIL}</span>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer className="border-t border-line py-10">
@@ -221,6 +258,9 @@ export default function LandingPage() {
             </Link>
             <a href={REPO} className="transition-colors hover:text-ink">
               GitHub
+            </a>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors hover:text-ink">
+              {CONTACT_EMAIL}
             </a>
           </div>
         </div>
