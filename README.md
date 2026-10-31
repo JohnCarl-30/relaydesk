@@ -146,6 +146,7 @@ Run the script again with `--articles` to replace the help center. The next chat
 
 Every new ticket gets a co-pilot pass right after the chat reply is sent:
 - **Triage:** it files the ticket under a help-center topic, writes a one-line summary, and notes why a person is needed.
+- **Revenue intent:** it reads the sales signal in the conversation, `lead` ("do you have a team plan?"), `upgrade` ("we need SSO and more seats"), `churn_risk` ("how do I export everything and cancel?"), or `none`, with a one-line reason. Keyless it is keyword rules; with a model key it is a classifier that falls back to the rules. The inbox shows it; nothing is sent anywhere.
 - **Draft:** it saves one suggested reply. Staff **Send**, edit and send, or **Reject** it with a reason.
 
 It never sends on its own. Only the staff reply path posts to the customer.

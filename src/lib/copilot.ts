@@ -16,11 +16,13 @@ import {
 import { isRefusal, isVisitorEscalation, PENDING_TICKET_EMAIL } from "./escalate";
 import { answerQuestion, chatModel, chatModelName, hasLlm } from "./graph";
 import { articleBySlug } from "./help-center";
+import { classifyIntent } from "./intent";
 import { generationAttributes, withSpan } from "./trace";
 
 /*
- * The inbox co-pilot. It reads a ticket, files it under a topic, and saves one
- * pending reply draft for staff to send, edit, or reject. It never sends: this
+ * The inbox co-pilot. It reads a ticket, files it under a topic, notes any
+ * sales signal (see intent.ts), and saves one pending reply draft for staff to
+ * send, edit, or reject. It never sends: this
  * module can write drafts, triage fields, and run logs, and nothing else.
  */
 
@@ -76,6 +78,8 @@ export type TicketContext = {
   name: string;
   lastMessageId: string | null;
   transcript: string;
+  /** Everything the customer wrote, for the intent keywords. */
+  visitorText: string;
 };
 
 function firstName(email: string): string {
@@ -125,6 +129,7 @@ export function readTicket(ticket: Ticket, messages: Message[]): TicketContext {
     name: firstName(ticket.email),
     lastMessageId: messages.at(-1)?.id ?? null,
     transcript: messages.map((m) => `${speaker(m.role)}: ${m.body}`).join("\n"),
+    visitorText: messages.filter((m) => m.role === "visitor").map((m) => m.body).join("\n"),
   };
 }
 
@@ -250,6 +255,7 @@ export async function runCopilot(
       const drafted =
         (canAnswer ? await modelDraft(center.name, context, sources).catch(() => null) : null) ??
         holdingDraft(context, sources);
+      const intent = await classifyIntent(context, hasLlm() ? chatModel() : null);
 
       const draft = insertDraft({
         ticket_id: ticket.id,
@@ -265,8 +271,11 @@ export async function runCopilot(
         topic: sources[0]?.category ?? "Other",
         summary: oneLine(context.question),
         needsHumanReason: drafted.kind === "holding" ? drafted.rationale : null,
+        intent: intent.intent,
+        intentReason: intent.reason,
       });
       span.setAttribute("copilot.reason", context.reason);
+      span.setAttribute("copilot.intent", intent.intent);
       log(drafted.kind, drafted.rationale, drafted);
       return { outcome: drafted.kind, draft };
     } catch (err) {

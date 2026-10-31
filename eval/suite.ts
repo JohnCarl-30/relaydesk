@@ -13,26 +13,32 @@ import {
   type RunEvaluator,
   type RunnerContext,
 } from "@langfuse/client";
-import { answerQuestion, chatModel, chatModelName, usingStubLlm } from "../src/lib/graph";
-import { ESCALATION_DATASET, GOLDEN_DATASET, escalationItems, goldenItems, type DesiredItem } from "./datasets";
+import { answerQuestion, chatModel, chatModelName, hasLlm, usingStubLlm } from "../src/lib/graph";
+import { classifyIntent } from "../src/lib/intent";
+import { ESCALATION_DATASET, GOLDEN_DATASET, INTENT_DATASET, escalationItems, goldenItems, intentItems, type DesiredItem } from "./datasets";
 import {
   answerTask,
   escalationMatch,
   escalationPrecisionRecall,
   faithfulnessJudge,
   hitAtK,
+  intentDealPrecision,
+  intentMatch,
+  intentTask,
   meanOf,
   regressions,
   type Threshold,
 } from "./experiments";
 import { loadGolden } from "./golden";
-import { loadLabels } from "./labels";
+import { loadIntentLabels, loadLabels } from "./labels";
 
 export type Experiment = {
   key: string;
   dataset: string;
   description: string;
   localItems: () => DesiredItem[];
+  /** Set when the experiment runs something other than the widget's answer path. */
+  task?: ExperimentTask;
   evaluators: Evaluator[];
   runEvaluators: RunEvaluator[];
   /** Run scores that must exist. The SDK logs a failing run evaluator and carries on. */
@@ -47,6 +53,7 @@ export type Experiment = {
 
 export type Suite = {
   experiments: Experiment[];
+  /** The widget's answer path, for every experiment without its own task. */
   task: ExperimentTask;
   metadata: { answers: string; judge: string };
 };
@@ -83,6 +90,23 @@ export function experimentSuite(): Suite {
       thresholds: [
         { name: "escalation_precision", min: 1 }, // 7/7
         { name: "escalation_recall", min: 0.63 }, // 7/11
+      ],
+    },
+    {
+      key: "intent",
+      dataset: INTENT_DATASET,
+      description: "Whether the co-pilot reads the sales signal (lead, upgrade, churn risk, none) the label says.",
+      localItems: () => intentItems(loadIntentLabels(join(here, "intent-labels.csv"))),
+      // The co-pilot's classifier: the model when a key is set, else the keyword baseline.
+      task: intentTask((question) =>
+        classifyIntent({ visitorText: question, transcript: `Customer: ${question}` }, hasLlm() ? chatModel() : null),
+      ),
+      evaluators: [intentMatch],
+      runEvaluators: [intentDealPrecision, meanOf("intent_correct")],
+      scores: ["intent_deal_precision", "intent_correct"],
+      thresholds: [
+        { name: "intent_deal_precision", min: 1 }, // no false leads or upgrades
+        { name: "intent_correct", min: 0.97 }, // 39/40; the keyword baseline scores 40/40
       ],
     },
   ];
@@ -124,7 +148,7 @@ export async function runGated(context: RunnerContext, key: string): Promise<Exp
     name: experiment.dataset,
     description: experiment.description,
     metadata,
-    task,
+    task: experiment.task ?? task,
     evaluators: experiment.evaluators,
     runEvaluators: experiment.runEvaluators,
     maxConcurrency: 4,

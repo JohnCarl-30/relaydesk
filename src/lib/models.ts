@@ -70,8 +70,20 @@ export type Ticket = {
   summary: string | null;
   /** Why a person has to answer; null once staff reply. */
   needs_human_reason: string | null;
+  /** Sales signal the co-pilot read in the conversation; null before its first run. */
+  intent: "lead" | "upgrade" | "churn_risk" | "none" | null;
+  /** One line on why, shown next to the intent. */
+  intent_reason: string | null;
   /** 1 when a co-pilot draft is waiting for review (listTickets only). */
   has_draft?: number;
+};
+
+/** What the inbox calls each intent. Lives here, not in intent.ts, so client components can import it without the tracing code. */
+export const INTENT_LABEL: Record<NonNullable<Ticket["intent"]>, string> = {
+  lead: "Sales lead",
+  upgrade: "Upgrade",
+  churn_risk: "Churn risk",
+  none: "No sales signal",
 };
 
 /** "answer" is grounded in help articles; "holding" only says a person is on it. */

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { formatRelative, IconSearch, Initials, StatusPill } from "@/components/ui";
-import type { Ticket } from "@/lib/models";
+import { INTENT_LABEL, type Ticket } from "@/lib/models";
 
 const FILTERS = ["all", "review", "open", "waiting", "closed"] as const;
 
@@ -142,6 +142,15 @@ export function TicketList({
                       {ticket.has_draft ? (
                         <span className="rounded-md bg-forest/10 px-1.5 py-0.5 text-[11px] font-medium text-forest">
                           Draft ready
+                        </span>
+                      ) : null}
+                      {ticket.intent && ticket.intent !== "none" ? (
+                        <span
+                          className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                            ticket.intent === "churn_risk" ? "bg-copper/10 text-copper" : "bg-forest/10 text-forest"
+                          }`}
+                        >
+                          {INTENT_LABEL[ticket.intent]}
                         </span>
                       ) : null}
                       {ticket.topic ? (

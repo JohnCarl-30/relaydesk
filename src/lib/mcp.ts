@@ -71,7 +71,7 @@ export function buildMcpServer(businessId: string): McpServer {
     {
       title: "List tickets",
       description:
-        "Tickets in this business's inbox, newest activity first. Each has id, status, assignee, topic, a one-line summary, why a person is needed, whether a draft is waiting, and when it last changed.",
+        "Tickets in this business's inbox, newest activity first. Each has id, status, assignee, topic, a one-line summary, why a person is needed, the sales signal (intent: lead, upgrade, churn_risk, none) with its reason, whether a draft is waiting, and when it last changed.",
       inputSchema: {
         status: z.enum(TICKET_STATUSES).optional().describe("Only tickets with this status."),
         assignee: z.string().nullable().optional().describe("Only tickets given to this staff name; null for unassigned."),
@@ -93,6 +93,8 @@ export function buildMcpServer(businessId: string): McpServer {
           topic: t.topic,
           summary: t.summary ?? t.preview,
           needs_human_reason: t.needs_human_reason,
+          intent: t.intent,
+          intent_reason: t.intent_reason,
           has_draft: Boolean(t.has_draft),
           updated_at: t.updated_at,
         }));
@@ -122,6 +124,8 @@ export function buildMcpServer(businessId: string): McpServer {
           topic: ticket.topic,
           summary: ticket.summary,
           needs_human_reason: ticket.needs_human_reason,
+          intent: ticket.intent,
+          intent_reason: ticket.intent_reason,
           created_at: ticket.created_at,
           updated_at: ticket.updated_at,
         },

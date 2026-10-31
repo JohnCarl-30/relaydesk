@@ -1,0 +1,41 @@
+question,intent,why
+"Do you have a plan for a 15-person team?",lead,asks about a team plan
+"What's your pricing for agencies?",lead,asks for pricing
+"Is there a free trial before we commit?",lead,asks for a trial
+"Can we book a demo for our ops team next week?",lead,asks for a demo
+"How much does Nimbus cost per month?",lead,asks the price
+"We're evaluating Nimbus against Mixpanel. Does it do funnels?",lead,says they are evaluating
+"Looking for a tool that tracks events across 3 apps. Does Nimbus fit?",lead,shopping for a fit
+"Can I get a quote for 40 seats?",lead,asks for a quote
+"Is there a plan for startups under 10 people?",lead,asks which plan fits
+"Do you offer annual pricing for a small company?",lead,asks whether you offer a plan
+"We need SSO and more seats for the London office.",upgrade,wants SSO and seats
+"We're adding 20 seats next month. How does billing change?",upgrade,adding seats
+"Can we upgrade to the Business plan mid-cycle?",upgrade,asks to upgrade
+"How do I move our workspace to the Pro plan?",upgrade,moving to a higher plan
+"We want to turn on SSO for our workspace. Which plan has it?",upgrade,wants a paid feature
+"Need 5 more seats added before Monday.",upgrade,adding seats
+"Is there a higher tier with longer data retention?",upgrade,asks for a higher tier
+"We'd like to switch to annual billing for our team.",upgrade,wants an annual contract
+"Can we buy another 10 licenses for the support team?",upgrade,buying licenses
+"How do I export everything and cancel?",churn_risk,exporting and cancelling
+"We're switching to Amplitude next quarter. How do we get our data out?",churn_risk,switching to a competitor
+"Please cancel our subscription at the end of this month.",churn_risk,cancelling
+"This is too expensive for what we use. What are our options?",churn_risk,price complaint
+"How do I downgrade to the free plan?",churn_risk,downgrading
+"We're not renewing. Who do I tell?",churn_risk,not renewing
+"How do I delete our workspace and all its data?",churn_risk,deleting the account
+"We're leaving Nimbus. Can you confirm nothing will be charged after March?",churn_risk,leaving
+"How do I close my account?",churn_risk,closing the account
+"How do I reset my API key?",none,support question
+"SSO keeps bouncing me back to Google and I never land in Nimbus.",none,support question about SSO
+"Our invoice shows 12 seats but we only have 9 people who can log in.",none,billing question with no buy or leave signal
+"Where do I download last month's invoice?",none,billing question
+"Does the CSV export include event properties?",none,feature question
+"Why is my dashboard showing zero events since yesterday?",none,bug report
+"Can I rename a project after creating it?",none,how-to
+"What timezone do daily reports use?",none,how-to
+"How do I invite a teammate to our workspace?",none,how-to with no seat purchase
+"Can I cancel a scheduled report?",none,cancel a report not the account
+"The user agent filter isn't matching Safari. Is that a bug?",none,bug report
+"How do I set up a retention chart?",none,how-to

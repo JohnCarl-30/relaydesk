@@ -92,8 +92,21 @@ describe("runCopilot without a model", () => {
     assert.equal(filed?.topic, "Billing");
     assert.equal(filed?.summary, "Do pending invites count as billed seats?");
     assert.match(filed?.needs_human_reason ?? "", /didn't help/);
+    assert.equal(filed?.intent, "none");
+    assert.equal(filed?.intent_reason, "No sales signal.");
     assert.equal(db.listRuns(ticket.id)[0].outcome, "holding");
     assert.equal(db.listMessages(ticket.conversation_id).length, before, "co-pilot must not send");
+  });
+
+  it("reads a sales signal from what the customer wrote, keyless", async () => {
+    const ticket = ticketFrom([
+      ["visitor", "Do you have a plan for a 15-person team?"],
+      ["assistant", REFUSED],
+    ]);
+    await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
+    const filed = db.getTicket(DEMO_BUSINESS_ID, ticket.id);
+    assert.equal(filed?.intent, "lead");
+    assert.equal(filed?.intent_reason, 'Mentions "Do you have".');
   });
 
   it("keeps one pending draft per ticket; regenerating supersedes the old one", async () => {
