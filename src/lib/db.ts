@@ -189,7 +189,7 @@ function open(): Database.Database {
 
 function migrateTickets(db: Database.Database) {
   const cols = db.prepare("PRAGMA table_info(tickets)").all() as { name: string }[];
-  for (const column of ["assignee", "topic", "summary", "needs_human_reason"]) {
+  for (const column of ["assignee", "topic", "summary", "needs_human_reason", "intent", "intent_reason"]) {
     if (!cols.some((col) => col.name === column)) {
       db.exec(`ALTER TABLE tickets ADD COLUMN ${column} TEXT`);
     }
@@ -451,6 +451,8 @@ export function createTicket(conversationId: string, email: string): Ticket {
     topic: null,
     summary: null,
     needs_human_reason: null,
+    intent: null,
+    intent_reason: null,
   };
   db()
     .prepare(
@@ -535,11 +537,19 @@ export function updateTicket(
 
 export function setTicketTriage(
   id: string,
-  triage: { topic: string; summary: string; needsHumanReason: string | null },
+  triage: {
+    topic: string;
+    summary: string;
+    needsHumanReason: string | null;
+    intent: Ticket["intent"];
+    intentReason: string;
+  },
 ) {
   db()
-    .prepare("UPDATE tickets SET topic = ?, summary = ?, needs_human_reason = ? WHERE id = ?")
-    .run(triage.topic, triage.summary, triage.needsHumanReason, id);
+    .prepare(
+      "UPDATE tickets SET topic = ?, summary = ?, needs_human_reason = ?, intent = ?, intent_reason = ? WHERE id = ?",
+    )
+    .run(triage.topic, triage.summary, triage.needsHumanReason, triage.intent, triage.intentReason, id);
 }
 
 /** Saves a pending draft and supersedes any earlier pending draft for the ticket. */

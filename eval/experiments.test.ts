@@ -7,6 +7,8 @@ import {
   escalationPrecisionRecall,
   faithfulnessJudge,
   hitAtK,
+  intentDealPrecision,
+  intentMatch,
   meanOf,
   parseJudgeReply,
   regressions,
@@ -72,6 +74,25 @@ describe("experiment evaluators", () => {
     assert.equal(run.escalation_precision, 2 / 3);
     assert.equal(run.escalation_recall, 2 / 3);
     assert.equal(run.escalation_correct, 3 / 5);
+  });
+
+  it("scores intent per item, and deal precision only over lead and upgrade calls", async () => {
+    const rows: [string, string][] = [
+      ["lead", "lead"],
+      ["upgrade", "upgrade"],
+      ["churn_risk", "none"],
+      ["none", "lead"],
+      ["none", "none"],
+    ];
+    const result = await runLocal({
+      data: rows.map(([expected, got]) => ({ input: { question: `${expected}-${got}` }, expectedOutput: { intent: expected }, metadata: { got } })),
+      task: async (item) => ({ intent: (item.metadata as { got: string }).got, reason: "test" }),
+      evaluators: [intentMatch],
+      runEvaluators: [intentDealPrecision, meanOf("intent_correct")],
+    });
+    const run = Object.fromEntries(result.runEvaluations.map((e) => [e.name, e.value]));
+    assert.equal(run.intent_correct, 3 / 5);
+    assert.equal(run.intent_deal_precision, 2 / 3);
   });
 
   it("leaves a run score out when no item had one", async () => {
@@ -154,7 +175,7 @@ describe("experiment suite", () => {
     const { experiments, task } = experimentSuite();
     for (const experiment of experiments) {
       const data = experiment.localItems().map(({ input, expectedOutput }) => ({ input, expectedOutput }));
-      const { runEvaluations } = await runLocal({ data, task, ...experiment });
+      const { runEvaluations } = await runLocal({ data, ...experiment, task: experiment.task ?? task });
       assert.deepEqual(regressions(runEvaluations, experiment.thresholds), [], experiment.dataset);
     }
   });

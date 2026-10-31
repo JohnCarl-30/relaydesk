@@ -6,6 +6,7 @@ import { helpCenterPath, loadHelpCenter } from "@/lib/business";
 import { copilotEnabled } from "@/lib/copilot";
 import { getPendingDraft, getTicket, listMessages, listRuns, listStaff } from "@/lib/db";
 import { slugForTitle } from "@/lib/help-center";
+import { INTENT_LABEL } from "@/lib/intent";
 import { DraftCard, type DraftView } from "./draft-card";
 import { ReplyForm } from "./reply-form";
 import { TicketActions } from "./ticket-actions";
@@ -189,7 +190,7 @@ export default async function TicketPage({
             <dd className="text-right tabular-nums">{messages.length}</dd>
           </div>
         </dl>
-        {ticket.summary || runs.length ? (
+        {ticket.summary || ticket.intent || runs.length ? (
           <div className="border-t border-line px-4 py-4">
             <p className="text-[11px] font-medium uppercase tracking-widest text-muted">Co-pilot</p>
             {ticket.summary ? (
@@ -198,6 +199,18 @@ export default async function TicketPage({
                   <span className="mr-1.5 rounded bg-forest/10 px-1.5 py-px text-[11px] text-forest">{ticket.topic}</span>
                 ) : null}
                 {ticket.summary}
+              </p>
+            ) : null}
+            {ticket.intent && ticket.intent !== "none" ? (
+              <p className="mt-2 text-sm">
+                <span
+                  className={`mr-1.5 rounded px-1.5 py-px text-[11px] ${
+                    ticket.intent === "churn_risk" ? "bg-copper/10 text-copper" : "bg-forest/10 text-forest"
+                  }`}
+                >
+                  {INTENT_LABEL[ticket.intent]}
+                </span>
+                {ticket.intent_reason}
               </p>
             ) : null}
             {runs.length ? (

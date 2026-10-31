@@ -1,8 +1,8 @@
 /**
  * Runs the widget's answer path over the Langfuse datasets as experiments.
  *
- *   npx --yes tsx eval/run-experiments.ts                    # both experiments
- *   npx --yes tsx eval/run-experiments.ts golden             # one of: golden, escalation
+ *   npx --yes tsx eval/run-experiments.ts                    # every experiment
+ *   npx --yes tsx eval/run-experiments.ts golden             # one of: golden, escalation, intent
  *   npx --yes tsx eval/run-experiments.ts --run-name baseline
  *
  * Reads LANGFUSE_* and OPENAI_API_KEY from the environment or .env.local.
@@ -68,7 +68,7 @@ async function main() {
         expectedOutput,
         metadata: metadata as Record<string, unknown>,
       }));
-      const result = await runLocal({ data, task, ...experiment });
+      const result = await runLocal({ data, ...experiment, task: experiment.task ?? task });
       printScores(`${experiment.dataset} (${result.itemResults.length} items)`, result.runEvaluations);
       assertScores(experiment, result.runEvaluations);
       passed = reportThresholds(experiment, result.runEvaluations) && passed;
@@ -88,7 +88,7 @@ async function main() {
         runName,
         description: experiment.description,
         metadata,
-        task,
+        task: experiment.task ?? task,
         evaluators: experiment.evaluators,
         runEvaluators: experiment.runEvaluators,
         maxConcurrency: 4,

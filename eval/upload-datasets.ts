@@ -1,5 +1,5 @@
 /**
- * Uploads golden.csv and escalation-labels.csv as Langfuse datasets.
+ * Uploads golden.csv, escalation-labels.csv, and intent-labels.csv as Langfuse datasets.
  *
  *   npx --yes tsx eval/upload-datasets.ts            # sync
  *   npx --yes tsx eval/upload-datasets.ts --dry-run  # print the plan only
@@ -16,15 +16,17 @@ import { LangfuseAPIClient, NotFoundError } from "@langfuse/core";
 import {
   ESCALATION_DATASET,
   GOLDEN_DATASET,
+  INTENT_DATASET,
   escalationItems,
   goldenItems,
+  intentItems,
   planSync,
   type DesiredItem,
   type ExistingItem,
   type SyncPlan,
 } from "./datasets";
 import { loadGolden } from "./golden";
-import { loadLabels } from "./labels";
+import { loadIntentLabels, loadLabels } from "./labels";
 
 type DatasetSpec = {
   name: string;
@@ -96,6 +98,11 @@ async function main() {
       name: ESCALATION_DATASET,
       description: "Questions labeled with whether the widget should open a ticket. Source: eval/escalation-labels.csv.",
       items: escalationItems(loadLabels(join(here, "escalation-labels.csv"))),
+    },
+    {
+      name: INTENT_DATASET,
+      description: "Customer messages labeled with the sales signal the co-pilot should read: lead, upgrade, churn_risk, or none. Source: eval/intent-labels.csv.",
+      items: intentItems(loadIntentLabels(join(here, "intent-labels.csv"))),
     },
   ];
 

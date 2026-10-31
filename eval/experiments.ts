@@ -8,6 +8,7 @@ import type {
 } from "@langfuse/client";
 import { getArticle } from "../src/lib/articles";
 import type { ChatLike } from "../src/lib/graph";
+import type { Intent, IntentResult } from "../src/lib/intent";
 import { retrieve } from "../src/lib/rag";
 
 /** What the widget did with one question. */
@@ -64,6 +65,42 @@ export const escalationMatch: Evaluator = async ({ output, expectedOutput }) => 
     value: escalated === expected ? 1 : 0,
     comment: `expected ${expected ? "escalate" : "answer"}, got ${escalated ? "escalate" : "answer"}`,
   };
+};
+
+/** The intent dataset stores `{ question }` as input and `{ intent }` as expected output. */
+export function intentTask(classify: (question: string) => Promise<IntentResult>): ExperimentTask {
+  return async (item): Promise<IntentResult> => classify((item.input as { question: string }).question);
+}
+
+/** 1 when the co-pilot read the sales signal the label says. */
+export const intentMatch: Evaluator = async ({ output, expectedOutput }) => {
+  const expected = (expectedOutput as { intent: Intent }).intent;
+  const { intent, reason } = output as IntentResult;
+  return {
+    name: "intent_correct",
+    value: intent === expected ? 1 : 0,
+    comment: `expected ${expected}, got ${intent}: ${reason}`,
+  };
+};
+
+const DEAL_INTENTS: Intent[] = ["lead", "upgrade"];
+
+/**
+ * Of the conversations the co-pilot called a lead or an upgrade, how many the
+ * label agrees with. A false deal in someone's CRM is worse than a missed one,
+ * so this one has its own score and gate next to plain accuracy.
+ */
+export const intentDealPrecision: RunEvaluator = async ({ itemResults }) => {
+  let tp = 0;
+  let fp = 0;
+  for (const r of itemResults) {
+    const expected = (r.item.expectedOutput as { intent: Intent }).intent;
+    const { intent } = r.output as IntentResult;
+    if (!DEAL_INTENTS.includes(intent)) continue;
+    if (DEAL_INTENTS.includes(expected)) tp += 1;
+    else fp += 1;
+  }
+  return { name: "intent_deal_precision", value: tp + fp === 0 ? 1 : tp / (tp + fp), comment: `tp=${tp} fp=${fp}` };
 };
 
 const JUDGE_SYSTEM = `You grade a support answer for faithfulness to the help articles it cites.

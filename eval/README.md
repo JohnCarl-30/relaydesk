@@ -6,7 +6,7 @@ Until 2026-09-29, CI also scored a `POST /api/eval` endpoint with [rag-eval-harn
 
 ## Langfuse datasets
 
-The CSVs stay the source of truth. Edit `golden.csv` or `escalation-labels.csv` in a PR, then sync them to Langfuse:
+The CSVs stay the source of truth. Edit `golden.csv`, `escalation-labels.csv`, or `intent-labels.csv` in a PR, then sync them to Langfuse:
 
 ```bash
 npx --yes tsx eval/upload-datasets.ts            # needs LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY
@@ -17,8 +17,9 @@ npx --yes tsx eval/upload-datasets.ts --dry-run  # prints the plan, writes nothi
 | --- | --- | --- | --- |
 | `golden.csv` | `relaydesk-golden` | `{ slug, answer }`, `slug` is `null` for out-of-corpus rows | `{ source }` |
 | `escalation-labels.csv` | `relaydesk-escalation` | `{ shouldEscalate }` | `{ source, why }` |
+| `intent-labels.csv` | `relaydesk-intent` | `{ intent }`: `lead`, `upgrade`, `churn_risk`, or `none` | `{ source, why }` |
 
-`input` is `{ question }` in both. Each item's id is the dataset name plus a hash of the question, so rerunning the script updates items instead of adding them. Only changed rows are written. Editing a question creates a new item, and a row removed from the CSV is archived in Langfuse, not deleted. Langfuse keeps a version per write. The script prints a timestamp at the end, and listing a dataset with that `version` returns exactly what was uploaded.
+`input` is `{ question }` in all three. Each item's id is the dataset name plus a hash of the question, so rerunning the script updates items instead of adding them. Only changed rows are written. Editing a question creates a new item, and a row removed from the CSV is archived in Langfuse, not deleted. Langfuse keeps a version per write. The script prints a timestamp at the end, and listing a dataset with that `version` returns exactly what was uploaded.
 
 Don't edit these datasets in the Langfuse UI. The next sync overwrites edited items and archives added ones.
 
@@ -44,7 +45,7 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 
 ### PR gate
 
-`.github/workflows/experiments.yml` runs `eval/ci/golden.ts` and `eval/ci/escalation.ts` on every pull request through [`langfuse/experiment-action`](https://github.com/langfuse/experiment-action). It posts one comment with both runs and fails the check when a run score drops below its threshold in `eval/suite.ts`:
+`.github/workflows/experiments.yml` runs `eval/ci/golden.ts`, `eval/ci/escalation.ts`, and `eval/ci/intent.ts` on every pull request through [`langfuse/experiment-action`](https://github.com/langfuse/experiment-action). It posts one comment with both runs and fails the check when a run score drops below its threshold in `eval/suite.ts`:
 
 | Score | Threshold | main, 2026-10-22 |
 | --- | --- | --- |
@@ -53,11 +54,14 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 | `escalation_precision` | 1.0 | 1.0 (7/7) |
 | `escalation_recall` | 0.63 | 0.6364 (7/11) |
 | `faithfulness` | 0.8 | not scored yet |
+| `intent_deal_precision` | 1.0 | 1.0 (keyword baseline, 2026-10-31) |
+| `intent_correct` | 0.97 | 1.0 (40/40, keyword baseline, 2026-10-31) |
 
 - **How strict:** retrieval and escalation are deterministic, so each threshold sits at main's score and a single extra miss fails the check. When a change raises a score, raise its threshold in the same PR.
 - **Faithfulness:** checked only when the `OPENAI_API_KEY` secret is set. Without it, answers are extractive and the score is absent.
 - **Secrets:** the workflow needs `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`. Fork PRs and runs without them skip with a notice. `experiments.test.ts` checks the same thresholds on the CSVs in `npm test`, so forks are still covered.
-- **Rows:** adding rows to `golden.csv` or `escalation-labels.csv` changes the ratios. Update the thresholds and run `upload-datasets.ts` after merging.
+- **Intent:** `intent_deal_precision` is the share of `lead` and `upgrade` calls the label agrees with. It gates at 1.0 because a false lead costs a salesperson's time, while a missed one is caught later. The classifier is the model when `OPENAI_API_KEY` is set and the keyword rules in `src/lib/intent.ts` otherwise, so the model's first live run sets its own baseline here.
+- **Rows:** adding rows to `golden.csv`, `escalation-labels.csv`, or `intent-labels.csv` changes the ratios. Update the thresholds and run `upload-datasets.ts` after merging.
 - **Traces:** the action runs its own OpenTelemetry setup. CI traces hold the item, its scores and any model calls, but not the widget's `relaydesk` spans. For those, use `run-experiments.ts`.
 
 2026-10-19, keyless (extractive answers, against a local Langfuse): hit@1 and hit@3 **1.0** (44/44), escalation precision and recall **1.0** (tp=7, fp=0, fn=0). These match `compare-retrievers.ts` and `escalation.ts`.

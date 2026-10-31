@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import type { GoldenRow } from "./golden";
-import type { LabelRow } from "./labels";
+import type { IntentLabelRow, LabelRow } from "./labels";
 
 export const GOLDEN_DATASET = "relaydesk-golden";
 export const ESCALATION_DATASET = "relaydesk-escalation";
+export const INTENT_DATASET = "relaydesk-intent";
 
 /** One row of a CSV, shaped the way it is stored as a Langfuse dataset item. */
 export type DesiredItem = {
@@ -63,6 +64,18 @@ export function escalationItems(rows: LabelRow[]): DesiredItem[] {
       metadata: { source: "eval/escalation-labels.csv", why: row.why },
     })),
     ESCALATION_DATASET,
+  );
+}
+
+export function intentItems(rows: IntentLabelRow[]): DesiredItem[] {
+  return assertUnique(
+    rows.map((row) => ({
+      id: itemId(INTENT_DATASET, row.question),
+      input: { question: row.question },
+      expectedOutput: { intent: row.intent },
+      metadata: { source: "eval/intent-labels.csv", why: row.why },
+    })),
+    INTENT_DATASET,
   );
 }
 

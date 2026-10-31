@@ -70,6 +70,10 @@ export type Ticket = {
   summary: string | null;
   /** Why a person has to answer; null once staff reply. */
   needs_human_reason: string | null;
+  /** Sales signal the co-pilot read in the conversation; null before its first run. */
+  intent: "lead" | "upgrade" | "churn_risk" | "none" | null;
+  /** One line on why, shown next to the intent. */
+  intent_reason: string | null;
   /** 1 when a co-pilot draft is waiting for review (listTickets only). */
   has_draft?: number;
 };
