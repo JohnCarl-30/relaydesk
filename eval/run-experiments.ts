@@ -49,7 +49,8 @@ async function main() {
   const args = process.argv.slice(2);
   const runNameAt = args.indexOf("--run-name");
   const runName = runNameAt >= 0 ? args[runNameAt + 1] : gitRunName();
-  const only = args.filter((arg, i) => !arg.startsWith("--") && i !== runNameAt + 1);
+  // Without --run-name, runNameAt + 1 is 0 and would drop the first experiment name.
+  const only = args.filter((arg, i) => !arg.startsWith("--") && (runNameAt < 0 || i !== runNameAt + 1));
 
   const { experiments, task, metadata } = experimentSuite();
   const unknown = only.filter((key) => !experiments.some((e) => e.key === key));
