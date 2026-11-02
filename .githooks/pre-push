@@ -1,0 +1,5 @@
+#!/bin/sh
+# Catch type and lint errors before CI does. Skip once with `git push --no-verify`.
+set -e
+npx tsc --noEmit
+npx eslint .
