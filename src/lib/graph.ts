@@ -118,7 +118,8 @@ export function chatModelName(): string {
 
 let stubSession: StubChatModel | undefined;
 
-export function chatModel(): ChatLike {
+/** Answers default to 0.2; classifiers pass 0, since a label gains nothing from sampling. */
+export function chatModel(temperature = 0.2): ChatLike {
   if (usingStubLlm()) {
     stubSession ??= new StubChatModel([
       "Nimbus is the analytics product in the help center. I am not fully sure. Talk to a person if this is the wrong case.",
@@ -130,7 +131,7 @@ export function chatModel(): ChatLike {
   const base = process.env.OPENAI_BASE_URL?.replace(/\/$/, "");
   return new ChatOpenAI({
     model: chatModelName(),
-    temperature: 0.2,
+    temperature,
     apiKey: process.env.OPENAI_API_KEY,
     ...(base ? { configuration: { baseURL: base } } : {}),
   }) as ChatLike;

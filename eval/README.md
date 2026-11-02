@@ -40,6 +40,7 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 - **Hit@k** uses the top 3 articles from the widget's first retrieval, the same check as `compare-retrievers.ts`.
 - **Faithfulness** is an LLM judge. It gives each answer a score from 0 to 1 for how well the articles it cites support it. Escalations and answers without citations get no score.
 - **Model use:** with `OPENAI_API_KEY` set, the model writes the answers, as in the widget, and also runs the judge. Without the key, answers are extractive and the judge is skipped.
+- **Comparing models:** set `RELAYDESK_JUDGE_MODEL` (and `RELAYDESK_JUDGE_BASE_URL` / `RELAYDESK_JUDGE_API_KEY` if it's on another provider) so every run is graded by the same judge. Then point `OPENAI_BASE_URL`, `OPENAI_API_KEY` and `OPENAI_MODEL` at each candidate and give each run its own `--run-name`.
 - **Without Langfuse keys**, the script runs the same task and evaluators on the CSVs and prints the scores without recording anything.
 - **Failure:** the script exits non-zero when an item fails, a run score is missing, or a run score is below its threshold.
 
@@ -55,7 +56,7 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 | `escalation_recall` | 0.63 | 0.6364 (7/11) |
 | `faithfulness` | 0.8 | not scored yet |
 | `intent_deal_precision` | 1.0 | 1.0 (keyword baseline, 2026-10-31) |
-| `intent_correct` | 0.97 | 1.0 (40/40, keyword baseline, 2026-10-31) |
+| `intent_correct` | 0.97 | 1.0 (40/40, keyword baseline, 2026-10-31); gpt-4o-mini 0.975 (39/40, `intent-a2`, 2026-11-02) |
 
 - **How strict:** retrieval and escalation are deterministic, so each threshold sits at main's score and a single extra miss fails the check. When a change raises a score, raise its threshold in the same PR.
 - **Faithfulness:** checked only when the `OPENAI_API_KEY` secret is set. Without it, answers are extractive and the score is absent.

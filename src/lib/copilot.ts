@@ -255,7 +255,7 @@ export async function runCopilot(
       const drafted =
         (canAnswer ? await modelDraft(center.name, context, sources).catch(() => null) : null) ??
         holdingDraft(context, sources);
-      const intent = await classifyIntent(context, hasLlm() ? chatModel() : null);
+      const intent = await classifyIntent(context, hasLlm() ? chatModel(0) : null);
 
       const draft = insertDraft({
         ticket_id: ticket.id,

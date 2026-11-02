@@ -45,11 +45,12 @@ export function keywordIntent(visitorText: string): IntentResult {
 const INTENT_SYSTEM = `You read a support conversation and name the sales signal in it, if any. Reply with JSON only: {"intent": "lead" | "upgrade" | "churn_risk" | "none", "reason": "<one short sentence quoting what the customer said>"}.
 lead: not a customer yet, asking about plans, pricing, trials, or whether the product fits them.
 upgrade: an existing customer who wants more seats, a higher plan, or a paid feature.
-churn_risk: a customer talking about cancelling, leaving, exporting everything, downgrading, or switching to a competitor.
+Lead or upgrade: it is an upgrade only when the customer shows they already have an account, workspace, or plan ("our workspace", "we're on Pro"). With no sign of that, it is a lead.
+churn_risk: a customer talking about cancelling their account or subscription, leaving, exporting everything, downgrading, or switching to a competitor. Cancelling a report, an invite, or a meeting is not churn.
 none: a support question with no sales signal.
 When unsure, answer none: a false lead wastes a salesperson's time, a missed one is caught later.`;
 
-export const INTENT_PROMPT_VERSION = "intent-a1";
+export const INTENT_PROMPT_VERSION = "intent-a2";
 
 /** Pulls {"intent", "reason"} out of a model reply; null when it is not a usable label. */
 export function parseIntentReply(text: string): IntentResult | null {
