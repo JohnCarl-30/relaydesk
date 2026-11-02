@@ -40,6 +40,7 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 - **Hit@k** uses the top 3 articles from the widget's first retrieval, the same check as `compare-retrievers.ts`.
 - **Faithfulness** is an LLM judge. It gives each answer a score from 0 to 1 for how well the articles it cites support it. Escalations and answers without citations get no score.
 - **Model use:** with `OPENAI_API_KEY` set, the model writes the answers, as in the widget, and also runs the judge. Without the key, answers are extractive and the judge is skipped.
+- **Comparing models:** set `RELAYDESK_JUDGE_MODEL` (and `RELAYDESK_JUDGE_BASE_URL` / `RELAYDESK_JUDGE_API_KEY` if it's on another provider) so every run is graded by the same judge. Then point `OPENAI_BASE_URL`, `OPENAI_API_KEY` and `OPENAI_MODEL` at each candidate and give each run its own `--run-name`.
 - **Without Langfuse keys**, the script runs the same task and evaluators on the CSVs and prints the scores without recording anything.
 - **Failure:** the script exits non-zero when an item fails, a run score is missing, or a run score is below its threshold.
 

@@ -13,7 +13,8 @@ import {
   type RunEvaluator,
   type RunnerContext,
 } from "@langfuse/client";
-import { answerQuestion, chatModel, chatModelName, hasLlm, usingStubLlm } from "../src/lib/graph";
+import { ChatOpenAI } from "@langchain/openai";
+import { answerQuestion, chatModel, chatModelName, hasLlm, usingStubLlm, type ChatLike } from "../src/lib/graph";
 import { classifyIntent } from "../src/lib/intent";
 import { ESCALATION_DATASET, GOLDEN_DATASET, INTENT_DATASET, escalationItems, goldenItems, intentItems, type DesiredItem } from "./datasets";
 import {
@@ -60,9 +61,27 @@ export type Suite = {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * The faithfulness judge. RELAYDESK_JUDGE_* pins it to one model, so runs that
+ * swap the answer model (OPENAI_*) are graded by the same judge, not by themselves.
+ */
+function judgeModel(): { model: ChatLike; name: string } {
+  const name = process.env.RELAYDESK_JUDGE_MODEL;
+  if (!name) return { model: chatModel(), name: chatModelName() };
+  const base = process.env.RELAYDESK_JUDGE_BASE_URL?.replace(/\/$/, "");
+  const model = new ChatOpenAI({
+    model: name,
+    temperature: 0,
+    apiKey: process.env.RELAYDESK_JUDGE_API_KEY ?? process.env.OPENAI_API_KEY,
+    ...(base ? { configuration: { baseURL: base } } : {}),
+  }) as ChatLike;
+  return { model, name };
+}
+
 export function experimentSuite(): Suite {
   const liveModel = Boolean(process.env.OPENAI_API_KEY) && !usingStubLlm();
-  const judge = liveModel ? [faithfulnessJudge(chatModel())] : [];
+  const judgeWith = liveModel ? judgeModel() : null;
+  const judge = judgeWith ? [faithfulnessJudge(judgeWith.model)] : [];
   const experiments: Experiment[] = [
     {
       key: "golden",
@@ -113,7 +132,7 @@ export function experimentSuite(): Suite {
   return {
     experiments,
     task: answerTask((question) => answerQuestion(question)),
-    metadata: { answers: liveModel ? chatModelName() : "extractive", judge: liveModel ? chatModelName() : "none" },
+    metadata: { answers: liveModel ? chatModelName() : "extractive", judge: judgeWith?.name ?? "none" },
   };
 }
 
