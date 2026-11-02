@@ -118,7 +118,7 @@ export function experimentSuite(): Suite {
       localItems: () => intentItems(loadIntentLabels(join(here, "intent-labels.csv"))),
       // The co-pilot's classifier: the model when a key is set, else the keyword baseline.
       task: intentTask((question) =>
-        classifyIntent({ visitorText: question, transcript: `Customer: ${question}` }, hasLlm() ? chatModel() : null),
+        classifyIntent({ visitorText: question, transcript: `Customer: ${question}` }, hasLlm() ? chatModel(0) : null),
       ),
       evaluators: [intentMatch],
       runEvaluators: [intentDealPrecision, meanOf("intent_correct")],

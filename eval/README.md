@@ -56,7 +56,7 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 | `escalation_recall` | 0.63 | 0.6364 (7/11) |
 | `faithfulness` | 0.8 | not scored yet |
 | `intent_deal_precision` | 1.0 | 1.0 (keyword baseline, 2026-10-31) |
-| `intent_correct` | 0.97 | 1.0 (40/40, keyword baseline, 2026-10-31) |
+| `intent_correct` | 0.97 | 1.0 (40/40, keyword baseline, 2026-10-31); gpt-4o-mini 0.975 (39/40, `intent-a2`, 2026-11-02) |
 
 - **How strict:** retrieval and escalation are deterministic, so each threshold sits at main's score and a single extra miss fails the check. When a change raises a score, raise its threshold in the same PR.
 - **Faithfulness:** checked only when the `OPENAI_API_KEY` secret is set. Without it, answers are extractive and the score is absent.
