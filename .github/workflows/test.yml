@@ -6,6 +6,26 @@ on:
   pull_request:
 
 jobs:
+  # The pre-push hook can be skipped with --no-verify; this catches what it would have.
+  typecheck-and-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - id: node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+        if: steps.node-modules.outputs.cache-hit != 'true'
+      - run: npx tsc --noEmit
+      - run: npx eslint .
+
   unit-and-e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
