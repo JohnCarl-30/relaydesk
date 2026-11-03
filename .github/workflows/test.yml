@@ -15,11 +15,34 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+      # Restoring node_modules replaces most of a ~65s `npm ci`; the lockfile hash keeps it exact.
+      - id: node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
       - run: npm ci
+        if: steps.node-modules.outputs.cache-hit != 'true'
       - name: Unit tests
         run: npm test
+      # The Playwright version is pinned by the lockfile, so its hash also keys the browser.
+      - id: playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Install Chromium
+        if: steps.playwright.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+      - name: Install Chromium system deps
+        if: steps.playwright.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      # e2e runs `next build`; Turbopack keeps its build cache in .next/cache.
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'next.config.ts') }}
+          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
       - name: Widget e2e
         run: npm run test:e2e
       - name: Upload Playwright traces
