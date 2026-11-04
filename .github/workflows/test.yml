@@ -24,7 +24,7 @@ jobs:
       - run: npm ci
         if: steps.node-modules.outputs.cache-hit != 'true'
       - run: npx tsc --noEmit
-      - run: npx eslint .
+      - run: npx oxlint .
 
   unit-and-e2e:
     runs-on: ubuntu-latest
