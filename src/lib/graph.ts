@@ -116,6 +116,11 @@ export function chatModelName(): string {
   return usingStubLlm() ? "stub" : (process.env.OPENAI_MODEL ?? "gpt-4o-mini");
 }
 
+/** Claude 4.7+ on Anthropic's OpenAI-compatible endpoint returns a 400 for temperature below 1, so Claude runs at its default. */
+export function temperatureFor(model: string, temperature: number): { temperature?: number } {
+  return model.startsWith("claude-") ? {} : { temperature };
+}
+
 let stubSession: StubChatModel | undefined;
 
 /** Answers default to 0.2; classifiers pass 0, since a label gains nothing from sampling. */
@@ -131,7 +136,7 @@ export function chatModel(temperature = 0.2): ChatLike {
   const base = process.env.OPENAI_BASE_URL?.replace(/\/$/, "");
   return new ChatOpenAI({
     model: chatModelName(),
-    temperature,
+    ...temperatureFor(chatModelName(), temperature),
     apiKey: process.env.OPENAI_API_KEY,
     ...(base ? { configuration: { baseURL: base } } : {}),
   }) as ChatLike;
