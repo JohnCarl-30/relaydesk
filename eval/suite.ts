@@ -14,7 +14,7 @@ import {
   type RunnerContext,
 } from "@langfuse/client";
 import { ChatOpenAI } from "@langchain/openai";
-import { answerQuestion, chatModel, chatModelName, hasLlm, usingStubLlm, type ChatLike } from "../src/lib/graph";
+import { answerQuestion, chatModel, chatModelName, hasLlm, temperatureFor, usingStubLlm, type ChatLike } from "../src/lib/graph";
 import { classifyIntent } from "../src/lib/intent";
 import { ESCALATION_DATASET, GOLDEN_DATASET, INTENT_DATASET, escalationItems, goldenItems, intentItems, type DesiredItem } from "./datasets";
 import {
@@ -71,7 +71,7 @@ function judgeModel(): { model: ChatLike; name: string } {
   const base = process.env.RELAYDESK_JUDGE_BASE_URL?.replace(/\/$/, "");
   const model = new ChatOpenAI({
     model: name,
-    temperature: 0,
+    ...temperatureFor(name, 0),
     apiKey: process.env.RELAYDESK_JUDGE_API_KEY ?? process.env.OPENAI_API_KEY,
     ...(base ? { configuration: { baseURL: base } } : {}),
   }) as ChatLike;
