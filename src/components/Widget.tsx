@@ -138,6 +138,7 @@ export function Widget({
         .catch(() => {});
     }, 15_000);
     return () => {
+      // oxlint-disable-next-line react/immutability -- false positive: effect-local flag, same pattern as the voice-check effect above
       cancelled = true;
       window.clearInterval(timer);
     };
