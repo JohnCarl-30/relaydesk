@@ -62,19 +62,23 @@ const TAGALOG_WORDS = new Set([
   "naman", "lang", "ito", "para", "maaari", "kailangan", "pwede", "paano", "magkano", "nang",
 ]);
 
-// English function words that Tagalog, Spanish and French text doesn't use.
-const ENGLISH_WORDS = new Set([
-  "the", "you", "your", "is", "are", "and", "of", "to", "for", "it", "can", "with", "have", "that", "from", "if", "not",
+// Spanish and French function words that English text doesn't use. A vaguer
+// prompt once sent English questions Spanish and French answers.
+const ROMANCE_WORDS = new Set([
+  "el", "los", "las", "que", "tu", "si", "su", "una", "del", "puedes", "vous", "vos", "est", "pour", "une",
+  "dans", "les", "des", "du", "au", "oui",
 ]);
 
-const words = (text: string) => text.toLowerCase().match(/[a-z]+/g) ?? [];
+const words = (text: string) => text.toLowerCase().match(/[a-zà-ÿ]+/g) ?? [];
+const distinctIn = (text: string, set: Set<string>) => new Set(words(text).filter((w) => set.has(w))).size;
 
 export function looksTagalog(text: string): boolean {
-  return new Set(words(text).filter((w) => TAGALOG_WORDS.has(w))).size >= 2;
+  return distinctIn(text, TAGALOG_WORDS) >= 2;
 }
 
+/** English unless it shows two function words of Tagalog, Spanish or French, so short answers pass. */
 export function looksEnglish(text: string): boolean {
-  return words(text).some((w) => ENGLISH_WORDS.has(w)) && !looksTagalog(text);
+  return !looksTagalog(text) && distinctIn(text, ROMANCE_WORDS) < 2;
 }
 
 /**

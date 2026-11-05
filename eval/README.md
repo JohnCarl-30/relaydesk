@@ -38,7 +38,7 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 | `relaydesk-escalation` | `escalation_correct` | `escalation_precision`, `escalation_recall`, mean `escalation_correct` |
 
 - **Hit@k** uses the top 3 articles from the widget's first retrieval, the same check as `compare-retrievers.ts`.
-- **English reply** is 1 when an English question gets an English answer from the model. It counts English and Tagalog function words, so Tagalog and Taglish questions and extractive answers get no score.
+- **English reply** is 1 when an English question gets an English answer from the model. An answer fails when it has two or more Tagalog, Spanish, or French function words, so short English answers pass. Tagalog and Taglish questions and extractive answers get no score.
 - **Faithfulness** is an LLM judge. It gives each answer a score from 0 to 1 for how well the articles it cites support it. Escalations and answers without citations get no score.
 - **Model use:** with `OPENAI_API_KEY` set, the model writes the answers, as in the widget, and also runs the judge. Without the key, answers are extractive and the judge is skipped.
 - **Comparing models:** set `RELAYDESK_JUDGE_MODEL` (and `RELAYDESK_JUDGE_BASE_URL` / `RELAYDESK_JUDGE_API_KEY` if it's on another provider) so every run is graded by the same judge. Then point `OPENAI_BASE_URL`, `OPENAI_API_KEY` and `OPENAI_MODEL` at each candidate and give each run its own `--run-name`.
