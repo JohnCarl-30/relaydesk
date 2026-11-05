@@ -39,10 +39,10 @@ const STEPS = [
 ];
 
 const UNDER_THE_HOOD = [
-  { stat: "55/60", label: "labeled questions find the right article in the top 3", href: `${REPO}/blob/main/eval/README.md` },
-  { stat: "1.00", label: "precision on when to open a ticket, over 23 labeled questions", href: `${REPO}/blob/main/eval/escalation.md` },
-  { stat: "Every PR", label: "gated by Langfuse experiments before it can merge", href: `${REPO}/blob/main/.github/workflows/experiments.yml` },
-  { stat: "Docker", label: "self-hosting with daily backups and a tested restore", href: `${REPO}/blob/main/RUNBOOK.md` },
+  { stat: "55 of 60", label: "test questions where it found the FAQ entry with the answer", href: `${REPO}/blob/main/eval/README.md` },
+  { stat: "0", label: "tickets opened for questions the FAQ already answered, in 23 tests", href: `${REPO}/blob/main/eval/escalation.md` },
+  { stat: "Every update", label: "has to pass these tests before it reaches your site", href: `${REPO}/blob/main/.github/workflows/experiments.yml` },
+  { stat: "Daily", label: "backups of your tickets and conversations, and the restore is tested", href: `${REPO}/blob/main/RUNBOOK.md` },
 ];
 
 function PrimaryCta() {
@@ -190,13 +190,13 @@ export default function LandingPage() {
 
         <section className="border-t border-line bg-card">
           <div className="mx-auto max-w-6xl px-6 py-16">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Under the hood</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">How it&apos;s tested</p>
             <h2 className="mt-3 max-w-xl font-serif text-2xl tracking-tight">
-              Built in the open, and measured before it ships.
+              We check it against customer questions before every update.
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
-              A LangGraph answer loop over your articles, a staff inbox you can also work from Claude over MCP, and an
-              eval suite that runs on every pull request. The numbers below are from labeled questions in the repo.
+              The test questions come with the right answers written down, so we can see when it gets one wrong. Each
+              number links to its test if you or your developer want to check it.
             </p>
             <ul className="mt-8 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
               {UNDER_THE_HOOD.map((item) => (
@@ -225,8 +225,8 @@ export default function LandingPage() {
               <p className="max-w-lg leading-7 text-muted">
                 Relaydesk is looking for its first few pilots: a dental or medical clinic with a receptionist, a Facebook or
                 Instagram brand with one to three people on chat, or a salon, repair shop, or tutoring centre. The pilot
-                is free. In return, the conversations it handles, with customer details removed, become the test set that
-                keeps it honest.
+                is free. In return, the conversations it handles, with customer details removed, become test questions every
+                change has to pass before it ships.
               </p>
               <p className="mt-4 max-w-lg leading-7 text-muted">
                 Send the questions your customers ask most and a link to your page, and you&apos;ll get a working help desk
