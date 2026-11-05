@@ -1,4 +1,4 @@
-import type { ChatLike } from "./graph";
+import { chatModelName, type ChatLike } from "./graph";
 import { INTENT_LABEL, type Ticket } from "./models";
 import { generationAttributes, withSpan } from "./trace";
 
@@ -91,7 +91,7 @@ export async function classifyIntent(input: IntentInput, model: ChatLike | null)
       const response = await model.invoke(messages);
       const text = typeof response.content === "string" ? response.content : JSON.stringify(response.content);
       span.setAttributes(
-        generationAttributes({ model: "intent", input: messages, output: text, usage: response.usage_metadata }),
+        generationAttributes({ model: chatModelName(), input: messages, output: text, usage: response.usage_metadata }),
       );
       const parsed = parseIntentReply(text);
       span.setAttribute("intent.source", parsed ? "model" : "keywords");
