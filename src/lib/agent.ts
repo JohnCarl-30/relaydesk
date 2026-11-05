@@ -238,7 +238,8 @@ export async function runAgent(options: {
             }
             case "hand_off": {
               const args = parseArgs(HandOffArgs, call.function.arguments);
-              span.setAttribute("hand_off.reason", args.ok ? args.value.reason : "");
+              if (!args.ok) return toolResult(args.error);
+              span.setAttribute("hand_off.reason", args.value.reason);
               return done(handOff(step, "hand_off"));
             }
             default:

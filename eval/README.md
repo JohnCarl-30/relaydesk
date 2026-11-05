@@ -223,7 +223,7 @@ npx --yes tsx eval/bench.ts
 - **No tool call, or a failed model call:** the visitor gets the graph's extractive answer, as when the graph's own model call fails.
 - **Traces:** one `agent.model` generation and one `agent.tool` span per step under `support.answer`, which records `answer.path`, `agent.steps` and `agent.stop`.
 
-To compare the two paths, run the same experiments with `RELAYDESK_ANSWER_PATH=agent` and a different `--run-name`:
+To compare the two paths, run the same experiments with `RELAYDESK_ANSWER_PATH=agent` and a different `--run-name`. Compare faithfulness, escalation, `english_reply`, steps, latency and cost. `hit_at_1` and `hit_at_3` score the fixed first retrieval on the question, so they come out the same on both paths and say nothing about the agent's own searches.
 
 ```bash
 npx --yes tsx eval/run-experiments.ts --run-name graph

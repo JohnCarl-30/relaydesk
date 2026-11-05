@@ -451,7 +451,11 @@ export async function answerQuestion(
         : undefined;
     span.setAttribute("answer.path", agentModel ? "agent" : "graph");
     if (agentModel) {
-      const hits = retrieve(resolved.search, { corpus: center.corpus });
+      // The same first retrieval as the graph's, topic ordering included, for the checks and the fallback.
+      const retrieved = retrieve(resolved.search, { corpus: center.corpus });
+      const hits = resolved.contextualized
+        ? preferTopic(retrieved, resolved.topicSlug, resolved.asked)
+        : retrieved;
       const { refused, attrs: checks } = refuseBeforeModel(center, resolved, hits);
       span.setAttributes(checks);
       const refuseLine = centerRefuseLine(center);

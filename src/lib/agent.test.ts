@@ -116,6 +116,13 @@ describe("runAgent", () => {
     assert.deepEqual([failed.stop, failed.result], ["model_error", FALLBACK]);
   });
 
+  it("returns a hand-off with bad arguments to the model instead of escalating", async () => {
+    const model = scripted([call("hand_off", "{reason"), call("hand_off", { reason: "not covered" })]);
+    const { stop, steps } = await run(model);
+    assert.deepEqual([stop, steps], ["hand_off", 2]);
+    assert.equal(toolResults(model)[0], "Arguments were not valid JSON.");
+  });
+
   it("answers an unknown tool with an error", async () => {
     const model = scripted([call("delete_everything", {}), call("hand_off", { reason: "stuck" })]);
     await run(model);
@@ -152,6 +159,18 @@ describe("answerQuestion with the agent path", () => {
     const tools = spans.filter((s) => s.name === "agent.tool").map((s) => s.attributes["tool.name"]);
     assert.deepEqual(tools, ["search_help_center", "reply"]);
     assert.equal(spans.find((s) => s.name === "agent.model")!.attributes["langfuse.observation.type"], "generation");
+  });
+
+  it("falls back on a follow-up the way the graph does, keeping the conversation's topic", async () => {
+    const history = [
+      { role: "visitor" as const, body: "Does Starter sample events?" },
+      { role: "assistant" as const, body: "Starter samples at 1% after 200k events in a day." },
+    ];
+    const question = "Does that also happen on Growth?";
+    const graph = await answerQuestion(question, { history });
+    const agent = await answerQuestion(question, { history, path: "agent", agentModel: scripted([{ content: "plain text" }]) });
+    assert.equal(graph.citations[0]?.slug, "funnel-zeros");
+    assert.deepEqual(agent, graph);
   });
 
   it("keeps the graph as the default, and without a model", async () => {
