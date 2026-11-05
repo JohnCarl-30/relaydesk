@@ -14,6 +14,9 @@ services:
       # Loopback only: the public way in is the tunnel or a reverse proxy, not a raw port.
       - "127.0.0.1:${RELAYDESK_PORT:-3000}:3000"
     env_file:
+      # Dokploy writes its Environment tab here and doesn't pass it to containers on its own.
+      - path: .env
+        required: false
       - path: .env.docker
         required: false
     volumes:
@@ -34,6 +37,9 @@ services:
     healthcheck:
       disable: true
     env_file:
+      # Dokploy writes its Environment tab here and doesn't pass it to containers on its own.
+      - path: .env
+        required: false
       - path: .env.docker
         required: false
     volumes:
