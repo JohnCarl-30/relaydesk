@@ -4,6 +4,7 @@ import type { ChatLike } from "../src/lib/graph";
 import {
   answerTask,
   escalationMatch,
+  englishReply,
   escalationPrecisionRecall,
   faithfulnessJudge,
   hitAtK,
@@ -31,6 +32,17 @@ function judgeModel(reply: string, seen: string[] = []): ChatLike {
 }
 
 describe("experiment evaluators", () => {
+  it("scores whether an English question got an English answer", async () => {
+    const score = async (question: string, answer: string) =>
+      englishReply({ input: { question }, output: output({ answer, usedLlm: true }), expectedOutput: {} });
+    assert.equal(((await score("How long does Starter keep raw events?", "Starter keeps raw events for 30 days.")) as { value: number }).value, 1);
+    assert.equal(((await score("How long does Starter keep raw events?", "Ang Starter ay nag-iimbak ng raw events sa loob ng 30 araw.")) as { value: number }).value, 0);
+    assert.equal(((await score("Why does my funnel show zeros?", "Si tu embudo muestra ceros, verifica cada paso.")) as { value: number }).value, 0);
+    assert.deepEqual(await score("Paano mag-add ng seats sa plan namin?", "Para mag-add ng seats, tingnan ang plan."), []);
+    const quoted = { input: { question: "What can a viewer do?" }, expectedOutput: {} };
+    assert.deepEqual(await englishReply({ ...quoted, output: output({ answer: "Viewer: read dashboards only." }) }), []);
+  });
+
   it("scores hit@1 and hit@3 against the expected slug", async () => {
     const scores = await hitAtK({
       input: { question: "q" },
