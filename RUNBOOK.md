@@ -148,7 +148,27 @@ No open ports or public IP needed, so it works from home and behind CGNAT.
 3. In the tunnel's **Public hostname**, add e.g. `relaydesk.example.com` → service `http://relaydesk:3000`.
 4. `docker compose --profile tunnel up -d`. Then `curl -s https://relaydesk.example.com/api/health` should return `{"ok":true}`.
 
-On a VPS with Dokploy instead, deploy this `docker-compose.yml` as a Compose app, put the `.env.docker` values in Dokploy's environment settings, and use Dokploy's domain settings for HTTPS rather than the tunnel.
+### HTTPS on a VPS with Dokploy
+
+Dokploy runs this `docker-compose.yml` from `main` and gets the certificate itself, so skip the tunnel.
+
+1. **VPS:** Ubuntu 24.04, 2 GB RAM. The image build compiles better-sqlite3 and runs `next build`, which can run out of memory on 2 GB, so add swap first:
+   ```bash
+   fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+   echo '/swapfile none swap sw 0 0' >> /etc/fstab
+   ```
+2. **Dokploy:** as root, `curl -sSL https://dokploy.com/install.sh | sh`. It needs ports 80, 443 and 3000 free. Open `http://<vps-ip>:3000` and create the admin account.
+3. **App:** new project → **Compose**, provider GitHub, repo `JohnCarl-30/relaydesk`, branch `main`, compose path `./docker-compose.yml`. Turn on **Autodeploy** so a merge to `main` deploys.
+4. **Environment tab:** the values from [First deploy](#first-deploy) step 2, plus:
+   - `RELAYDESK_PUBLIC_URL=https://relaydesk.dyeyc.dev` (or whatever domain you use)
+   - `RELAYDESK_PORT=3100`: Dokploy's dashboard holds host port 3000.
+
+   Dokploy writes these to `.env` beside the compose file; `env_file` in `docker-compose.yml` passes them to the containers.
+5. **DNS:** an `A` record for the hostname pointing at the VPS IP. On Cloudflare, set it to **DNS only** (grey cloud) so Let's Encrypt can reach the server.
+6. **Domains tab:** the hostname, path `/`, service `relaydesk`, container port `3000`, HTTPS on with Let's Encrypt. Then **Deploy**.
+7. **Check:** `curl -s https://relaydesk.dyeyc.dev/api/health` returns `{"ok":true}`. Then run the [health check](#health-check) with that address as `HOST`.
+
+Data lives in the `relaydesk-data` named volume, which survives redeploys. Once the dashboard has its own domain, close its raw port: `docker service update --publish-rm "published=3000,target=3000,mode=host" dokploy`.
 
 ### Backups
 
