@@ -57,7 +57,7 @@ async function main() {
   if (unknown.length) throw new Error(`unknown experiment: ${unknown.join(", ")}`);
   const selected = only.length ? experiments.filter((e) => only.includes(e.key)) : experiments;
 
-  console.log(`answers: ${metadata.answers}, faithfulness judge: ${metadata.judge}`);
+  console.log(`answers: ${metadata.answers} (${metadata.path}), faithfulness judge: ${metadata.judge}`);
 
   let passed = true;
   const live = Boolean(process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY);

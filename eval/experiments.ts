@@ -18,7 +18,10 @@ export type AnswerOutput = {
   citations: string[];
   escalated: boolean;
   usedLlm: boolean;
-  /** Top-3 unique article slugs from the widget's first retrieval, best first. */
+  /**
+   * Top-3 unique article slugs from the widget's first retrieval, best first.
+   * On the agent path this is still retrieve(question), not the agent's own searches.
+   */
   retrieved: string[];
 };
 
