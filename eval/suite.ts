@@ -14,7 +14,7 @@ import {
   type RunnerContext,
 } from "@langfuse/client";
 import { ChatOpenAI } from "@langchain/openai";
-import { answerQuestion, chatModel, chatModelName, hasLlm, temperatureFor, usingStubLlm, type ChatLike } from "../src/lib/graph";
+import { answerQuestion, chatModel, type AnswerPath, chatModelName, hasLlm, temperatureFor, usingStubLlm, type ChatLike } from "../src/lib/graph";
 import { classifyIntent } from "../src/lib/intent";
 import { ESCALATION_DATASET, GOLDEN_DATASET, INTENT_DATASET, escalationItems, goldenItems, intentItems, type DesiredItem } from "./datasets";
 import {
@@ -57,7 +57,7 @@ export type Suite = {
   experiments: Experiment[];
   /** The widget's answer path, for every experiment without its own task. */
   task: ExperimentTask;
-  metadata: { answers: string; judge: string };
+  metadata: { answers: string; judge: string; path: AnswerPath };
 };
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -132,10 +132,12 @@ export function experimentSuite(): Suite {
       ],
     },
   ];
+  // RELAYDESK_ANSWER_PATH=agent runs the agent loop (#70); it needs a model, so keyless runs stay on the graph.
+  const path: AnswerPath = process.env.RELAYDESK_ANSWER_PATH === "agent" && liveModel ? "agent" : "graph";
   return {
     experiments,
-    task: answerTask((question) => answerQuestion(question)),
-    metadata: { answers: liveModel ? chatModelName() : "extractive", judge: judgeWith?.name ?? "none" },
+    task: answerTask((question) => answerQuestion(question, { path })),
+    metadata: { answers: liveModel ? chatModelName() : "extractive", judge: judgeWith?.name ?? "none", path },
   };
 }
 
@@ -164,7 +166,7 @@ export async function runGated(context: RunnerContext, key: string): Promise<Exp
   const experiment = experiments.find((e) => e.key === key);
   if (!experiment) throw new Error(`unknown experiment: ${key}`);
   if (!context.data?.length) throw new Error(`${experiment.dataset}: set dataset_name on the action step`);
-  console.log(`answers: ${metadata.answers}, faithfulness judge: ${metadata.judge}`);
+  console.log(`answers: ${metadata.answers} (${metadata.path}), faithfulness judge: ${metadata.judge}`);
 
   const result = await context.runExperiment({
     name: experiment.dataset,

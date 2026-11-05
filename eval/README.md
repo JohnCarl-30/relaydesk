@@ -211,3 +211,23 @@ Extractive answers (retrieve + extractiveAnswer) are 0.12 ms/row and $0. LLM gen
 ```bash
 npx --yes tsx eval/bench.ts
 ```
+
+## Agent loop
+
+`answerQuestion(question, { path: "agent" })` swaps the fixed graph for a loop where the model picks its own tools: `search_help_center`, `reply`, and `hand_off` ([`src/lib/agent.ts`](../src/lib/agent.ts), #70). It calls `/chat/completions` with `fetch`, no framework. The graph stays the default, and without a model the agent path falls back to the graph.
+
+- **Before the loop:** acknowledgements, explicit requests for a person, follow-ups naming things the articles don't cover, and unpriced price questions. The model never sees these. The coverage check is left to the model, since searching again is the point of the loop.
+- **Step cap:** 4 model calls. A model still searching after that is handed to a person.
+- **Bad tool arguments** (invalid JSON, a missing field, an unknown tool) go back to the model as the tool result, so it can try again within the cap.
+- **Citations** are kept only for articles a search returned. A reply left with none goes back to the model.
+- **No tool call, or a failed model call:** the visitor gets the graph's extractive answer, as when the graph's own model call fails.
+- **Traces:** one `agent.model` generation and one `agent.tool` span per step under `support.answer`, which records `answer.path`, `agent.steps` and `agent.stop`.
+
+To compare the two paths, run the same experiments with `RELAYDESK_ANSWER_PATH=agent` and a different `--run-name`:
+
+```bash
+npx --yes tsx eval/run-experiments.ts --run-name graph
+RELAYDESK_ANSWER_PATH=agent npx --yes tsx eval/run-experiments.ts --run-name agent
+```
+
+Not run yet. The comparison needs a funded model key.

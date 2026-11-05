@@ -30,8 +30,12 @@ import {
   type Hit,
   type RagResult,
 } from "./rag";
+import { fetchToolModel, runAgent, type ToolModel } from "./agent";
 import { generationAttributes, initTracing, withSpan } from "./trace";
 import type { Channel } from "./voice";
+
+/** "graph" is the fixed retrieve, generate, rewrite workflow; "agent" lets the model pick its tools. */
+export type AnswerPath = "graph" | "agent";
 
 /** The visitor's question and the forms the graph uses it in. */
 type ResolvedQuestion = {
@@ -195,6 +199,33 @@ async function retrieveNode(state: SupportStateType) {
 type SpanAttrs = Record<string, string | number | boolean>;
 
 /**
+ * Checks that hand a question to a person before any model sees it: an explicit
+ * request for a person, a follow-up naming things the articles don't cover, and
+ * a price the articles don't state. Both the graph and the agent run these.
+ */
+function refuseBeforeModel(
+  center: HelpCenter,
+  resolved: ResolvedQuestion,
+  hits: Hit[],
+): { refused?: RagResult; attrs: SpanAttrs } {
+  const explicitEscalation = isVisitorEscalation(resolved.asked);
+  const unsupportedAnchors = resolved.contextualized
+    ? unsupportedExplicitAnchors(resolved.asked, hits)
+    : [];
+  const unpricedQuestion = unsupportedPriceQuestion(resolved.asked, hits[0]);
+  const attrs: SpanAttrs = {
+    "generate.explicit_escalation": explicitEscalation,
+    "generate.unsupported_anchors": unsupportedAnchors.join(","),
+    "generate.unsupported_price": unpricedQuestion,
+  };
+  if (!explicitEscalation && unsupportedAnchors.length === 0 && !unpricedQuestion) return { attrs };
+  return {
+    refused: { answer: centerRefuseLine(center), citations: [], confident: false, usedLlm: false, escalated: true },
+    attrs,
+  };
+}
+
+/**
  * Refusal checks, then the model when one is configured, else an extractive
  * quote. The widget's generate node and eval/generate.ts both call this, so
  * the A/B measures what the widget runs.
@@ -206,29 +237,8 @@ async function answerFromHits(
 ): Promise<{ result: RagResult; attrs: SpanAttrs }> {
   const refuseLine = centerRefuseLine(center);
   const ignoreTerms = nameTerms(center);
-  const explicitEscalation = isVisitorEscalation(resolved.asked);
-  const unsupportedAnchors = resolved.contextualized
-    ? unsupportedExplicitAnchors(resolved.asked, hits)
-    : [];
-  const unpricedQuestion = unsupportedPriceQuestion(resolved.asked, hits[0]);
-  const attrs: SpanAttrs = {
-    "generate.explicit_escalation": explicitEscalation,
-    "generate.unsupported_anchors": unsupportedAnchors.join(","),
-    "generate.unsupported_price": unpricedQuestion,
-  };
-
-  if (explicitEscalation || unsupportedAnchors.length > 0 || unpricedQuestion) {
-    return {
-      result: {
-        answer: refuseLine,
-        citations: [],
-        confident: false,
-        usedLlm: false,
-        escalated: true,
-      },
-      attrs,
-    };
-  }
+  const { refused, attrs } = refuseBeforeModel(center, resolved, hits);
+  if (refused) return { result: refused, attrs };
 
   const extractive = () =>
     extractiveAnswer(resolved.search, hits, {
@@ -390,6 +400,10 @@ export async function answerQuestion(
     helpCenter?: HelpCenter;
     /** "voice" when the widget transcribed the question from speech. */
     channel?: Channel;
+    /** "agent" lets the model pick its own tools (#70). It needs a model, so without one the graph answers. */
+    path?: AnswerPath;
+    /** The agent's model. Defaults to /chat/completions on the OPENAI_* settings. */
+    agentModel?: ToolModel;
   } = {},
 ): Promise<RagResult> {
   initTracing();
@@ -422,6 +436,49 @@ export async function answerQuestion(
     const resolved = resolveQuestion(center, question, options.history ?? []);
     span.setAttribute("contextualized", resolved.contextualized);
     span.setAttribute("resolved.search", resolved.search);
+
+    const agentModel =
+      options.path === "agent"
+        ? (options.agentModel ??
+          (process.env.OPENAI_API_KEY
+            ? fetchToolModel({
+                baseUrl: process.env.OPENAI_BASE_URL,
+                apiKey: process.env.OPENAI_API_KEY,
+                model: chatModelName(),
+                ...temperatureFor(chatModelName(), 0.2),
+              })
+            : undefined))
+        : undefined;
+    span.setAttribute("answer.path", agentModel ? "agent" : "graph");
+    if (agentModel) {
+      const hits = retrieve(resolved.search, { corpus: center.corpus });
+      const { refused, attrs: checks } = refuseBeforeModel(center, resolved, hits);
+      span.setAttributes(checks);
+      const refuseLine = centerRefuseLine(center);
+      const { result, steps, stop } = refused
+        ? { result: refused, steps: 0, stop: "checks" }
+        : await runAgent({
+            center,
+            prompt: resolved.prompt,
+            refuseLine,
+            model: agentModel,
+            modelName: chatModelName(),
+            fallback: () =>
+              extractiveAnswer(resolved.search, hits, {
+                focus: resolved.contextualized ? resolved.asked : undefined,
+                refuseLine,
+                ignoreTerms: nameTerms(center),
+              }),
+          });
+      span.setAttribute("agent.steps", steps);
+      span.setAttribute("agent.stop", stop);
+      span.setAttribute("usedLlm", result.usedLlm);
+      span.setAttribute("escalated", result.escalated);
+      span.setAttribute("citation_count", result.citations.length);
+      span.setAttribute("langfuse.observation.output", result.answer);
+      return result;
+    }
+
     const state = await supportGraph().invoke({
       center,
       resolved,
