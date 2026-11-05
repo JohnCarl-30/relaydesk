@@ -22,6 +22,7 @@ import {
   escalationMatch,
   escalationPrecisionRecall,
   faithfulnessJudge,
+  englishReply,
   hitAtK,
   intentDealPrecision,
   intentMatch,
@@ -88,12 +89,14 @@ export function experimentSuite(): Suite {
       dataset: GOLDEN_DATASET,
       description: "Retrieval hit@k against the expected article, and faithfulness of the answer to its citations.",
       localItems: () => goldenItems(loadGolden(join(here, "golden.csv"))),
-      evaluators: [hitAtK, ...judge],
-      runEvaluators: [meanOf("hit_at_1", "hit_at_3", "faithfulness")],
-      scores: ["hit_at_1", "hit_at_3", ...(liveModel ? ["faithfulness"] : [])],
+      evaluators: [hitAtK, englishReply, ...judge],
+      runEvaluators: [meanOf("hit_at_1", "hit_at_3", "english_reply", "faithfulness")],
+      scores: ["hit_at_1", "hit_at_3", ...(liveModel ? ["english_reply", "faithfulness"] : [])],
       thresholds: [
         { name: "hit_at_1", min: 0.83 }, // 50/60
         { name: "hit_at_3", min: 0.91 }, // 55/60
+        // Model answers only. 57/58 and 58/58 on two runs of the fix (2026-11-05); the old prompt scored 20/58.
+        { name: "english_reply", min: 0.96, optional: true },
         // No live baseline yet; checked whenever OPENAI_API_KEY is set.
         { name: "faithfulness", min: 0.8, optional: true },
       ],

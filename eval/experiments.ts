@@ -56,6 +56,42 @@ export const hitAtK: Evaluator = async ({ output, expectedOutput }) => {
   }));
 };
 
+// Common Tagalog function words that English text doesn't use.
+const TAGALOG_WORDS = new Set([
+  "ang", "ng", "mga", "ay", "yung", "po", "ba", "ninyo", "niyo", "iyong", "inyong", "kung", "hindi",
+  "naman", "lang", "ito", "para", "maaari", "kailangan", "pwede", "paano", "magkano", "nang",
+]);
+
+// Spanish and French function words that English text doesn't use. A vaguer
+// prompt once sent English questions Spanish and French answers.
+const ROMANCE_WORDS = new Set([
+  "el", "los", "las", "que", "tu", "si", "su", "una", "del", "puedes", "vous", "vos", "est", "pour", "une",
+  "dans", "les", "des", "du", "au", "oui",
+]);
+
+const words = (text: string) => text.toLowerCase().match(/[a-zà-ÿ]+/g) ?? [];
+const distinctIn = (text: string, set: Set<string>) => new Set(words(text).filter((w) => set.has(w))).size;
+
+export function looksTagalog(text: string): boolean {
+  return distinctIn(text, TAGALOG_WORDS) >= 2;
+}
+
+/** English unless it shows two function words of Tagalog, Spanish or French, so short answers pass. */
+export function looksEnglish(text: string): boolean {
+  return !looksTagalog(text) && distinctIn(text, ROMANCE_WORDS) < 2;
+}
+
+/**
+ * 1 when an English question gets an English answer from the model. Tagalog and
+ * Taglish questions, and extractive answers (quoted from English articles), get no score.
+ */
+export const englishReply: Evaluator = async ({ input, output }) => {
+  const { answer, usedLlm } = output as AnswerOutput;
+  if (!usedLlm || looksTagalog((input as { question: string }).question)) return [];
+  const english = looksEnglish(answer);
+  return { name: "english_reply", value: english ? 1 : 0, comment: english ? "" : answer.slice(0, 200) };
+};
+
 /** 1 when the widget escalated exactly when the label says it should. */
 export const escalationMatch: Evaluator = async ({ output, expectedOutput }) => {
   const expected = (expectedOutput as { shouldEscalate: boolean }).shouldEscalate;
