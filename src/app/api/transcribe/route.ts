@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { loadLiveHelpCenter } from "@/lib/business";
 import { elevenLabsConfig, readTranscript, transcribeRequest } from "@/lib/elevenlabs";
-import { MAX_QUESTION_BYTES, MAX_QUESTION_SECONDS, recordVoiceSeconds, voiceStatus } from "@/lib/server-voice";
+import { allowRequest, CHAT_PER_MINUTE, clientIp } from "@/lib/rate-limit";
+import { MAX_QUESTION_BYTES, recordVoiceSeconds, voiceStatus } from "@/lib/server-voice";
 
 /*
  * Turns one recorded question into text with ElevenLabs Scribe. The widget then
@@ -19,8 +20,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "voice unavailable", provider: status.provider }, { status: 409 });
   }
 
-  const length = Number(request.headers.get("content-length") ?? 0);
-  if (length > MAX_QUESTION_BYTES) return NextResponse.json({ error: "recording too long" }, { status: 413 });
+  if (!allowRequest(`voice:${clientIp(request.headers)}`, CHAT_PER_MINUTE)) {
+    return NextResponse.json({ error: "too many recordings" }, { status: 429, headers: { "Retry-After": "60" } });
+  }
+
+  // Without a length, blob() would read an unbounded body into memory before the size check below.
+  const length = request.headers.get("content-length");
+  if (length === null) return NextResponse.json({ error: "content-length required" }, { status: 411 });
+  if (Number(length) > MAX_QUESTION_BYTES) return NextResponse.json({ error: "recording too long" }, { status: 413 });
   const audio = await request.blob().catch(() => null);
   if (!audio || audio.size === 0) return NextResponse.json({ error: "audio required" }, { status: 400 });
   if (audio.size > MAX_QUESTION_BYTES) return NextResponse.json({ error: "recording too long" }, { status: 413 });
@@ -32,7 +39,7 @@ export async function POST(request: Request) {
   if (!upstream?.ok) return NextResponse.json({ error: "transcription failed" }, { status: 502 });
 
   const { text, seconds } = readTranscript(await upstream.json().catch(() => null));
-  // A silent clip has no words to time, but it was still sent and billed.
-  recordVoiceSeconds(center.businessId, Math.min(seconds || 1, MAX_QUESTION_SECONDS));
+  // A silent clip has no words to time, but it was still sent and billed. Count all of it: ElevenLabs bills all of it.
+  recordVoiceSeconds(center.businessId, seconds || 1);
   return NextResponse.json({ text });
 }

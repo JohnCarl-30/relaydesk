@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { readBody, unauthorized } from "@/lib/api";
+import { demoReadOnly, readBody, unauthorized } from "@/lib/api";
 import { parseArticles } from "@/lib/article-import";
 import { currentStaff } from "@/lib/auth";
-import { replaceArticles, saveArticles } from "@/lib/db";
+import { isPublicDemo, replaceArticles, saveArticles } from "@/lib/db";
 
 const Import = z.object({
   format: z.enum(["markdown", "json"]),
@@ -15,6 +15,7 @@ const Import = z.object({
 export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return unauthorized();
+  if (isPublicDemo(staff)) return demoReadOnly();
   const body = await readBody(request, Import);
   if ("error" in body) return body.error;
   let articles;

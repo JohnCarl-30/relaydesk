@@ -69,12 +69,14 @@ export function transcribeRequest(config: ElevenLabsConfig, audio: Blob, filenam
   };
 }
 
-type Transcript = { text?: unknown; words?: { end?: unknown }[] };
+type Transcript = { text?: unknown; audio_duration_secs?: unknown; words?: { end?: unknown }[] };
 
 /** The question as heard, and how many seconds of audio it took, from a speech-to-text response. */
 export function readTranscript(json: unknown): { text: string; seconds: number } {
   const transcript = (json ?? {}) as Transcript;
   const text = typeof transcript.text === "string" ? transcript.text.trim() : "";
+  // The whole clip, silence included, is what gets billed; the last word's end is the fallback.
+  if (typeof transcript.audio_duration_secs === "number") return { text, seconds: transcript.audio_duration_secs };
   const ends = (transcript.words ?? []).map((w) => (typeof w.end === "number" ? w.end : 0));
   return { text, seconds: ends.length ? Math.max(...ends) : 0 };
 }

@@ -17,6 +17,7 @@ import type {
   Ticket,
 } from "@/lib/models";
 import { hashPassword, verifyPassword } from "@/lib/passwords";
+import { SESSION_TTL_MS } from "@/lib/session";
 
 export type {
   AgentDraft,
@@ -39,8 +40,30 @@ export type {
 
 export const DEMO_STAFF_EMAIL = "staff@nimbus.demo";
 
+/** Printed on /login and /demo, so anyone can sign in with it. */
+export const PUBLIC_DEMO_PASSWORD = "nimbus-demo";
+
 export function demoStaffPassword(): string {
-  return process.env.RELAYDESK_ADMIN_PASSWORD ?? "nimbus-demo";
+  return process.env.RELAYDESK_ADMIN_PASSWORD ?? PUBLIC_DEMO_PASSWORD;
+}
+
+const DEMO_PASSWORD_CHANGED_AT = "demo_password_changed_at";
+
+/**
+ * True for a Nimbus session started before the demo password last changed. It may have been started
+ * with the password printed on /login, so it must not gain setup access once that password is gone.
+ */
+export function demoSessionRevoked(session: { businessId: string; expiresAt: number }): boolean {
+  if (session.businessId !== DEMO_BUSINESS_ID) return false;
+  const row = db().prepare("SELECT value FROM settings WHERE key = ?").get(DEMO_PASSWORD_CHANGED_AT) as
+    | { value: string }
+    | undefined;
+  return session.expiresAt - SESSION_TTL_MS < Number(row?.value ?? 0);
+}
+
+/** True for Nimbus staff while the login still takes the printed password: they can work tickets but not change setup. */
+export function isPublicDemo(staff: { business_id: string }): boolean {
+  return staff.business_id === DEMO_BUSINESS_ID && demoStaffPassword() === PUBLIC_DEMO_PASSWORD;
 }
 
 type GlobalDb = typeof globalThis & { __relaydeskDb?: Database.Database };
@@ -246,6 +269,9 @@ function seedDemoBusiness(db: Database.Database) {
       hashPassword(password),
       DEMO_STAFF_EMAIL,
     );
+    db.prepare(
+      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    ).run(DEMO_PASSWORD_CHANGED_AT, String(Date.now()));
   }
 }
 

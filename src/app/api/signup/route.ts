@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { Email, Password, PersonName, readBody } from "@/lib/api";
+import { authRateLimited, Email, Password, PersonName, readBody } from "@/lib/api";
 import { slugify } from "@/lib/article-import";
 import { cameOverHttps, startSession } from "@/lib/auth";
 import { BUSINESS_ID_PATTERN, getBusiness, getStaffByEmail, signUpBusiness } from "@/lib/db";
@@ -29,6 +29,8 @@ function codeAccepted(code: string | undefined): boolean {
 }
 
 export async function POST(request: Request) {
+  const limited = authRateLimited(request);
+  if (limited) return limited;
   const body = await readBody(request, SignUp);
   if ("error" in body) return body.error;
   const input = body.data;

@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { readBody, unauthorized } from "@/lib/api";
+import { demoReadOnly, readBody, unauthorized } from "@/lib/api";
 import { currentStaff } from "@/lib/auth";
-import { listArticles, setBusinessLive } from "@/lib/db";
+import { isPublicDemo, listArticles, setBusinessLive } from "@/lib/db";
 
 /** Go live (or back to hidden). Live needs at least one article to answer from. */
 export async function PATCH(request: Request) {
   const staff = await currentStaff();
   if (!staff) return unauthorized();
+  if (isPublicDemo(staff)) return demoReadOnly();
   const body = await readBody(request, z.object({ live: z.boolean() }));
   if ("error" in body) return body.error;
   if (body.data.live && listArticles(staff.business_id).length === 0) {

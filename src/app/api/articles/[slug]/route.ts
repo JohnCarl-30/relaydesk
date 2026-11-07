@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { notFound, readBody, unauthorized } from "@/lib/api";
+import { demoReadOnly, notFound, readBody, unauthorized } from "@/lib/api";
 import { ArticleInput, toArticle } from "@/lib/article-import";
 import { currentStaff } from "@/lib/auth";
-import { deleteArticle, listArticles, saveArticles } from "@/lib/db";
+import { deleteArticle, isPublicDemo, listArticles, saveArticles } from "@/lib/db";
 
 type Context = { params: Promise<{ slug: string }> };
 
 export async function PUT(request: Request, context: Context) {
   const staff = await currentStaff();
   if (!staff) return unauthorized();
+  if (isPublicDemo(staff)) return demoReadOnly();
   const { slug } = await context.params;
   const body = await readBody(request, ArticleInput);
   if ("error" in body) return body.error;
@@ -28,6 +29,7 @@ export async function PUT(request: Request, context: Context) {
 export async function DELETE(_request: Request, context: Context) {
   const staff = await currentStaff();
   if (!staff) return unauthorized();
+  if (isPublicDemo(staff)) return demoReadOnly();
   const { slug } = await context.params;
   if (!deleteArticle(staff.business_id, slug)) return notFound();
   return NextResponse.json({ ok: true });

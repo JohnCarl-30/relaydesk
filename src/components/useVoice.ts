@@ -44,7 +44,7 @@ export type ServerVoice = {
   onUnavailable: () => void;
 };
 
-/** Longest question recorded for the server. Matches MAX_QUESTION_SECONDS in server-voice.ts. */
+/** Longest question recorded for the server. The cap counts whatever Scribe actually transcribed. */
 const MAX_QUESTION_SECONDS = 30;
 
 // Browser support never changes while the page is open, so there is nothing to subscribe to.

@@ -56,6 +56,5 @@ export function speakingSeconds(text: string): number {
   return Math.ceil(text.length / 15);
 }
 
-/** The longest question the widget records, and the biggest upload the server takes. */
-export const MAX_QUESTION_SECONDS = 30;
+/** The biggest upload the server takes. The widget stops recording at 30 seconds, well under it. */
 export const MAX_QUESTION_BYTES = 2_000_000;

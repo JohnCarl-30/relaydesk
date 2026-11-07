@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { readBody, unauthorized } from "@/lib/api";
+import { demoReadOnly, readBody, unauthorized } from "@/lib/api";
 import { currentStaff } from "@/lib/auth";
 import { loadLiveHelpCenter } from "@/lib/business";
+import { isPublicDemo } from "@/lib/db";
 import { setVoiceProvider, voiceStatus } from "@/lib/server-voice";
 
 /** Which voice the widget should use. Public: the widget asks when it opens. */
@@ -17,6 +18,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return unauthorized();
+  if (isPublicDemo(staff)) return demoReadOnly();
   const body = await readBody(request, z.object({ provider: z.enum(["browser", "elevenlabs"]) }));
   if ("error" in body) return body.error;
   if (body.data.provider === "elevenlabs" && !voiceStatus(staff.business_id).configured) {
