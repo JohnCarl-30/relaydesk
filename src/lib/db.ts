@@ -39,8 +39,16 @@ export type {
 
 export const DEMO_STAFF_EMAIL = "staff@nimbus.demo";
 
+/** Printed on /login and /demo, so anyone can sign in with it. */
+export const PUBLIC_DEMO_PASSWORD = "nimbus-demo";
+
 export function demoStaffPassword(): string {
-  return process.env.RELAYDESK_ADMIN_PASSWORD ?? "nimbus-demo";
+  return process.env.RELAYDESK_ADMIN_PASSWORD ?? PUBLIC_DEMO_PASSWORD;
+}
+
+/** True for Nimbus staff while the login still takes the printed password: they can work tickets but not change setup. */
+export function isPublicDemo(staff: { business_id: string }): boolean {
+  return staff.business_id === DEMO_BUSINESS_ID && demoStaffPassword() === PUBLIC_DEMO_PASSWORD;
 }
 
 type GlobalDb = typeof globalThis & { __relaydeskDb?: Database.Database };

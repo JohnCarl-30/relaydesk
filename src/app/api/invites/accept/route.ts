@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { Password, PersonName, readBody } from "@/lib/api";
+import { authRateLimited, Password, PersonName, readBody } from "@/lib/api";
 import { cameOverHttps, startSession } from "@/lib/auth";
 import { acceptInvite, findInvite, getStaffByEmail } from "@/lib/db";
 
 const Accept = z.object({ token: z.string().min(1), name: PersonName, password: Password });
 
 export async function POST(request: Request) {
+  const limited = authRateLimited(request);
+  if (limited) return limited;
   const body = await readBody(request, Accept);
   if ("error" in body) return body.error;
   const invite = findInvite(body.data.token);

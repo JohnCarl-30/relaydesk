@@ -149,6 +149,20 @@ describe("staff logins and sessions", () => {
     );
   });
 
+  it("keeps the Nimbus setup read-only only while it takes the printed password", () => {
+    const saved = process.env.RELAYDESK_ADMIN_PASSWORD;
+    try {
+      delete process.env.RELAYDESK_ADMIN_PASSWORD;
+      assert.equal(db.isPublicDemo({ business_id: DEMO_BUSINESS_ID }), true);
+      assert.equal(db.isPublicDemo({ business_id: "other-shop" }), false);
+      process.env.RELAYDESK_ADMIN_PASSWORD = "a private password";
+      assert.equal(db.isPublicDemo({ business_id: DEMO_BUSINESS_ID }), false);
+    } finally {
+      if (saved === undefined) delete process.env.RELAYDESK_ADMIN_PASSWORD;
+      else process.env.RELAYDESK_ADMIN_PASSWORD = saved;
+    }
+  });
+
   it("rejects a session cookie edited to point at another business", () => {
     const secret = db.sessionSecret();
     const cookie = encodeSession(

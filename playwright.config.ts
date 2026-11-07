@@ -40,6 +40,7 @@ export default defineConfig({
       RELAYDESK_DB_PATH: process.env.RELAYDESK_E2E_DB,
       // Every test chats from 127.0.0.1, so one visitor's limit would trip across the suite.
       RELAYDESK_CHAT_PER_MINUTE: "10000",
+      RELAYDESK_AUTH_PER_MINUTE: "10000",
       RELAYDESK_ADMIN_PASSWORD: ADMIN_PASSWORD,
       RELAYDESK_NEW_STAFF_PASSWORD: ACME.password,
       RELAYDESK_MCP_TOKEN: MCP_TOKEN,

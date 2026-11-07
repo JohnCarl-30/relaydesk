@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { readBody, unauthorized } from "@/lib/api";
+import { demoReadOnly, readBody, unauthorized } from "@/lib/api";
 import { ArticleInput, toArticle } from "@/lib/article-import";
 import { currentStaff } from "@/lib/auth";
-import { listArticles, saveArticles } from "@/lib/db";
+import { isPublicDemo, listArticles, saveArticles } from "@/lib/db";
 
 /** Adds one article. A slug already in use is refused rather than overwritten. */
 export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return unauthorized();
+  if (isPublicDemo(staff)) return demoReadOnly();
   const body = await readBody(request, ArticleInput);
   if ("error" in body) return body.error;
   const article = toArticle(body.data);

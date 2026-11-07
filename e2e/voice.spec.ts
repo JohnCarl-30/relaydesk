@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { chat, openChat, signIn } from "./chat";
+import { ACME } from "./env";
 
 /*
  * Headless Chromium has no speech service, so these tests install a fake
@@ -297,7 +298,8 @@ test("without a key, the voice routes stay off and point the widget at the brows
 });
 
 test("Setup shows the voice switch, and ElevenLabs can't be turned on without a key", async ({ page }) => {
-  await signIn(page);
+  // The Nimbus login is the public demo, whose setup is read-only, so use a business of its own.
+  await signIn(page, ACME.email, ACME.password);
   await page.goto("/inbox/setup");
   await expect(page.getByText("Browser voice", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Use ElevenLabs" })).toBeDisabled();
@@ -305,4 +307,10 @@ test("Setup shows the voice switch, and ElevenLabs can't be turned on without a 
 
   const res = await page.request.post("/api/voice", { data: { provider: "elevenlabs" } });
   expect(res.status()).toBe(409);
+});
+
+test("the public demo login can't change setup", async ({ page }) => {
+  await signIn(page);
+  const res = await page.request.post("/api/voice", { data: { provider: "browser" } });
+  expect(res.status()).toBe(403);
 });

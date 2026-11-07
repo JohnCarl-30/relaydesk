@@ -1,6 +1,7 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 // scrypt with Node's defaults (N=16384, r=8, p=1). Stored as "scrypt$<salt>$<hash>", both base64url.
+// shortcut: scryptSync blocks the event loop on every check, capped by authRateLimited in api.ts; move to async scrypt if logins come from many IPs at once.
 const KEY_LENGTH = 32;
 
 export function hashPassword(password: string): string {
