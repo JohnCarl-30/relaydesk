@@ -9,7 +9,7 @@ import { refuseLine } from "./escalate";
 import { answerQuestion } from "./graph";
 import { DEMO_BUSINESS_ID } from "./help-center";
 import { forceExtractiveAnswers } from "./keyless";
-import { decodeSession, encodeSession } from "./session";
+import { decodeSession, encodeSession, SESSION_TTL_MS } from "./session";
 
 forceExtractiveAnswers();
 process.env.RELAYDESK_DB_PATH = join(tmpdir(), `relaydesk-business-${process.pid}-${Date.now()}.db`);
@@ -160,6 +160,30 @@ describe("staff logins and sessions", () => {
     } finally {
       if (saved === undefined) delete process.env.RELAYDESK_ADMIN_PASSWORD;
       else process.env.RELAYDESK_ADMIN_PASSWORD = saved;
+    }
+  });
+
+  it("signs out Nimbus cookies from before the demo password changed", () => {
+    const reopen = () => {
+      const g = globalThis as { __relaydeskDb?: { close(): void } };
+      g.__relaydeskDb?.close();
+      delete g.__relaydeskDb;
+    };
+    const startedAgo = (ms: number) => ({ businessId: DEMO_BUSINESS_ID, expiresAt: Date.now() - ms + SESSION_TTL_MS });
+    const before = startedAgo(1_000);
+    assert.equal(db.demoSessionRevoked(before), false);
+
+    const saved = process.env.RELAYDESK_ADMIN_PASSWORD;
+    try {
+      process.env.RELAYDESK_ADMIN_PASSWORD = "a rotated private password";
+      reopen(); // the demo password is re-hashed when the database opens
+      assert.equal(db.demoSessionRevoked(before), true);
+      assert.equal(db.demoSessionRevoked({ ...before, businessId: "other-shop" }), false);
+      assert.equal(db.demoSessionRevoked(startedAgo(-1_000)), false);
+    } finally {
+      if (saved === undefined) delete process.env.RELAYDESK_ADMIN_PASSWORD;
+      else process.env.RELAYDESK_ADMIN_PASSWORD = saved;
+      reopen();
     }
   });
 

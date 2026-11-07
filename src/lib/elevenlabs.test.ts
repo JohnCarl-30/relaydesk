@@ -74,7 +74,7 @@ describe("transcribeRequest", () => {
 });
 
 describe("readTranscript", () => {
-  it("takes the text, and the audio length from the last word", () => {
+  it("takes the text, and the audio length from the last word when no duration comes back", () => {
     assert.deepEqual(
       readTranscript({
         text: " Magkano ang Growth plan? ",
@@ -86,6 +86,10 @@ describe("readTranscript", () => {
       }),
       { text: "Magkano ang Growth plan?", seconds: 2.4 },
     );
+  });
+
+  it("takes the whole clip's length when the response has it, so silence counts too", () => {
+    assert.deepEqual(readTranscript({ text: "", words: [], audio_duration_secs: 120 }), { text: "", seconds: 120 });
   });
 
   it("copes with an empty or odd response", () => {

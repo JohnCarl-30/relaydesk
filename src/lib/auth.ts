@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getStaff, sessionSecret, type Staff } from "@/lib/db";
+import { demoSessionRevoked, getStaff, sessionSecret, type Staff } from "@/lib/db";
 import { decodeSession, encodeSession, SESSION_TTL_MS } from "@/lib/session";
 
 const COOKIE = "relaydesk_session";
@@ -8,7 +8,7 @@ const COOKIE = "relaydesk_session";
 export async function currentStaff(): Promise<Staff | null> {
   const jar = await cookies();
   const session = decodeSession(jar.get(COOKIE)?.value, sessionSecret());
-  if (!session) return null;
+  if (!session || demoSessionRevoked(session)) return null;
   return getStaff(session.businessId, session.staffId) ?? null;
 }
 
