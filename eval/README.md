@@ -71,6 +71,27 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 
 2026-10-22, keyless, CSVs only, after the hard rows went in: hit@1 **0.8333** (50/60), hit@3 **0.9167** (55/60), escalation precision **1.0**, recall **0.6364** (tp=7, fp=0, fn=4).
 
+## Model comparison
+
+Which model answers the widget ([#14](https://github.com/JohnCarl-30/relaydesk/issues/14)). Every run uses the same judge and dataset versions, so the scores compare:
+
+- **Judge:** `RELAYDESK_JUDGE_MODEL=gpt-4.1`, on the OpenAI key. It isn't one of the candidates, so no run is graded by itself.
+- **Datasets:** `relaydesk-golden` (70 items), `relaydesk-escalation` (23), `relaydesk-intent` (40), unchanged at Langfuse version `2026-11-05T06:11:50.234Z`.
+- **Latency and cost per answer:** `eval/run-costs.ts <run-name> <time before the run>`. Latency is the widget's own spans, so the judge and the upload aren't in it. Cost is what Langfuse priced the item's model calls at; the judge isn't counted.
+
+```bash
+RELAYDESK_JUDGE_MODEL=gpt-4.1 npx --yes tsx eval/run-experiments.ts --run-name gpt-4o-mini
+npx --yes tsx eval/run-costs.ts gpt-4o-mini 2026-11-05T06:00:00Z
+```
+
+| Run | hit@1 | hit@3 | faithfulness | english_reply | escalation P / R | intent correct / deal P | latency mean (p95) | cost per answer |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `gpt-4o-mini`, 2026-11-05, main@d778155 | 0.8333 | 0.9167 | 0.9722 (54) | 1.0 (58) | 0.9167 / 1.0 (tp=11, fp=1, fn=0) | 0.975 / 1.0 | 1.05 s (2.37 s) golden, 0.80 s escalation, 0.87 s intent | $0.000088 golden, $0.000073 escalation, $0.000050 intent |
+
+- **Escalation with the model** catches all 11 rows that should escalate; keyless catches 7. The near-miss rows (refund, BigQuery, EU data, Scale price) now escalate, because the model says it has no answer.
+- **The one false positive** is the Spanish row "¿Los datos de eventos cruzan workspaces de Nimbus?". Since #68 ("answer in English unless the question is in Tagalog or Taglish"), the model sometimes says it has no answer: 1 of 5 tries, against 0 of 5 before #68, which answered in Spanish every time. That puts `escalation_precision` under its 1.0 threshold on the model path. CI runs escalation keyless, so the gate doesn't see it.
+- **Faithfulness** has its first score: 0.9722 over the 54 answers that cite an article. Its threshold stays at 0.8 until a CI run sets it ([#59](https://github.com/JohnCarl-30/relaydesk/issues/59)).
+
 ## Retrieval
 
 Hit@k vs `expected_slug` (no server):
