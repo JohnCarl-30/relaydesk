@@ -11,8 +11,10 @@ import {
   LangfuseSpanProcessor,
   type ShouldExportSpan,
 } from "@langfuse/otel";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
+  BatchSpanProcessor,
   NodeTracerProvider,
   SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-node";
@@ -117,15 +119,33 @@ export function langfuseProcessor(env: LangfuseEnv = process.env): LangfuseSpanP
   });
 }
 
+/**
+ * Sends every relaydesk span to TraceRoot when TRACEROOT_API_KEY is set. Its ingest
+ * takes OTLP protobuf only, hence the proto exporter. Spans arrive redacted, because
+ * initTracing puts RedactingSpanProcessor first and processors run in order.
+ */
+export function traceRootProcessor(env: LangfuseEnv = process.env): BatchSpanProcessor | undefined {
+  if (!env.TRACEROOT_API_KEY) return undefined;
+  const host = (env.TRACEROOT_HOST_URL || "https://app.traceroot.ai").replace(/\/$/, "");
+  return new BatchSpanProcessor(
+    new OTLPTraceExporter({
+      url: `${host}/api/v1/public/traces`,
+      headers: { Authorization: `Bearer ${env.TRACEROOT_API_KEY}` },
+    }),
+  );
+}
+
 export function initTracing(): void {
   if (provider) return;
   const langfuse = langfuseProcessor();
+  const traceroot = traceRootProcessor();
   provider = new NodeTracerProvider({
     resource: resourceFromAttributes({ "service.name": "relaydesk" }),
     spanProcessors: [
       new RedactingSpanProcessor(),
       new SimpleSpanProcessor(exporter),
       ...(langfuse ? [langfuse] : []),
+      ...(traceroot ? [traceroot] : []),
     ],
   });
   provider.register();
