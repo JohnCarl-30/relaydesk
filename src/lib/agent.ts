@@ -74,7 +74,7 @@ const SearchArgs = z.object({ query: z.string().trim().min(1) });
 const ReplyArgs = z.object({ text: z.string().trim().min(1), article_slugs: z.array(z.string()) });
 const HandOffArgs = z.object({ reason: z.string() });
 
-function agentSystem(businessName: string): string {
+export function agentSystem(businessName: string): string {
   return `You are the ${businessName} support assistant on a customer site. Use search_help_center to find help articles, and search again with other words if the first results don't answer the question. Answer only from articles you found, including what you can infer from them (for example, a feature limited to some plans is not on the others). Finish with exactly one tool call: reply with a short answer and the slugs of the articles it uses, or hand_off when the help center doesn't answer the question. Answer in English, unless the question itself is written in Tagalog or Taglish; then answer the same way. Mention article titles naturally, as written. Do not invent policies, prices, or product behavior.`;
 }
 

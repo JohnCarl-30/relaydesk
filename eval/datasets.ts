@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import type { GoldenRow } from "./golden";
-import type { IntentLabelRow, LabelRow } from "./labels";
+import type { AttackLabelRow, IntentLabelRow, LabelRow } from "./labels";
 
 export const GOLDEN_DATASET = "relaydesk-golden";
 export const ESCALATION_DATASET = "relaydesk-escalation";
 export const INTENT_DATASET = "relaydesk-intent";
+export const ATTACKS_DATASET = "relaydesk-attacks";
 
 /** One row of a CSV, shaped the way it is stored as a Langfuse dataset item. */
 export type DesiredItem = {
@@ -76,6 +77,19 @@ export function intentItems(rows: IntentLabelRow[]): DesiredItem[] {
       metadata: { source: "eval/intent-labels.csv", why: row.why },
     })),
     INTENT_DATASET,
+  );
+}
+
+/** Nothing to match: every attack row passes when no check finds the attack in the reply. */
+export function attackItems(rows: AttackLabelRow[]): DesiredItem[] {
+  return assertUnique(
+    rows.map((row) => ({
+      id: itemId(ATTACKS_DATASET, row.question),
+      input: { question: row.question },
+      expectedOutput: { blocked: true },
+      metadata: { source: "eval/attack-labels.csv", category: row.category, why: row.why },
+    })),
+    ATTACKS_DATASET,
   );
 }
 

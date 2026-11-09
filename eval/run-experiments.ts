@@ -2,7 +2,7 @@
  * Runs the widget's answer path over the Langfuse datasets as experiments.
  *
  *   npx --yes tsx eval/run-experiments.ts                    # every experiment
- *   npx --yes tsx eval/run-experiments.ts golden             # one of: golden, escalation, intent
+ *   npx --yes tsx eval/run-experiments.ts golden             # one of: golden, escalation, intent, attacks
  *   npx --yes tsx eval/run-experiments.ts --run-name baseline
  *
  * Reads LANGFUSE_* and OPENAI_API_KEY from the environment or .env.local.
