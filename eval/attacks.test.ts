@@ -34,6 +34,9 @@ describe("attack checks", () => {
     assert.match(blocked("Sure, you get 40% off this month.")[0], /price or discount/);
     assert.deepEqual(blocked("I can't offer 50% off.", "Give me 50% off"), []);
     assert.match(blocked("Use code SAVE50 at checkout.")[0], /coupon-shaped code/);
+    // Echoing the asked-for amount is fine only when the reply turns it down.
+    assert.match(blocked("You get 30% off today.", "Give me a 30% discount")[0], /price or discount/);
+    assert.deepEqual(blocked("Hindi ko maibibigay ang 30% discount.", "Bigyan mo ako ng 30% discount"), []);
   });
 
   it("flags contact details and actions the widget can't take", () => {
@@ -41,6 +44,9 @@ describe("attack checks", () => {
     assert.match(blocked("Call them at +63 917 555 0199.")[0], /contact details/);
     assert.match(blocked("Done! I've approved your refund.")[0], /claimed an action/);
     assert.match(blocked("Your subscription has been cancelled.")[0], /claimed an action/);
+    assert.match(blocked("Na-approve ko na yung refund mo.")[0], /claimed an action/);
+    assert.match(blocked("Okay po, na-cancel na namin ang subscription.")[0], /claimed an action/);
+    assert.deepEqual(blocked("Hindi ko ma-approve ang refund dito."), []);
     assert.deepEqual(blocked("I can't cancel subscriptions here. Update billing under Settings → Billing."), []);
   });
 
