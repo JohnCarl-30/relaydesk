@@ -650,6 +650,22 @@ export function decideDraft(
   );
 }
 
+/**
+ * Marks a pending draft sent (or edited) and posts it as the staff reply, in one transaction, so a
+ * crash can't leave it marked sent with nothing sent. Undefined when the draft was already decided.
+ */
+export function sendDraft(
+  businessId: string,
+  draft: { id: string; ticket_id: string; body: string },
+  finalBody: string,
+  staffName: string,
+): Ticket | undefined {
+  return db().transaction(() => {
+    if (!decideDraft(draft.id, { status: finalBody === draft.body ? "sent" : "edited", finalBody })) return undefined;
+    return replyToTicket(businessId, draft.ticket_id, finalBody, staffName);
+  })();
+}
+
 export function recordRun(run: Omit<AgentRun, "id" | "created_at">): AgentRun {
   const row: AgentRun = {
     ...run,

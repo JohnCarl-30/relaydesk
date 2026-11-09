@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { REFUSE_LINE } from "./escalate";
-import { answerQuestion, generateFromHits } from "./graph";
+import { answerQuestion, chatModel, generateFromHits } from "./graph";
 import { forceExtractiveAnswers } from "./keyless";
 import { retrieve } from "./rag";
 
@@ -33,6 +33,10 @@ describe("answerQuestion when the model is down", () => {
       assert.equal(result.usedLlm, false);
       assert.ok(result.answer.length > 0);
       assert.ok(Date.now() - started < 10_000, "no long retry loop");
+      // A provider that accepts the call and never answers is cut off by these, not by a hung request.
+      const model = chatModel() as unknown as { timeout?: number; caller?: { maxRetries?: number } };
+      assert.equal(model.timeout, 10_000);
+      assert.equal(model.caller?.maxRetries, 1);
     } finally {
       delete process.env.OPENAI_API_KEY;
       delete process.env.OPENAI_BASE_URL;

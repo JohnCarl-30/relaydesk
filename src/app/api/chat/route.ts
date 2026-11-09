@@ -104,6 +104,10 @@ export async function POST(request: Request) {
     body: messageBody,
   }));
   addMessage(conversationId, "visitor", text);
+  // The customer wrote again, so their ticket goes back to open and to the top of the inbox. Before the
+  // model runs, so a staff reply or close made while it thinks isn't overwritten afterwards.
+  const existing = getTicketByConversation(conversationId);
+  if (existing) updateTicket(businessId, existing.id, { status: "open" });
   const rag = await answerQuestion(text, {
     history,
     sessionId: conversationId,
@@ -112,8 +116,6 @@ export async function POST(request: Request) {
   });
   const conversation = getConversation(businessId, conversationId);
   let ticket = getTicketByConversation(conversationId);
-  // The customer wrote again, so their ticket goes back to open and to the top of the inbox.
-  if (ticket) ticket = updateTicket(businessId, ticket.id, { status: "open" });
   let reply = rag.answer;
   if (rag.escalated) {
     if (!ticket) {
