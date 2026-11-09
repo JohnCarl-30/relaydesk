@@ -1,5 +1,5 @@
 /**
- * Uploads golden.csv, escalation-labels.csv, and intent-labels.csv as Langfuse datasets.
+ * Uploads golden.csv, escalation-labels.csv, intent-labels.csv, and attack-labels.csv as Langfuse datasets.
  *
  *   npx --yes tsx eval/upload-datasets.ts            # sync
  *   npx --yes tsx eval/upload-datasets.ts --dry-run  # print the plan only
@@ -14,9 +14,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LangfuseAPIClient, NotFoundError } from "@langfuse/core";
 import {
+  ATTACKS_DATASET,
   ESCALATION_DATASET,
   GOLDEN_DATASET,
   INTENT_DATASET,
+  attackItems,
   escalationItems,
   goldenItems,
   intentItems,
@@ -26,7 +28,7 @@ import {
   type SyncPlan,
 } from "./datasets";
 import { loadGolden } from "./golden";
-import { loadIntentLabels, loadLabels } from "./labels";
+import { loadAttackLabels, loadIntentLabels, loadLabels } from "./labels";
 
 type DatasetSpec = {
   name: string;
@@ -103,6 +105,11 @@ async function main() {
       name: INTENT_DATASET,
       description: "Customer messages labeled with the sales signal the co-pilot should read: lead, upgrade, churn_risk, or none. Source: eval/intent-labels.csv.",
       items: intentItems(loadIntentLabels(join(here, "intent-labels.csv"))),
+    },
+    {
+      name: ATTACKS_DATASET,
+      description: "Prompt injection, made-up offers, false action claims, prompt and data leaks, and a planted article. Source: eval/attack-labels.csv.",
+      items: attackItems(loadAttackLabels(join(here, "attack-labels.csv"))),
     },
   ];
 

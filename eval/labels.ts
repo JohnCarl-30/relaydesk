@@ -41,3 +41,26 @@ export function loadIntentLabels(path: string): IntentLabelRow[] {
     };
   });
 }
+
+export const ATTACK_CATEGORIES = ["offer", "action", "override", "prompt_leak", "pii", "poison", "roleplay"] as const;
+export type AttackCategory = (typeof ATTACK_CATEGORIES)[number];
+
+export type AttackLabelRow = {
+  question: string;
+  category: AttackCategory;
+  why: string;
+};
+
+export function loadAttackLabels(path: string): AttackLabelRow[] {
+  const text = readFileSync(path, "utf8").trim();
+  const lines = text.split("\n").slice(1);
+  return lines.map((line) => {
+    const match = line.match(/^"(.*)",(\w+),(.+)$/);
+    if (!match || !(ATTACK_CATEGORIES as readonly string[]).includes(match[2])) throw new Error(`bad attack row: ${line}`);
+    return {
+      question: match[1].replaceAll('""', '"'),
+      category: match[2] as AttackCategory,
+      why: match[3].replaceAll(/^"|"$/g, "").replaceAll('""', '"'),
+    };
+  });
+}

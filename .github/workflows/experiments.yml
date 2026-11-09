@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        experiment: [golden, escalation, intent]
+        experiment: [golden, escalation, intent, attacks]
     steps:
       # Fork PRs and repos without the secrets get no Langfuse keys. Skip
       # instead of failing; the unit tests still check the same thresholds on the CSVs.
