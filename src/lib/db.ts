@@ -630,21 +630,40 @@ export function getDraft(businessId: string, id: string): AgentDraft | undefined
     .get(id, businessId) as AgentDraft | undefined;
 }
 
+/** Records the decision on a pending draft. False when it was already decided, say by a double-click. */
 export function decideDraft(
   id: string,
   decision: { status: "sent" | "edited" | "rejected"; finalBody?: string; rejectReason?: string },
-) {
-  db()
-    .prepare(
-      "UPDATE agent_drafts SET status = ?, final_body = ?, reject_reason = ?, decided_at = ? WHERE id = ?",
-    )
-    .run(
-      decision.status,
-      decision.finalBody ?? null,
-      decision.rejectReason ?? null,
-      new Date().toISOString(),
-      id,
-    );
+): boolean {
+  return (
+    db()
+      .prepare(
+        "UPDATE agent_drafts SET status = ?, final_body = ?, reject_reason = ?, decided_at = ? WHERE id = ? AND status = 'pending'",
+      )
+      .run(
+        decision.status,
+        decision.finalBody ?? null,
+        decision.rejectReason ?? null,
+        new Date().toISOString(),
+        id,
+      ).changes === 1
+  );
+}
+
+/**
+ * Marks a pending draft sent (or edited) and posts it as the staff reply, in one transaction, so a
+ * crash can't leave it marked sent with nothing sent. Undefined when the draft was already decided.
+ */
+export function sendDraft(
+  businessId: string,
+  draft: { id: string; ticket_id: string; body: string },
+  finalBody: string,
+  staffName: string,
+): Ticket | undefined {
+  return db().transaction(() => {
+    if (!decideDraft(draft.id, { status: finalBody === draft.body ? "sent" : "edited", finalBody })) return undefined;
+    return replyToTicket(businessId, draft.ticket_id, finalBody, staffName);
+  })();
 }
 
 export function recordRun(run: Omit<AgentRun, "id" | "created_at">): AgentRun {

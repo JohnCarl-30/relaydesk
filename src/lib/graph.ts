@@ -141,6 +141,9 @@ export function chatModel(temperature = 0.2): ChatLike {
   return new ChatOpenAI({
     model: chatModelName(),
     ...temperatureFor(chatModelName(), temperature),
+    // The visitor is waiting: give up after one retry instead of the default backoff, which ran for minutes.
+    maxRetries: 1,
+    timeout: 10_000,
     apiKey: process.env.OPENAI_API_KEY,
     ...(base ? { configuration: { baseURL: base } } : {}),
   }) as ChatLike;
@@ -299,6 +302,7 @@ async function answerFromHits(
       attrs,
     };
   } catch {
+    attrs["generate.model_failed"] = true;
     return { result: extractive(), attrs };
   }
 }
@@ -312,7 +316,8 @@ async function generateNode(state: SupportStateType) {
     async (span) => {
       const { result, attrs } = await answerFromHits(state.center, state.resolved, hits);
       for (const [key, value] of Object.entries(attrs)) span.setAttribute(key, value);
-      const patch = { ...result, attempts };
+      // A failed model call won't do better on a rewritten query, so end on the extractive answer.
+      const patch = { ...result, attempts, ...(attrs["generate.model_failed"] ? { allowRewrite: false } : {}) };
       const next = nextAfterGenerate({ ...state, ...patch } as SupportStateType);
       span.setAttribute("generate.used_llm", Boolean(patch.usedLlm));
       span.setAttribute("generate.confident", Boolean(patch.confident));
@@ -334,7 +339,11 @@ async function rewriteNode(state: SupportStateType) {
       },
       { role: "user", content: state.resolved.prompt },
     ];
-    const response = await chatModel().invoke(messages);
+    const response = await chatModel()
+      .invoke(messages)
+      .catch(() => null);
+    // The model failed mid-loop: search again with the question as asked rather than fail the chat.
+    if (!response) return { query: state.resolved.search };
     const tokens = tokenAttrs(response);
     span.setAttribute("llm.input_tokens", tokens["llm.input_tokens"]);
     span.setAttribute("llm.output_tokens", tokens["llm.output_tokens"]);

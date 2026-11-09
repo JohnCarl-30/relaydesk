@@ -1,6 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { currentStaff } from "@/lib/auth";
-import { decideDraft, getBusiness, getDraft, replyToTicket } from "@/lib/db";
+import { decideDraft, getBusiness, getDraft, sendDraft } from "@/lib/db";
 import { notifyCustomerReply } from "@/lib/notify";
 
 const REJECT_REASONS = ["wrong", "not_helpful", "tone", "other"] as const;
@@ -29,19 +29,18 @@ export async function POST(
   const body = (await request.json()) as { action?: string; body?: string; reason?: string };
   if (body.action === "send") {
     const finalBody = body.body?.trim() || draft.body;
-    const ticket = replyToTicket(staff.business_id, id, finalBody, staff.name);
-    if (!ticket) return NextResponse.json({ error: "not found" }, { status: 404 });
-    decideDraft(draft.id, {
-      status: finalBody === draft.body ? "sent" : "edited",
-      finalBody,
-    });
+    // Of two clicks that both read "pending" above, only one sends.
+    const ticket = sendDraft(staff.business_id, draft, finalBody, staff.name);
+    if (!ticket) return NextResponse.json({ error: "draft is already decided" }, { status: 409 });
     const businessName = getBusiness(staff.business_id)?.name ?? staff.business_id;
     after(() => notifyCustomerReply({ businessId: staff.business_id, businessName, ticket, body: finalBody }));
     return NextResponse.json({ ticket });
   }
   if (body.action === "reject") {
     const reason = REJECT_REASONS.find((r) => r === body.reason) ?? "other";
-    decideDraft(draft.id, { status: "rejected", rejectReason: reason });
+    if (!decideDraft(draft.id, { status: "rejected", rejectReason: reason })) {
+      return NextResponse.json({ error: "draft is already decided" }, { status: 409 });
+    }
     return NextResponse.json({ ok: true });
   }
   return NextResponse.json({ error: "action must be send or reject" }, { status: 400 });
