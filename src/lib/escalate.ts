@@ -44,6 +44,22 @@ export function isVisitorEscalation(text: string): boolean {
   return VISITOR_ESCALATE.test(text.trim());
 }
 
+// Questions about the customer's own records ("did you file my VAT?", "how much
+// do I owe?"). Only staff can see those, so a general article is the wrong answer.
+const OWN_RECORDS = new RegExp(
+  [
+    String.raw`\b(?:did|have|has)\s+(?:you|your team|anyone)\s+(?:already\s+)?(?:file|filed|submit|submitted|pay|paid|remit|remitted|send|sent|process|processed|charge|charged)\b`,
+    String.raw`\bhow much\s+(?:tax\s+)?(?:do|does|will|did)\s+(?:i|we|my\s+\w+)\s+(?:owe|have to pay|need to pay)\b`,
+    String.raw`\b(?:send|give|email|forward)\s+(?:me|us)\s+(?:a copy of\s+)?(?:my|our)\b`,
+    String.raw`\b(?:status of|update on)\s+(?:my|our)\b`,
+  ].join("|"),
+  "i",
+);
+
+export function asksAboutOwnRecords(text: string): boolean {
+  return OWN_RECORDS.test(text);
+}
+
 export function questionCoverage(
   question: string,
   hitText: string,
@@ -67,6 +83,7 @@ export function shouldEscalate(
   ignoreTerms?: string[],
 ): boolean {
   if (isVisitorEscalation(question)) return true;
+  if (asksAboutOwnRecords(question)) return true;
   if (hits.length === 0) return true;
   const top = hits[0];
   if (top.score >= CONFIDENT_MIN_SCORE) return false;

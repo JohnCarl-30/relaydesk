@@ -142,6 +142,17 @@ It prints a one-time staff password. The business then has:
 
 Run the script again with `--articles` to replace the help center. The next chat answers from the new articles.
 
+### Accounting firms in the Philippines
+
+[`templates/accounting-ph.json`](templates/accounting-ph.json) is a starter help center for a bookkeeping or tax firm: BIR deadlines, the document cutoff, BIR notices, registration, invoices, the 8% rate, fees, paying tax, late penalties, payroll and Form 2316, and closing a business. A firm imports it under **Articles** as JSON, or:
+
+```bash
+npx tsx scripts/add-business.ts --id tala --name "Tala Accounting" \
+  --articles templates/accounting-ph.json --staff-email owner@tala.ph
+```
+
+Edit the firm's own terms (document cutoff, retainer, notice period) before going live, and check the BIR dates each year. [`eval/accounting.test.ts`](eval/accounting.test.ts) checks that 13 client questions find the right article, and that questions outside it, or about the client's own records ("Did you already file my VAT?", "How much do I owe?", "Send me my 2316"), open a ticket. Four questions marked todo there still get an article instead of a person: taxes the template doesn't cover, like estate or real property tax, because "tax" alone scores as a match without a model key.
+
 ## Inbox co-pilot
 
 Every new ticket gets a co-pilot pass right after the chat reply is sent:
