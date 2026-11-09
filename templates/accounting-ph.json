@@ -1,0 +1,86 @@
+[
+  {
+    "slug": "bir-deadlines",
+    "title": "When each BIR return is due",
+    "category": "Deadlines",
+    "summary": "Monthly returns by the 10th, quarterly VAT and percentage tax by the 25th, annual income tax by April 15.",
+    "body": "We file these returns for you as long as your documents reach us by the cutoff.\n\nMonthly withholding: Form 1601-C (withholding on compensation) and Form 0619-E (expanded withholding) are due on the 10th of the following month.\n\nQuarterly VAT and percentage tax: Form 2550Q (VAT) and Form 2551Q (percentage tax) are due on the 25th day after the quarter ends, so April 25, July 25, October 25 and January 25.\n\nQuarterly expanded withholding: Form 1601-EQ is due on the last day of the month after the quarter ends.\n\nQuarterly income tax: individuals file Form 1701Q by May 15, August 15 and November 15. Corporations file Form 1702Q within 60 days after the quarter ends.\n\nAnnual income tax: Form 1701, 1701A or 1702 is due on April 15 for calendar-year taxpayers. The BIR sometimes extends it, and we tell you when it does.\n\nWhen a deadline falls on a weekend or holiday, it moves to the next working day."
+  },
+  {
+    "slug": "document-cutoff",
+    "title": "When to send us your receipts, invoices and bank statements",
+    "category": "Documents",
+    "summary": "Send last month's documents by the 5th so we can file on time.",
+    "body": "Send everything for the past month by the 5th of the following month. That gives us time to record it in your books and file the monthly returns due on the 10th.\n\nFor quarterly returns, send the last month of the quarter by the 5th as well. Documents that arrive after the cutoff go into the next period's books, and we may have to file late or amend a return, which can mean penalties.\n\nIf you will be late, tell us before the cutoff so we can plan around it."
+  },
+  {
+    "slug": "send-documents",
+    "title": "How to send us your documents",
+    "category": "Documents",
+    "summary": "Upload clear photos or PDFs to your shared folder, or email them to your account officer.",
+    "body": "Upload your sales invoices, purchase receipts, bank statements and payroll records to the shared folder we set up for you when you signed up. Clear phone photos are fine as long as the amount, date and TIN can be read.\n\nYou can also email them to your account officer. Put your business name and the month in the subject line.\n\nKeep the paper originals in a safe place. The BIR can ask to see them during an audit, and we cannot replace a lost original."
+  },
+  {
+    "slug": "bir-letter",
+    "title": "Got a letter or notice from the BIR?",
+    "category": "BIR notices",
+    "summary": "Send us a photo of every page the same day. Don't pay, sign or reply to the BIR yourself.",
+    "body": "Send us a clear photo of every page of the letter the same day you receive it, including the envelope if it shows a date. BIR notices such as a Letter of Authority, a notice of discrepancy or a preliminary assessment come with short deadlines, often 15 days or less.\n\nDo not pay anything, sign anything or reply to the BIR yourself until one of our accountants has read it. Some notices can be settled with a simple explanation, and paying first can make that harder.\n\nHandling a BIR audit or assessment is not part of the monthly retainer. We read the notice for free and send you a quote before doing any work on it."
+  },
+  {
+    "slug": "register-business",
+    "title": "Registering a new business with the BIR",
+    "category": "Registration",
+    "summary": "What we need from you to get your Certificate of Registration, books and invoices.",
+    "body": "To register a new business with the BIR we need:\n\n- your DTI certificate (sole proprietors) or SEC certificate and articles of incorporation (corporations and partnerships)\n- your mayor's permit or proof that it is in process\n- your barangay clearance\n- your lease contract or proof that you own the place of business\n- a valid government ID of the owner or authorized officer\n\nWe file the registration form, get your Certificate of Registration (Form 2303), register your books of accounts and arrange your invoices. Registration usually takes one to two weeks once we have every document.\n\nThere is no more ₱500 annual registration fee. It was removed in 2024."
+  },
+  {
+    "slug": "invoices-vs-receipts",
+    "title": "Invoices and official receipts",
+    "category": "Invoices",
+    "summary": "Since 2024, the sales invoice is the main document for both goods and services.",
+    "body": "Since the Ease of Paying Taxes Act took effect in 2024, you issue a sales invoice for every sale of goods or services. The official receipt is no longer the main proof of a sale of services.\n\nIf you still have unused official receipts, ask us how to use them up or surrender them, since the rules depend on your registration.\n\nIssue an invoice for every sale, including cash sales and small amounts. A missing invoice is one of the most common findings in a BIR audit."
+  },
+  {
+    "slug": "eight-percent",
+    "title": "Should I choose the 8% income tax rate?",
+    "category": "Income tax",
+    "summary": "Self-employed people and professionals with gross sales up to ₱3 million can choose 8% instead of the graduated rates.",
+    "body": "If you are self-employed or a professional, are not VAT-registered, and your gross sales or receipts are ₱3 million or less for the year, you can choose to pay 8% on your gross sales or receipts above ₱250,000 instead of the graduated income tax rates. If you also earn a salary, the ₱250,000 is not deducted. The 8% replaces the percentage tax as well.\n\nYou choose it once a year, at registration or on your first quarterly income tax return for the year. If you don't choose it then, you stay on the graduated rates for the whole year.\n\nThe 8% is usually lower when your expenses are small compared with your sales. When your expenses are large, the graduated rates can come out lower. Ask us before the first quarter's deadline and we'll compare both for your numbers."
+  },
+  {
+    "slug": "fees-retainer",
+    "title": "Our fees and what the monthly retainer covers",
+    "category": "Fees",
+    "summary": "The retainer covers bookkeeping and your regular returns. Other work is quoted first.",
+    "body": "Your monthly retainer is listed in your engagement letter. It covers:\n\n- recording your sales, purchases and expenses in your books of accounts\n- preparing and filing your monthly, quarterly and annual BIR returns\n- telling you the tax due before each deadline\n\nThese are billed separately, and we always quote first: new business registration, closing a business, catch-up filing for months before you joined us, BIR audits and assessments, and audited financial statements.\n\nWe send the retainer invoice at the start of each month, payable within 15 days."
+  },
+  {
+    "slug": "paying-tax",
+    "title": "How to pay the tax due",
+    "category": "Payments",
+    "summary": "We send you the amount and the filed return before the deadline. You pay online or at a bank and send us the proof.",
+    "body": "A few days before each deadline we send you the amount due and a copy of the return we filed.\n\nPay through any of the BIR's online payment channels or at an authorized agent bank. You can pay anywhere, not only at your own Revenue District Office.\n\nSend us a screenshot or photo of the payment confirmation the same day. We keep it with your return as proof you paid on time.\n\nThe tax is paid from your account, not ours. We never ask you to send tax money to the firm."
+  },
+  {
+    "slug": "late-penalties",
+    "title": "What happens if a return is filed or paid late",
+    "category": "Deadlines",
+    "summary": "The BIR adds a surcharge, interest and a compromise penalty. Micro and small taxpayers pay less.",
+    "body": "A late return or late payment gets three additions from the BIR:\n\n- a surcharge of 25% of the tax due, or 10% for micro and small taxpayers\n- interest of 12% a year on the unpaid tax, or 6% for micro and small taxpayers\n- a compromise penalty that depends on the amount\n\nA late return with no tax due can still get a compromise penalty.\n\nIf you have months you never filed, tell us. We'll check what is missing and quote a catch-up, and it's always cheaper to file before the BIR sends a notice."
+  },
+  {
+    "slug": "payroll-2316",
+    "title": "Payroll, withholding on compensation and Form 2316",
+    "category": "Payroll",
+    "summary": "We file 1601-C every month and prepare each employee's Form 2316 by January 31.",
+    "body": "If you have employees, send us your payroll summary for the month by the 5th. We compute the tax withheld from salaries and file Form 1601-C by the 10th.\n\nBy January 31 we prepare Form 2316 for each employee, showing their pay and the tax withheld for the year. You give a signed copy to each employee. We also file the annual Form 1604-C for you.\n\nTell us the same month when someone joins or leaves, so their Form 2316 and final pay are right."
+  },
+  {
+    "slug": "close-business",
+    "title": "Closing your business or moving to another accountant",
+    "category": "Registration",
+    "summary": "Closing a business needs BIR clearance. Moving accountants needs a handover of your books.",
+    "body": "To close a business with the BIR, we file the registration update to close your registration, list your remaining inventory and unused invoices, and file any returns still due. The BIR usually reviews your open years before it lets you close, so it can take a few months. Closing is quoted separately.\n\nIf you are moving to another accountant, give us 30 days' notice. We hand over your books, your filed returns and payment confirmations, and your BIR login details for the new accountant."
+  }
+]

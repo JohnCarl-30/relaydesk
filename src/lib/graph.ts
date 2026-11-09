@@ -10,6 +10,7 @@ import {
   type ConversationTurn,
 } from "./conversation-context";
 import {
+  asksAboutOwnRecords,
   CONFIDENT_MIN_SCORE,
   isRefusal,
   isVisitorEscalation,
@@ -212,16 +213,20 @@ function refuseBeforeModel(
   hits: Hit[],
 ): { refused?: RagResult; attrs: SpanAttrs } {
   const explicitEscalation = isVisitorEscalation(resolved.asked);
+  const ownRecords = asksAboutOwnRecords(resolved.asked);
   const unsupportedAnchors = resolved.contextualized
     ? unsupportedExplicitAnchors(resolved.asked, hits)
     : [];
   const unpricedQuestion = unsupportedPriceQuestion(resolved.asked, hits[0]);
   const attrs: SpanAttrs = {
     "generate.explicit_escalation": explicitEscalation,
+    "generate.own_records": ownRecords,
     "generate.unsupported_anchors": unsupportedAnchors.join(","),
     "generate.unsupported_price": unpricedQuestion,
   };
-  if (!explicitEscalation && unsupportedAnchors.length === 0 && !unpricedQuestion) return { attrs };
+  if (!explicitEscalation && !ownRecords && unsupportedAnchors.length === 0 && !unpricedQuestion) {
+    return { attrs };
+  }
   return {
     refused: { answer: centerRefuseLine(center), citations: [], confident: false, usedLlm: false, escalated: true },
     attrs,
