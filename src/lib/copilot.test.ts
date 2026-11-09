@@ -118,6 +118,16 @@ describe("runCopilot without a model", () => {
     assert.equal(db.getPendingDraft(ticket.id)?.id, second.id);
   });
 
+  it("decides a draft once, so a double-clicked Send replies once", async () => {
+    const ticket = ticketFrom(didntHelp);
+    const draft = (await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created")).draft;
+    assert.ok(draft);
+    assert.equal(db.decideDraft(draft.id, { status: "sent", finalBody: draft.body }), true);
+    assert.equal(db.decideDraft(draft.id, { status: "sent", finalBody: draft.body }), false);
+    assert.equal(db.decideDraft(draft.id, { status: "rejected", rejectReason: "other" }), false);
+    assert.equal(db.getDraft(DEMO_BUSINESS_ID, draft.id)?.status, "sent");
+  });
+
   it("does nothing when switched off", async () => {
     const ticket = ticketFrom(didntHelp);
     db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "off");

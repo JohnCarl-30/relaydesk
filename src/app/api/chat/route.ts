@@ -6,6 +6,7 @@ import {
   getConversation,
   getTicketByConversation,
   listMessages,
+  updateTicket,
 } from "@/lib/db";
 import { loadLiveHelpCenter, type HelpCenter } from "@/lib/business";
 import { runCopilot } from "@/lib/copilot";
@@ -111,6 +112,8 @@ export async function POST(request: Request) {
   });
   const conversation = getConversation(businessId, conversationId);
   let ticket = getTicketByConversation(conversationId);
+  // The customer wrote again, so their ticket goes back to open and to the top of the inbox.
+  if (ticket) ticket = updateTicket(businessId, ticket.id, { status: "open" });
   let reply = rag.answer;
   if (rag.escalated) {
     if (!ticket) {

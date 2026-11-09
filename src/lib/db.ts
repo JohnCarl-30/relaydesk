@@ -630,21 +630,24 @@ export function getDraft(businessId: string, id: string): AgentDraft | undefined
     .get(id, businessId) as AgentDraft | undefined;
 }
 
+/** Records the decision on a pending draft. False when it was already decided, say by a double-click. */
 export function decideDraft(
   id: string,
   decision: { status: "sent" | "edited" | "rejected"; finalBody?: string; rejectReason?: string },
-) {
-  db()
-    .prepare(
-      "UPDATE agent_drafts SET status = ?, final_body = ?, reject_reason = ?, decided_at = ? WHERE id = ?",
-    )
-    .run(
-      decision.status,
-      decision.finalBody ?? null,
-      decision.rejectReason ?? null,
-      new Date().toISOString(),
-      id,
-    );
+): boolean {
+  return (
+    db()
+      .prepare(
+        "UPDATE agent_drafts SET status = ?, final_body = ?, reject_reason = ?, decided_at = ? WHERE id = ? AND status = 'pending'",
+      )
+      .run(
+        decision.status,
+        decision.finalBody ?? null,
+        decision.rejectReason ?? null,
+        new Date().toISOString(),
+        id,
+      ).changes === 1
+  );
 }
 
 export function recordRun(run: Omit<AgentRun, "id" | "created_at">): AgentRun {
