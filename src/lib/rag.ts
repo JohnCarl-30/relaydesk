@@ -314,6 +314,25 @@ function citationsFromHits(hits: Hit[]): Citation[] {
   return citations;
 }
 
+/**
+ * Text written to the bot rather than the reader: "Note to the AI assistant…",
+ * "ignore your previous instructions". A help article never needs either.
+ */
+const ADDRESSES_THE_BOT =
+  /\b(?:ignore|disregard|forget|override)\s+(?:all\s+|any\s+)?(?:(?:your|the|my)\s+)?(?:previous\s+|prior\s+|above\s+|other\s+|earlier\s+)?(?:instructions|prompts?|rules|guidelines)\b|\b(?:to|for)\s+(?:the\s+|any\s+)?(?:AI|assistant|chatbot|bot|LLM|language model)\b|\b(?:AI|assistant|chatbot|bot|language model)s?\s+(?:reading|processing)\s+this\b/i;
+
+/**
+ * Drops each paragraph that talks to the bot, so a planted instruction is never quoted,
+ * along with the sentences around it in the same paragraph.
+ * shortcut: a planted line inside an otherwise real paragraph takes that paragraph with it.
+ */
+export function withoutBotInstructions(text: string): string {
+  return text
+    .split(/\n\s*\n/)
+    .filter((para) => !ADDRESSES_THE_BOT.test(para))
+    .join("\n\n");
+}
+
 export function extractiveAnswer(
   question: string,
   hits: Hit[],
@@ -344,7 +363,7 @@ export function extractiveAnswer(
   const source = top.chunkId
     ? top.text.replace(`${top.article.title}\n\n`, "")
     : top.article.body;
-  const sentences = source
+  const sentences = withoutBotInstructions(source)
     .split(/(?<=[.!?])\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
@@ -356,6 +375,10 @@ export function extractiveAnswer(
     (a, b) => overlap(b, focus) - overlap(a, focus) || overlap(b, q) - overlap(a, q),
   );
   const picked = ranked.slice(0, 2).join(" ");
+  if (!picked) {
+    // The top hit was nothing but a planted instruction: nothing safe to quote.
+    return { answer: refuseLine, citations: [], confident: false, usedLlm: false, escalated: false };
+  }
   return {
     answer: picked,
     citations: citationsFromHits(hits),
