@@ -70,25 +70,6 @@ If SSO loops, check that the ACS URL has no trailing slash and that the user exi
 JIT provisioning is off by default; turn it on only if you want first-time SSO users created as viewers.`,
   },
   {
-    slug: "api-keys",
-    title: "API keys and rate limits",
-    category: "Developers",
-    summary: "Project keys ingest events. Workspace keys read data.",
-    body: `Project write keys send events. Workspace read keys query data and cannot ingest events.
-
-Project write key: used by the JS snippet and server SDKs to send events. It can only write. Rotate it from Project → API.
-
-Workspace read key: used for the query API and CSV exports. It cannot ingest events. Treat it like a password.
-
-Write keys are limited to 100 requests / second per write key. Read keys are limited to 10 / second per read key.
-
-Burst above that returns HTTP 429 with Retry-After.
-
-Keys created before March 2025 share a workspace-wide 50 rps cap; create a new key to get the current limits.
-
-Never ship a read key in frontend code.`,
-  },
-  {
     slug: "data-retention",
     title: "How long Starter and Growth keep raw events",
     category: "Privacy",
