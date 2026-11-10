@@ -1,9 +1,17 @@
 import { after, NextResponse } from "next/server";
+import { z } from "zod";
+import { readBody } from "@/lib/api";
 import { currentStaff } from "@/lib/auth";
 import { decideDraft, getBusiness, getDraft, sendDraft } from "@/lib/db";
 import { notifyCustomerReply } from "@/lib/notify";
 
 const REJECT_REASONS = ["wrong", "not_helpful", "tone", "other"] as const;
+
+const Decision = z.object({
+  action: z.enum(["send", "reject"], "action must be send or reject"),
+  body: z.string().max(10_000).optional(),
+  reason: z.string().max(40).optional(),
+});
 
 /**
  * The only path from a co-pilot draft to the customer. Staff send it as is or
@@ -26,7 +34,9 @@ export async function POST(
     return NextResponse.json({ error: `draft is ${draft.status}` }, { status: 409 });
   }
 
-  const body = (await request.json()) as { action?: string; body?: string; reason?: string };
+  const read = await readBody(request, Decision);
+  if ("error" in read) return read.error;
+  const body = read.data;
   if (body.action === "send") {
     const finalBody = body.body?.trim() || draft.body;
     // Of two clicks that both read "pending" above, only one sends.
@@ -36,12 +46,9 @@ export async function POST(
     after(() => notifyCustomerReply({ businessId: staff.business_id, businessName, ticket, body: finalBody }));
     return NextResponse.json({ ticket });
   }
-  if (body.action === "reject") {
-    const reason = REJECT_REASONS.find((r) => r === body.reason) ?? "other";
-    if (!decideDraft(draft.id, { status: "rejected", rejectReason: reason })) {
-      return NextResponse.json({ error: "draft is already decided" }, { status: 409 });
-    }
-    return NextResponse.json({ ok: true });
+  const reason = REJECT_REASONS.find((r) => r === body.reason) ?? "other";
+  if (!decideDraft(draft.id, { status: "rejected", rejectReason: reason })) {
+    return NextResponse.json({ error: "draft is already decided" }, { status: 409 });
   }
-  return NextResponse.json({ error: "action must be send or reject" }, { status: 400 });
+  return NextResponse.json({ ok: true });
 }

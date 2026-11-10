@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { notFound, readBody, unauthorized } from "@/lib/api";
+import { chatRateLimited, notFound, readBody, unauthorized } from "@/lib/api";
 import { currentStaff } from "@/lib/auth";
 import { loadHelpCenter } from "@/lib/business";
 import { answerQuestion } from "@/lib/graph";
@@ -20,6 +20,9 @@ const Preview = z.object({
 export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return unauthorized();
+  // It runs the model like the widget does, and the public demo's login is printed on the login page.
+  const limited = chatRateLimited(request, "preview:");
+  if (limited) return limited;
   const center = loadHelpCenter(staff.business_id);
   if (!center) return notFound();
   const body = await readBody(request, Preview);

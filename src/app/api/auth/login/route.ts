@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
-import { authRateLimited } from "@/lib/api";
+import { z } from "zod";
+import { authRateLimited, readBody } from "@/lib/api";
 import { cameOverHttps, startSession } from "@/lib/auth";
 import { checkStaffLogin } from "@/lib/db";
+
+// Capped because the password goes through scrypt, which blocks the server while it runs.
+const Login = z.object({ email: z.string().max(200), password: z.string().max(200) });
 
 export async function POST(request: Request) {
   const limited = authRateLimited(request);
   if (limited) return limited;
-  const body = (await request.json()) as { email?: string; password?: string };
-  const staff = checkStaffLogin(body.email ?? "", body.password ?? "");
+  const body = await readBody(request, Login);
+  if ("error" in body) return body.error;
+  const staff = checkStaffLogin(body.data.email, body.data.password);
   if (!staff) {
     return NextResponse.json({ error: "wrong email or password" }, { status: 401 });
   }

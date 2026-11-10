@@ -404,6 +404,7 @@ export function Widget({
             <div className="flex items-center gap-2">
               <input
                 aria-label="Message"
+                maxLength={2000}
                 value={hearing ? voice.interim : input}
                 onChange={(e) => setInput(e.target.value)}
                 readOnly={hearing}

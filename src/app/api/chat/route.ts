@@ -1,4 +1,6 @@
 import { after, NextResponse } from "next/server";
+import { z } from "zod";
+import { chatRateLimited, Email, readBody } from "@/lib/api";
 import {
   addMessage,
   createConversation,
@@ -15,7 +17,6 @@ import { answerQuestion } from "@/lib/graph";
 import { slugForTitle } from "@/lib/help-center";
 import { notifyNewTicket } from "@/lib/notify";
 import { publicOrigin } from "@/lib/origin";
-import { allowRequest, CHAT_PER_MINUTE, clientIp } from "@/lib/rate-limit";
 import { parseChannel } from "@/lib/voice";
 
 /*
@@ -23,9 +24,18 @@ import { parseChannel } from "@/lib/voice";
  * conversation id only resolves inside that business.
  */
 
+// The message is saved, searched and sent to the model, so its length is the visitor's to abuse.
+const ChatMessage = z.object({
+  business: z.string().trim().max(100).optional(),
+  conversationId: z.string().max(100).nullish(),
+  message: z.string().trim().min(1, "write a message first").max(2_000, "keep it under 2,000 characters"),
+  email: Email.optional(),
+  /** "voice" when the widget transcribed the message from speech. */
+  channel: z.string().max(20).optional(),
+});
+
 function ticketEmail(bodyEmail: string | undefined, visitorEmail: string | null): string {
-  const fromBody = bodyEmail?.trim().toLowerCase();
-  if (fromBody?.includes("@")) return fromBody;
+  if (bodyEmail) return bodyEmail;
   if (visitorEmail?.includes("@")) return visitorEmail;
   return PENDING_TICKET_EMAIL;
 }
@@ -71,28 +81,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   // Before any work, so a flood never reaches the model.
-  if (!allowRequest(clientIp(request.headers), Number(process.env.RELAYDESK_CHAT_PER_MINUTE) || CHAT_PER_MINUTE)) {
-    return NextResponse.json(
-      { error: "You're sending messages too fast. Wait a minute and try again." },
-      { status: 429, headers: { "Retry-After": "60" } },
-    );
-  }
-  const body = (await request.json()) as {
-    business?: string;
-    conversationId?: string;
-    message?: string;
-    email?: string;
-    /** "voice" when the widget transcribed the message from speech. */
-    channel?: string;
-  };
-  const business = body.business?.trim();
-  const center = business ? loadLiveHelpCenter(business) : undefined;
-  if (!center) return unknownBusiness(business);
+  const limited = chatRateLimited(request);
+  if (limited) return limited;
+  const read = await readBody(request, ChatMessage);
+  if ("error" in read) return read.error;
+  const body = read.data;
+  const center = body.business ? loadLiveHelpCenter(body.business) : undefined;
+  if (!center) return unknownBusiness(body.business);
   const businessId = center.businessId;
-  const text = body.message?.trim() ?? "";
-  if (!text) {
-    return NextResponse.json({ error: "message required" }, { status: 400 });
-  }
+  const text = body.message;
 
   let conversationId = body.conversationId;
   if (!conversationId || !getConversation(businessId, conversationId)) {

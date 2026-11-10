@@ -16,7 +16,8 @@ export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return unauthorized();
   if (isPublicDemo(staff)) return demoReadOnly();
-  const body = await readBody(request, Import);
+  // 500,000 characters of a non-Latin script pass the default 1 MB.
+  const body = await readBody(request, Import, 4_000_000);
   if ("error" in body) return body.error;
   let articles;
   try {
