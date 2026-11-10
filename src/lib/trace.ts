@@ -120,18 +120,80 @@ export function langfuseProcessor(env: LangfuseEnv = process.env): LangfuseSpanP
 }
 
 /**
- * Sends every relaydesk span to TraceRoot when TRACEROOT_API_KEY is set. Its ingest
+ * The span as TraceRoot should see it, without changing the span the other processors
+ * share: input and output also under OpenInference's `input.value` / `output.value`,
+ * which TraceRoot reads (it doesn't read Langfuse's names), and no parent when `reroot`.
+ */
+function forTraceRoot(span: ReadableSpan, reroot: boolean): ReadableSpan {
+  const attrs = span.attributes;
+  const attributes = {
+    ...attrs,
+    ...(attrs["input.value"] === undefined && attrs["langfuse.observation.input"] !== undefined
+      ? { "input.value": attrs["langfuse.observation.input"] }
+      : {}),
+    ...(attrs["output.value"] === undefined && attrs["langfuse.observation.output"] !== undefined
+      ? { "output.value": attrs["langfuse.observation.output"] }
+      : {}),
+  };
+  return new Proxy(span, {
+    get(target, key) {
+      if (key === "attributes") return attributes;
+      if (key === "parentSpanContext" && reroot) return undefined;
+      const value = Reflect.get(target, key, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
+/**
+ * Passes TraceRoot relaydesk's own spans only, so Next.js's request spans (page loads,
+ * the widget's polling) stay out. A relaydesk span whose parent is not a relaydesk span
+ * still open is sent as a root: TraceRoot finds a trace's root by its missing parent,
+ * so a parent that never arrives would hide the trace.
+ * shortcut: a child that outlives its relaydesk parent is re-rooted too; nothing does that today.
+ */
+export class TraceRootSpanProcessor implements SpanProcessor {
+  private readonly open = new Set<string>();
+
+  constructor(private readonly next: SpanProcessor) {}
+
+  onStart(span: Parameters<SpanProcessor["onStart"]>[0], context: Parameters<SpanProcessor["onStart"]>[1]): void {
+    if (span.instrumentationScope.name !== TRACER_NAME) return;
+    this.open.add(span.spanContext().spanId);
+    this.next.onStart(span, context);
+  }
+
+  onEnd(span: ReadableSpan): void {
+    if (span.instrumentationScope.name !== TRACER_NAME) return;
+    const parentId = span.parentSpanContext?.spanId;
+    this.open.delete(span.spanContext().spanId);
+    this.next.onEnd(forTraceRoot(span, parentId !== undefined && !this.open.has(parentId)));
+  }
+
+  forceFlush(): Promise<void> {
+    return this.next.forceFlush();
+  }
+
+  shutdown(): Promise<void> {
+    return this.next.shutdown();
+  }
+}
+
+/**
+ * Sends relaydesk's spans to TraceRoot when TRACEROOT_API_KEY is set. Its ingest
  * takes OTLP protobuf only, hence the proto exporter. Spans arrive redacted, because
  * initTracing puts RedactingSpanProcessor first and processors run in order.
  */
-export function traceRootProcessor(env: LangfuseEnv = process.env): BatchSpanProcessor | undefined {
+export function traceRootProcessor(env: LangfuseEnv = process.env): TraceRootSpanProcessor | undefined {
   if (!env.TRACEROOT_API_KEY) return undefined;
   const host = (env.TRACEROOT_HOST_URL || "https://app.traceroot.ai").replace(/\/$/, "");
-  return new BatchSpanProcessor(
-    new OTLPTraceExporter({
-      url: `${host}/api/v1/public/traces`,
-      headers: { Authorization: `Bearer ${env.TRACEROOT_API_KEY}` },
-    }),
+  return new TraceRootSpanProcessor(
+    new BatchSpanProcessor(
+      new OTLPTraceExporter({
+        url: `${host}/api/v1/public/traces`,
+        headers: { Authorization: `Bearer ${env.TRACEROOT_API_KEY}` },
+      }),
+    ),
   );
 }
 
