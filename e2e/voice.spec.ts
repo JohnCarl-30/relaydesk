@@ -313,4 +313,5 @@ test("the public demo login can't change setup", async ({ page }) => {
   await signIn(page);
   const res = await page.request.post("/api/voice", { data: { provider: "browser" } });
   expect(res.status()).toBe(403);
+  expect((await page.request.post("/api/copilot", { data: { enabled: false } })).status()).toBe(403);
 });

@@ -16,13 +16,16 @@ function needsReview(ticket: Ticket): boolean {
 function CopilotToggle({ on }: { on: boolean }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [refused, setRefused] = useState<string | null>(null);
   async function toggle() {
     setPending(true);
-    await fetch("/api/copilot", {
+    const res = await fetch("/api/copilot", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled: !on }),
     });
+    // The public demo can't switch it, and a switch that ignores the click looks broken.
+    setRefused(res.ok ? null : (((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? "Couldn't change that."));
     setPending(false);
     router.refresh();
   }
@@ -36,7 +39,7 @@ function CopilotToggle({ on }: { on: boolean }) {
       className="flex items-center gap-1.5 text-[11px] text-muted transition-colors hover:text-ink disabled:opacity-50"
     >
       <span className={`h-1.5 w-1.5 rounded-full ${on ? "bg-forest" : "bg-line"}`} aria-hidden />
-      AI drafts {on ? "on" : "off"}
+      {refused ? <span role="alert">{refused}</span> : `AI drafts ${on ? "on" : "off"}`}
     </button>
   );
 }

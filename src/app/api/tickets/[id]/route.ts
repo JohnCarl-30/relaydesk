@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { readBody } from "@/lib/api";
 import { getTicket, listMessages, updateTicket } from "@/lib/db";
 import { checkTicketPatch } from "@/lib/ticket-patch";
 import { currentStaff } from "@/lib/auth";
@@ -29,8 +31,10 @@ export async function PATCH(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
-  const body = (await request.json()) as { status?: unknown; assignee?: unknown };
-  const checked = checkTicketPatch(staff.business_id, body);
+  // checkTicketPatch does the checking; this is for the size limit.
+  const body = await readBody(request, z.object({ status: z.unknown().optional(), assignee: z.unknown().optional() }));
+  if ("error" in body) return body.error;
+  const checked = checkTicketPatch(staff.business_id, body.data);
   if ("error" in checked) {
     return NextResponse.json({ error: checked.error }, { status: 400 });
   }

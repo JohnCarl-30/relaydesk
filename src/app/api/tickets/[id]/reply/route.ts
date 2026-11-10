@@ -1,7 +1,12 @@
 import { after, NextResponse } from "next/server";
+import { z } from "zod";
+import { readBody } from "@/lib/api";
 import { getBusiness, replyToTicket } from "@/lib/db";
 import { currentStaff } from "@/lib/auth";
 import { notifyCustomerReply } from "@/lib/notify";
+
+/** A reply is saved, shown in the widget and emailed, so it has a length a person would write. */
+const Reply = z.string().trim().min(1, "write a reply first").max(10_000);
 
 export async function POST(
   request: Request,
@@ -12,11 +17,9 @@ export async function POST(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
-  const body = (await request.json()) as { body?: string };
-  const text = body.body?.trim() ?? "";
-  if (!text) {
-    return NextResponse.json({ error: "body required" }, { status: 400 });
-  }
+  const body = await readBody(request, z.object({ body: Reply }));
+  if ("error" in body) return body.error;
+  const text = body.data.body;
   const ticket = replyToTicket(staff.business_id, id, text, staff.name);
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
