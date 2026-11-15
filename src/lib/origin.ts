@@ -8,7 +8,8 @@ export async function publicOrigin(): Promise<string> {
   const fromEnv = process.env.RELAYDESK_PUBLIC_URL?.replace(/\/+$/, "");
   if (fromEnv) return fromEnv;
   const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  // Not X-Forwarded-Host: a visitor can set it, and this origin goes into staff emails as a link.
+  const host = h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
   return `${proto}://${host}`;
 }

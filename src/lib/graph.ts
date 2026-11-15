@@ -31,6 +31,7 @@ import {
   type Hit,
   type RagResult,
 } from "./rag";
+import { modelBudgetLeft, recordModelCall } from "./rate-limit";
 import { fetchToolModel, runAgent, type ToolModel } from "./agent";
 import { generationAttributes, initTracing, withSpan } from "./trace";
 import type { Channel } from "./voice";
@@ -108,8 +109,10 @@ export function generateSystem(businessName: string, refuseLine: string): string
   return `You are the ${businessName} support assistant on a customer site. Answer only from the provided help articles. Be short. Answer whatever the articles let you answer, including answers you can infer from them (for example, a feature limited to some plans is not on the others). If nothing in the articles bears on the question, reply with exactly: ${refuseLine} Keep that line in English, word for word. Otherwise answer in English, unless the question itself is written in Tagalog or Taglish; then answer the same way. Mention article titles naturally, as written. Do not invent policies, prices, or product behavior.`;
 }
 
+/** A model is configured and today's budget isn't spent. Over it, everything answers as if keyless. */
 export function hasLlm(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY) || process.env.RELAYDESK_STUB_LLM === "1";
+  if (process.env.OPENAI_API_KEY) return modelBudgetLeft();
+  return process.env.RELAYDESK_STUB_LLM === "1";
 }
 
 export function usingStubLlm(): boolean {
@@ -145,6 +148,7 @@ export function chatModel(temperature = 0.2): ChatLike {
     // The visitor is waiting: give up after one retry instead of the default backoff, which ran for minutes.
     maxRetries: 1,
     timeout: 10_000,
+    callbacks: [{ handleLLMStart: () => recordModelCall() }],
     apiKey: process.env.OPENAI_API_KEY,
     ...(base ? { configuration: { baseURL: base } } : {}),
   }) as ChatLike;

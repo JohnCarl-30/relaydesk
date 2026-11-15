@@ -60,6 +60,16 @@ describe("backups", () => {
     assert.deepEqual(fs.readdirSync(dir), [backup.name]);
   });
 
+  it("never leaves a half-written snapshot under a backup's name", async () => {
+    const dir = join(root, "partial");
+    const at = new Date("2026-10-23T20:00:00Z");
+    const { file } = await createBackup(dbPath, dir, at);
+    fs.rmSync(file);
+    fs.mkdirSync(`${file}.part`); // the gzip can't write there, so this run fails partway
+    await assert.rejects(createBackup(dbPath, dir, at));
+    assert.deepEqual(listBackups(dir), []);
+  });
+
   it("keeps only the newest snapshots", async () => {
     for (const day of ["24", "25", "26"]) {
       await createBackup(dbPath, backups, new Date(`2026-10-${day}T18:00:00Z`));
