@@ -123,6 +123,17 @@ describe("staff invites", () => {
     assert.equal(db.findInvite(token), undefined);
   });
 
+  it("takes a removed teammate's MCP tokens and pending invites with them, and only the owner may remove", () => {
+    const eve = db.createStaff({ businessId: "bean-there", email: "eve@beanthere.ph", name: "Eve", password: "a long password" });
+    assert.equal(db.isOwner(owner()), true);
+    assert.equal(db.isOwner(eve), false);
+    db.createMcpToken({ businessId: "bean-there", name: "Eve's Claude", createdBy: eve.id });
+    const { invite } = db.createInvite({ businessId: "bean-there", email: "mallory@evil.test", invitedBy: eve.id });
+    assert.equal(db.removeStaff("bean-there", eve.id), true);
+    assert.ok(!db.listMcpTokens("bean-there").some((t) => t.created_by === eve.id));
+    assert.ok(!db.listPendingInvites("bean-there").some((i) => i.id === invite.id));
+  });
+
   it("removes a teammate only within the business", () => {
     const ben = db.getStaffByEmail("ben@beanthere.ph")!;
     assert.equal(db.removeStaff("nimbus", ben.id), false);

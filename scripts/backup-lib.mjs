@@ -68,6 +68,9 @@ export async function createBackup(dbPath, dir, now = new Date()) {
   const name = `${BACKUP_PREFIX}${stamp(now)}${BACKUP_SUFFIX}`;
   const raw = path.join(dir, `.${name}.tmp`);
   const file = path.join(dir, name);
+  // Gzipped here first and renamed when complete, so a failed write never sits under a name
+  // that listBackups, pruning and restore --latest would take for a good snapshot.
+  const partial = `${file}.part`;
   const source = new Database(dbPath, { fileMustExist: true });
   try {
     await source.backup(raw);
@@ -78,9 +81,11 @@ export async function createBackup(dbPath, dir, now = new Date()) {
     const integrity = integrityOf(raw);
     if (integrity !== "ok") throw new Error(`snapshot failed integrity_check: ${integrity}`);
     const counts = summarize(raw);
-    await pipeline(fs.createReadStream(raw), zlib.createGzip({ level: 9 }), fs.createWriteStream(file));
+    await pipeline(fs.createReadStream(raw), zlib.createGzip({ level: 9 }), fs.createWriteStream(partial));
+    fs.renameSync(partial, file);
     return { file, name, bytes: fs.statSync(file).size, counts };
   } finally {
+    fs.rmSync(partial, { force: true });
     fs.rmSync(raw, { force: true });
     removeSidecars(raw);
   }

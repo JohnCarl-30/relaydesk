@@ -14,7 +14,7 @@ What to check and do when something is wrong, and how to host it. Production is 
 | Model | Optional. Without a key everything still works without a model. | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (default `gpt-4o-mini`) |
 | Businesses | `businesses`, `articles`, `staff`, `invites` tables; Nimbus is seeded | `/signup` (gate it with `RELAYDESK_SIGNUP_CODE`), or `scripts/add-business.ts`. `businesses.live = 0` hides one from the public |
 | MCP | `/api/mcp`, Streamable HTTP, stateless | Per-business tokens in `mcp_tokens` (hashed; **Setup** to create or revoke). `RELAYDESK_MCP_TOKEN` is the Nimbus demo's. 404 when neither exists |
-| Public URL | Embed snippets and invite links | `RELAYDESK_PUBLIC_URL`, else the request's `Host` / `X-Forwarded-Host` |
+| Public URL | Embed snippets, invite links, links in staff emails | `RELAYDESK_PUBLIC_URL`, else the request's `Host` (never `X-Forwarded-Host`, which visitors can set) |
 | Staff login | `/login`, email + password, signed 7-day cookie | Nimbus demo: `staff@nimbus.demo` / `RELAYDESK_ADMIN_PASSWORD` (default `nimbus-demo`). Signing key: `RELAYDESK_SESSION_SECRET`, else one generated into `settings` |
 | Co-pilot | Drafts on every new ticket | **AI drafts on/off** in the inbox header, or `business_settings` key `copilot` |
 | CI | `.github/workflows/test.yml` | `npm test`, `npm run test:e2e` |
@@ -98,7 +98,7 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
 
 - **Rotate the demo login:** change `RELAYDESK_ADMIN_PASSWORD` and restart; the Nimbus demo staff password is re-hashed on start.
 - **Sign everyone out:** change `RELAYDESK_SESSION_SECRET` (or, without it, delete the `session_secret` row from `settings`) and restart. Sessions are signed with it, so old cookies stop working.
-- **Remove someone:** **Team** → **Remove**, or `DELETE FROM staff WHERE email = '...'`. Their session stops working on the next request.
+- **Remove someone:** **Team** → **Remove** (only the business's first login, the one that signed up, can do this). Their session stops working on the next request, and their MCP tokens and unaccepted invites are deleted with them.
 - **Known limit:** there is no password reset. Remove the login and send a new invite, or add one with `scripts/add-business.ts --id <business> --staff-email <email>`.
 
 ## Rollback

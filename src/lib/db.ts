@@ -203,6 +203,9 @@ function open(): Database.Database {
   db.exec(`
     CREATE INDEX IF NOT EXISTS tickets_by_business ON tickets (business_id, updated_at);
     CREATE INDEX IF NOT EXISTS conversations_by_business ON conversations (business_id);
+    CREATE INDEX IF NOT EXISTS messages_by_conversation ON messages (conversation_id, created_at);
+    CREATE INDEX IF NOT EXISTS tickets_by_conversation ON tickets (conversation_id);
+    CREATE INDEX IF NOT EXISTS drafts_by_ticket ON agent_drafts (ticket_id, status);
   `);
   seedDemoBusiness(db);
   seedIfEmpty(db);
@@ -920,12 +923,28 @@ export function getStaffByEmail(email: string): Staff | undefined {
     .get(email.trim().toLowerCase()) as Staff | undefined;
 }
 
-/** Removes a login. Their open session stops working on the next request. */
+/**
+ * Removes a login. Their open session stops working on the next request, and the MCP tokens and
+ * unaccepted invites they made go with it, so neither keeps a way back in.
+ */
 export function removeStaff(businessId: string, id: string): boolean {
-  return (
-    db().prepare("DELETE FROM staff WHERE business_id = ? AND id = ?").run(businessId, id)
-      .changes > 0
-  );
+  return db().transaction(() => {
+    const removed = db().prepare("DELETE FROM staff WHERE business_id = ? AND id = ?").run(businessId, id).changes > 0;
+    if (!removed) return false;
+    db().prepare("DELETE FROM mcp_tokens WHERE business_id = ? AND created_by = ?").run(businessId, id);
+    db()
+      .prepare("DELETE FROM invites WHERE business_id = ? AND invited_by = ? AND accepted_at IS NULL")
+      .run(businessId, id);
+    return true;
+  })();
+}
+
+/** The business's first login, made at sign-up. Only they can remove teammates. */
+export function isOwner(staff: { id: string; business_id: string }): boolean {
+  const first = db()
+    .prepare("SELECT id FROM staff WHERE business_id = ? ORDER BY created_at, id LIMIT 1")
+    .get(staff.business_id) as { id: string } | undefined;
+  return first?.id === staff.id;
 }
 
 export function getStaff(businessId: string, id: string): Staff | undefined {
