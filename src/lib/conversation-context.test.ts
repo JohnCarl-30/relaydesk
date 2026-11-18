@@ -25,7 +25,7 @@ const GROWTH_QUOTA = [
 
 describe("follow-up answers without a model", () => {
   it("replies to thanks without escalating", async () => {
-    for (const text of ["Thanks!", "Got it, perfect", "ok thank you so much"]) {
+    for (const text of ["Thanks!", "Got it, perfect", "ok thank you so much", "Salamat po!", "Maraming salamat po", "no thanks, bye"]) {
       const result = await answerQuestion(text, { history: GROWTH_QUOTA });
       assert.equal(result.answer, ACKNOWLEDGEMENT_REPLY, text);
       assert.equal(result.escalated, false, text);
@@ -96,6 +96,14 @@ describe("isAcknowledgement", () => {
     assert.equal(isAcknowledgement("thanks, but what about Scale?"), false);
     assert.equal(isAcknowledgement("this didn't help"), false);
     assert.equal(isAcknowledgement("that?"), false);
+    assert.equal(isAcknowledgement("salamat, pero magkano ang Growth?"), false);
+    assert.equal(isAcknowledgement("no"), false);
+  });
+
+  it("knows Taglish thanks", () => {
+    for (const text of ["Salamat po!", "ok salamat", "sige po", "Ayos, salamat na po"]) {
+      assert.equal(isAcknowledgement(text), true, text);
+    }
   });
 });
 

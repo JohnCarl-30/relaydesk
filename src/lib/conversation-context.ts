@@ -30,12 +30,14 @@ const CONTEXT_REFERENCE =
 const CONTEXT_OPENING = /^(and|also|but|what about|how about)\b/i;
 const STANDALONE_OPENING = /^(is|are|do|does|can|could|where|when|why)\b/i;
 
-// "Thanks", "ok great", "got it, perfect": nothing to retrieve, nothing to escalate.
+// "Thanks", "ok great", "got it, perfect", "salamat po", "no thanks, bye": nothing to retrieve, nothing to escalate.
 const ACKNOWLEDGEMENTS = new Set([
   "alright",
   "appreciate",
   "appreciated",
   "awesome",
+  "ayos",
+  "bye",
   "cheers",
   "cool",
   "good",
@@ -49,7 +51,9 @@ const ACKNOWLEDGEMENTS = new Set([
   "ok",
   "okay",
   "perfect",
+  "salamat",
   "sense",
+  "sige",
   "thank",
   "thanks",
   "thx",
@@ -62,7 +66,11 @@ const ACKNOWLEDGEMENT_FILLER = new Set([
   "it",
   "lot",
   "makes",
+  "maraming",
   "much",
+  "na",
+  "no",
+  "po",
   "right",
   "s",
   "so",

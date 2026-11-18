@@ -123,13 +123,12 @@ export async function POST(request: Request) {
       ticket = created;
       // Draft after the response is sent, so the visitor never waits on it.
       after(async () => {
-        await notifyNewTicket({
-          businessId,
-          businessName: center.name,
-          ticket: created,
-          origin: await publicOrigin(),
-        });
-        await runCopilot(businessId, created.id, "ticket_created");
+        const origin = await publicOrigin();
+        // Side by side: a slow or failing email must not hold up or skip the draft.
+        await Promise.allSettled([
+          notifyNewTicket({ businessId, businessName: center.name, ticket: created, origin }),
+          runCopilot(businessId, created.id, "ticket_created"),
+        ]);
       });
     }
     if (ticket) {

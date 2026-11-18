@@ -31,7 +31,7 @@ export const COPILOT_SETTING = "copilot";
 export const MAX_RUNS_PER_DAY = 5;
 
 export type CopilotTrigger = "ticket_created" | "regenerate";
-export type CopilotOutcome = "answer" | "holding" | "disabled" | "rate_limited" | "error";
+export type CopilotOutcome = "answer" | "holding" | "disabled" | "rate_limited" | "stale" | "error";
 
 /** Why the ticket exists, which decides what kind of draft is safe. */
 export type EscalationReason =
@@ -257,6 +257,12 @@ export async function runCopilot(
         holdingDraft(context, sources);
       const intent = await classifyIntent(context, hasLlm() ? chatModel(0) : null);
 
+      // Staff replied, or the customer wrote again, while the model ran: this draft answers an older conversation.
+      // No await from here to setTicketTriage, so nothing can land in between.
+      if (listMessages(ticket.conversation_id).at(-1)?.id !== context.lastMessageId) {
+        log("stale", "The conversation moved on while drafting.");
+        return { outcome: "stale" };
+      }
       const draft = insertDraft({
         ticket_id: ticket.id,
         kind: drafted.kind,
