@@ -3,11 +3,8 @@ import { ARTICLES } from "../src/lib/articles";
 import { chunkArticles } from "../src/lib/chunks";
 import {
   buildCorpus,
-  DEMO_CORPUS,
   extractiveAnswer,
-  fuseRrf,
   retrieve,
-  retrieveDenseFromVecs,
 } from "../src/lib/rag";
 import { tokenize } from "../src/lib/tokenize";
 import { GOLDEN_QUESTIONS } from "./fixtures";
@@ -76,32 +73,5 @@ describe("answer", () => {
 
   bench("retrieve + extractiveAnswer golden set", () => {
     for (const question of GOLDEN_QUESTIONS) extractiveAnswer(question, retrieve(question));
-  });
-});
-
-describe("hybrid fusion", () => {
-  // Deterministic pseudo-embeddings, so dense scoring and RRF fusion run without loading a model.
-  const DIM = 384;
-  let seed = 42;
-  const rand = () => {
-    seed = (seed * 1103515245 + 12345) % 2147483648;
-    return seed / 2147483648 - 0.5;
-  };
-  const vec = () => Array.from({ length: DIM }, rand);
-  const rows = DEMO_CORPUS.chunks.map((chunk) => ({
-    article: chunk.article,
-    vec: vec(),
-    text: chunk.text,
-    chunkId: chunk.id,
-  }));
-  const queryVecs = GOLDEN_QUESTIONS.map(() => vec());
-  const lexical = GOLDEN_QUESTIONS.map((question) =>
-    retrieve(question, { unit: "chunk", k: DEMO_CORPUS.chunks.length }),
-  );
-
-  bench("dense scoring + fuseRrf golden set", () => {
-    queryVecs.forEach((queryVec, i) => {
-      fuseRrf(lexical[i], retrieveDenseFromVecs(queryVec, rows), 3);
-    });
   });
 });

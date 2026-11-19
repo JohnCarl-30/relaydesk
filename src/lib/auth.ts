@@ -1,5 +1,13 @@
 import { cookies } from "next/headers";
-import { demoSessionRevoked, getStaff, sessionSecret, type Staff } from "@/lib/db";
+import {
+  demoSessionRevoked,
+  getStaff,
+  isPublicDemo,
+  recordSignOut,
+  sessionSecret,
+  signedOutSince,
+  type Staff,
+} from "@/lib/db";
 import { decodeSession, encodeSession, SESSION_TTL_MS } from "@/lib/session";
 
 const COOKIE = "relaydesk_session";
@@ -8,7 +16,7 @@ const COOKIE = "relaydesk_session";
 export async function currentStaff(): Promise<Staff | null> {
   const jar = await cookies();
   const session = decodeSession(jar.get(COOKIE)?.value, sessionSecret());
-  if (!session || demoSessionRevoked(session)) return null;
+  if (!session || demoSessionRevoked(session) || signedOutSince(session)) return null;
   return getStaff(session.businessId, session.staffId) ?? null;
 }
 
@@ -36,6 +44,9 @@ export async function startSession(staff: Staff, options: { secure: boolean }) {
 }
 
 export async function endSession() {
+  const staff = await currentStaff();
+  // The public demo login is shared, so one visitor signing out must not sign out the others.
+  if (staff && !isPublicDemo(staff)) recordSignOut(staff);
   const jar = await cookies();
   jar.delete(COOKIE);
 }

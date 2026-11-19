@@ -109,6 +109,10 @@ export function generateSystem(businessName: string, refuseLine: string): string
   return `You are the ${businessName} support assistant on a customer site. Answer only from the provided help articles. Be short. Answer whatever the articles let you answer, including answers you can infer from them (for example, a feature limited to some plans is not on the others). If nothing in the articles bears on the question, reply with exactly: ${refuseLine} Keep that line in English, word for word. Otherwise answer in English, unless the question itself is written in Tagalog or Taglish; then answer the same way. Mention article titles naturally, as written. Do not invent policies, prices, or product behavior.`;
 }
 
+export function rewriteSystem(searchHint: string): string {
+  return `Rewrite the visitor question as a short help-center search query. Return only the query. ${searchHint}`;
+}
+
 /** A model is configured and today's budget isn't spent. Over it, everything answers as if keyless. */
 export function hasLlm(): boolean {
   if (process.env.OPENAI_API_KEY) return modelBudgetLeft();
@@ -353,8 +357,7 @@ async function rewriteNode(state: SupportStateType) {
     const messages = [
       {
         role: "system",
-        content:
-          `Rewrite the visitor question as a short help-center search query. Return only the query. ${state.center.searchHint}`,
+        content: rewriteSystem(state.center.searchHint),
       },
       { role: "user", content: state.resolved.prompt },
     ];

@@ -61,6 +61,18 @@ export function demoSessionRevoked(session: { businessId: string; expiresAt: num
   return session.expiresAt - SESSION_TTL_MS < Number(row?.value ?? 0);
 }
 
+const signedOutKey = (staffId: string) => `signed_out_at:${staffId}`;
+
+/** Signing out stamps the time, so a cookie started before it (a copy, another device) stops working too. */
+export function recordSignOut(staff: { id: string; business_id: string }, now = Date.now()) {
+  setSetting(staff.business_id, signedOutKey(staff.id), String(now));
+}
+
+export function signedOutSince(session: { staffId: string; businessId: string; expiresAt: number }): boolean {
+  const at = getSetting(session.businessId, signedOutKey(session.staffId));
+  return session.expiresAt - SESSION_TTL_MS < Number(at ?? 0);
+}
+
 /** True for Nimbus staff while the login still takes the printed password: they can work tickets but not change setup. */
 export function isPublicDemo(staff: { business_id: string }): boolean {
   return staff.business_id === DEMO_BUSINESS_ID && demoStaffPassword() === PUBLIC_DEMO_PASSWORD;
