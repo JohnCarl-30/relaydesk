@@ -187,6 +187,18 @@ describe("staff logins and sessions", () => {
     }
   });
 
+  it("signing out stops every cookie that staff member started before it", () => {
+    const staff = { id: "staff-signout", business_id: ACME };
+    const startedAt = (t: number) => ({ staffId: staff.id, businessId: ACME, expiresAt: t + SESSION_TTL_MS });
+    const now = Date.now();
+    assert.equal(db.signedOutSince(startedAt(now - 1_000)), false);
+
+    db.recordSignOut(staff, now);
+    assert.equal(db.signedOutSince(startedAt(now - 1_000)), true, "a copied cookie is dead");
+    assert.equal(db.signedOutSince(startedAt(now + 1_000)), false, "signing in again works");
+    assert.equal(db.signedOutSince({ ...startedAt(now - 1_000), staffId: "someone-else" }), false);
+  });
+
   it("rejects a session cookie edited to point at another business", () => {
     const secret = db.sessionSecret();
     const cookie = encodeSession(
