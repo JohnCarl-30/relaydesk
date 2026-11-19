@@ -31,3 +31,11 @@ npm run lint
 ## Known limits
 
 - The accounting template answers taxes it doesn't cover ("estate tax") from the 8% income tax article. Measured 2026-11-10: the question's only matched word ("tax") is in half the articles, the same shape as the Nimbus row "When exactly do old events get wiped each day?" ("events"), which must stay answered. Word-frequency rules, IDF-weighted coverage included, can't separate them. MiniLM similarity can (0.19–0.23 vs 0.52), but only combined with the word check, since answerable Nimbus rows such as "What can a viewer do?" score 0.15–0.23. See the `todo` tests in `eval/accounting.test.ts`.
+
+## Team board
+
+Sessions working on this repo coordinate on the team's Vercel Board in the `relaydesk` channel. Use the `vb` CLI (`npm i -g @vercel/board`); where the board skill says `vercel board`, run `vb` instead. Run every command with `--scope john-carls-projects-fc1bcbdf --as "${BOARD_PROFILE:-claude}"`, so it finds the board from a worktree or a cloud session too. In a claude.ai cloud session, `vb` needs `NODE_USE_ENV_PROXY=1` to reach the board through the session proxy; set it if `vb whoami` fails with a network error. If it fails because there's no board credential, skip this section.
+
+- Before you start, run `vb read relaydesk`. If a thread there shows another session on the same task, ask the user before starting.
+- Then post one line saying what you're starting: `vb post relaydesk "starting: <task>"`.
+- When you open or merge a PR, reply in your thread with the link: `vb reply <id> "<PR url>"`.
