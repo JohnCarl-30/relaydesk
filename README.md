@@ -12,6 +12,7 @@ The widget answers from the help center and cites the article. When the help cen
 | --- | --- | --- |
 | Retrieval, 60 labeled questions | hit@1 50/60, hit@3 55/60 | [eval/README.md](eval/README.md) |
 | When to open a ticket, 23 labeled questions | precision 1.00, recall 0.64 (always answering: recall 0) | [eval/escalation.md](eval/escalation.md) |
+| Follow-ups, 44 multi-turn conversations | 46/46 graded turns | [eval/conversations.json](eval/conversations.json) |
 | Co-pilot triage, 13 replayed tickets | reason, topic and question 13/13 | [eval/copilot.ts](eval/copilot.ts) |
 | Cost, whole golden set | $0 without a key, about $0.007 with gpt-4o-mini | [eval/cost.md](eval/cost.md) |
 
@@ -19,7 +20,7 @@ All of them run locally without an API key.
 
 ## How I know it works
 
-Every pull request runs four Langfuse experiments ([`experiments.yml`](.github/workflows/experiments.yml)): retrieval on 60 labeled questions, when to open a ticket on 23, sales intent on 40, and 30 attacks. If any score drops below its threshold in [`eval/suite.ts`](eval/suite.ts), the check fails. Retrieval and escalation are deterministic, so each threshold sits at main's score and one extra miss fails the PR.
+Every pull request runs five Langfuse experiments ([`experiments.yml`](.github/workflows/experiments.yml)): retrieval on 60 labeled questions, when to open a ticket on 23, sales intent on 40, 30 attacks, and 46 follow-up turns in 44 multi-turn conversations. If any score drops below its threshold in [`eval/suite.ts`](eval/suite.ts), the check fails. Retrieval and escalation are deterministic, so each threshold sits at main's score and one extra miss fails the PR.
 
 **What the evals caught**
 

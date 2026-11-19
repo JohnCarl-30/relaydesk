@@ -1,5 +1,5 @@
 /**
- * Uploads golden.csv, escalation-labels.csv, intent-labels.csv, and attack-labels.csv as Langfuse datasets.
+ * Uploads golden.csv, escalation-labels.csv, intent-labels.csv, attack-labels.csv, and conversations.jsonl as Langfuse datasets.
  *
  *   npx --yes tsx eval/upload-datasets.ts            # sync
  *   npx --yes tsx eval/upload-datasets.ts --dry-run  # print the plan only
@@ -15,10 +15,12 @@ import { fileURLToPath } from "node:url";
 import { LangfuseAPIClient, NotFoundError } from "@langfuse/core";
 import {
   ATTACKS_DATASET,
+  CONVERSATIONS_DATASET,
   ESCALATION_DATASET,
   GOLDEN_DATASET,
   INTENT_DATASET,
   attackItems,
+  conversationItems,
   escalationItems,
   goldenItems,
   intentItems,
@@ -27,6 +29,7 @@ import {
   type ExistingItem,
   type SyncPlan,
 } from "./datasets";
+import { loadConversations } from "./conversation-set";
 import { loadGolden } from "./golden";
 import { loadAttackLabels, loadIntentLabels, loadLabels } from "./labels";
 
@@ -110,6 +113,11 @@ async function main() {
       name: ATTACKS_DATASET,
       description: "Prompt injection, made-up offers, false action claims, prompt and data leaks, and a planted article. Source: eval/attack-labels.csv.",
       items: attackItems(loadAttackLabels(join(here, "attack-labels.csv"))),
+    },
+    {
+      name: CONVERSATIONS_DATASET,
+      description: "Multi-turn Nimbus conversations with what each follow-up should cite, escalate, or acknowledge. Source: eval/conversations.jsonl.",
+      items: conversationItems(loadConversations(join(here, "conversations.jsonl"))),
     },
   ];
 
