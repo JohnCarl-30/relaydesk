@@ -11,14 +11,16 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
 import { extractiveAnswer, retrieve } from "../src/lib/rag";
-import { answerQuestion } from "../src/lib/graph";
+import { REFUSE_LINE } from "../src/lib/escalate";
+import { answerQuestion, generateSystem, rewriteSystem } from "../src/lib/graph";
+import { DEMO_HELP_CENTER } from "../src/lib/help-center";
 import { forceExtractiveAnswers } from "../src/lib/keyless";
+import { rewriteSearchQuery, shouldRewrite } from "../src/lib/rewrite";
 import { loadGolden } from "./golden";
 
-const GENERATE_SYSTEM =
-  "You are the Nimbus support assistant on a customer site. Answer only from the provided help articles. Be short. If the articles do not contain the answer, say you are unsure and suggest talking to a human. Mention article titles naturally. Do not invent policies, prices, or product behavior.";
-const REWRITE_SYSTEM =
-  "Rewrite the visitor question as a short help-center search query. Return only the query. Keep product words like seats, SSO, invoice, funnel, API key.";
+// The prompts and rewrite rule the widget uses, so the estimate moves when they do.
+const GENERATE_SYSTEM = generateSystem(DEMO_HELP_CENTER.name, REFUSE_LINE);
+const REWRITE_SYSTEM = rewriteSystem(DEMO_HELP_CENTER.searchHint);
 
 const INPUT_PER_M = 0.15;
 const OUTPUT_PER_M = 0.6;
@@ -96,16 +98,14 @@ async function main() {
 
     const hits = retrieve(row.question);
     contextChars += hits.reduce((n, h) => n + h.text.length, 0);
-    const top = hits[0]?.score ?? 0;
     const genIn = estimateTokens(generatePrompt(row.question, hits));
     llmInput += genIn;
     llmOutput += GEN_OUT_TOKENS;
-    if (top < 6 && hits.length > 0) {
+    if (shouldRewrite(row.question, hits)) {
       rewriteRows += 1;
       llmInput += estimateTokens(`${REWRITE_SYSTEM}\n${row.question}`);
       llmOutput += REWRITE_OUT_TOKENS;
-      const rewritten = `${row.question} workspace`;
-      const second = retrieve(rewritten);
+      const second = retrieve(rewriteSearchQuery(row.question));
       llmInput += estimateTokens(generatePrompt(row.question, second));
       llmOutput += GEN_OUT_TOKENS;
     }
