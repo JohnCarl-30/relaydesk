@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { REFUSE_LINE } from "./escalate";
-import { answerQuestion, chatModel, generateFromHits } from "./graph";
+import { answerQuestion, chatModel, citedHits, generateFromHits } from "./graph";
 import { forceExtractiveAnswers } from "./keyless";
 import { retrieve } from "./rag";
 
@@ -41,5 +41,15 @@ describe("answerQuestion when the model is down", () => {
       delete process.env.OPENAI_API_KEY;
       delete process.env.OPENAI_BASE_URL;
     }
+  });
+});
+
+describe("citedHits", () => {
+  it("cites the articles the answer names, not just the top hit", () => {
+    const hits = retrieve("How do I add seats?");
+    assert.ok(hits.length >= 2);
+    const second = hits[1].article.title;
+    assert.deepEqual(citedHits(`See "${second}": open Billing and add seats.`, hits).map((h) => h.article.title), [second]);
+    assert.deepEqual(citedHits("Open Billing and add seats.", hits), hits.slice(0, 1));
   });
 });

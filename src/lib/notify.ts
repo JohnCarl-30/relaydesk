@@ -63,7 +63,7 @@ export async function notifyNewTicket(
   const staffEmails = listStaff(input.businessId).map((s) => s.email);
   if (!staffEmails.length) return false;
   const { url, init } = newTicketRequest(config, { ...input, staffEmails });
-  const res = await fetch(url, init).catch((error: unknown) => error as Error);
+  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(10_000) }).catch((error: unknown) => error as Error);
   if (res instanceof Response && res.ok) return true;
   console.error("ticket email failed", res instanceof Response ? `${res.status} ${await res.text()}` : res);
   return false;
@@ -99,7 +99,7 @@ export async function notifyCustomerReply(
   // Demo tickets carry made-up customer addresses.
   if (!config || input.businessId === DEMO_BUSINESS_ID || input.ticket.email === PENDING_TICKET_EMAIL) return false;
   const { url, init } = replyRequest(config, input);
-  const res = await fetch(url, init).catch((error: unknown) => error as Error);
+  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(10_000) }).catch((error: unknown) => error as Error);
   if (res instanceof Response && res.ok) return true;
   console.error("reply email failed", res instanceof Response ? `${res.status} ${await res.text()}` : res);
   return false;

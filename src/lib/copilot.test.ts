@@ -130,6 +130,15 @@ describe("runCopilot without a model", () => {
     assert.equal(replies(), 1);
   });
 
+  it("drops a draft when staff replied while the model was drafting", async () => {
+    const ticket = ticketFrom(didntHelp);
+    const run = runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
+    db.replyToTicket(DEMO_BUSINESS_ID, ticket.id, "On it, Priya.", "Ana");
+    assert.equal((await run).outcome, "stale");
+    assert.equal(db.getPendingDraft(ticket.id), undefined);
+    assert.equal(db.getTicket(DEMO_BUSINESS_ID, ticket.id)?.needs_human_reason, null);
+  });
+
   it("does nothing when switched off", async () => {
     const ticket = ticketFrom(didntHelp);
     db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "off");

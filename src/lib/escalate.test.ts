@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isVisitorEscalation, unsupportedPriceQuestion } from "./escalate";
+import { isRefusal, isVisitorEscalation, refuseLine, unsupportedPriceQuestion } from "./escalate";
 
 describe("unsupportedPriceQuestion", () => {
   const sso = { text: "SSO is available on Growth and Scale." };
@@ -61,3 +61,12 @@ describe("isVisitorEscalation", () => {
   });
 });
 
+describe("isRefusal", () => {
+  it("counts the refuse line even after an apology, so a ticket still opens", () => {
+    const line = refuseLine("Dela Cruz Accounting");
+    assert.equal(isRefusal(line), true);
+    assert.equal(isRefusal(`Sorry, ${line}`), true);
+    assert.equal(isRefusal(`Pasensya na po. ${line}`), true);
+    assert.equal(isRefusal("Seats are $10 a month on Growth."), false);
+  });
+});

@@ -238,6 +238,16 @@ function refuseBeforeModel(
 }
 
 /**
+ * The hits the answer names by title, which the prompt asks the model to do, so the widget's
+ * "Answer based on" is the article actually used. The top hit when it names none.
+ */
+export function citedHits(answer: string, hits: Hit[]): Hit[] {
+  const lower = answer.toLowerCase();
+  const named = hits.filter((h) => lower.includes(h.article.title.toLowerCase()));
+  return named.length ? named : hits.slice(0, 1);
+}
+
+/**
  * Refusal checks, then the model when one is configured, else an extractive
  * quote. The widget's generate node and eval/generate.ts both call this, so
  * the A/B measures what the widget runs.
@@ -300,7 +310,7 @@ async function answerFromHits(
     return {
       result: {
         answer: text,
-        citations: hits.map((h) => ({
+        citations: citedHits(text, hits).map((h) => ({
           slug: h.article.slug,
           title: h.article.title,
         })),

@@ -15,7 +15,8 @@ export const REFUSE_LINE = refuseLine("Nimbus");
 
 /** True for any business's refuse line, so ticket reading works the same everywhere. */
 export function isRefusal(text: string): boolean {
-  return /^I don't have that in the .+ help center\./.test(text);
+  // Not anchored: models often add "Sorry," or "Pasensya na," before the line, and that is still a refusal.
+  return /I don't have that in the .+ help center\./.test(text);
 }
 
 /** The demo's name, which says nothing about which article a question needs. */
