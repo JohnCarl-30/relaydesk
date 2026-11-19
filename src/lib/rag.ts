@@ -12,7 +12,6 @@ export { tokenize };
 
 const BM25_K1 = 1.2;
 const BM25_B = 0.75;
-const RRF_K = 10;
 
 export type Citation = { slug: string; title: string };
 
@@ -34,7 +33,7 @@ export type AnswerOptions = {
   focus?: string;
 };
 
-export type RetrieveMode = "count" | "bm25" | "hybrid";
+export type RetrieveMode = "count" | "bm25";
 export type RetrieveUnit = "article" | "chunk";
 
 export type RetrieveOptions = {
@@ -219,12 +218,9 @@ export function retrieve(question: string, options: RetrieveOptions = {}): Hit[]
   const unit = options.unit ?? "article";
   const q = tokenize(question);
   if (q.length === 0) return [];
-  if (mode === "hybrid") {
-    throw new Error("hybrid retrieval is async; call retrieveHybrid()");
-  }
   if (mode === "bm25") {
     if (unit === "chunk") {
-      throw new Error("bm25 is article-level only; use count or hybrid for chunks");
+      throw new Error("bm25 is article-level only; use count for chunks");
     }
     return retrieveBm25(corpus, q, k, titleWeight);
   }
@@ -232,75 +228,6 @@ export function retrieve(question: string, options: RetrieveOptions = {}): Hit[]
     return retrieveCountChunks(corpus, q, k, titleWeight);
   }
   return retrieveCountArticles(corpus, q, k, titleWeight);
-}
-
-function rrfScore(rank: number): number {
-  return 1 / (RRF_K + rank + 1);
-}
-
-function hitKey(row: Hit): string {
-  return row.chunkId ?? row.article.slug;
-}
-
-export function fuseRrf(lexical: Hit[], dense: Hit[], k: number): Hit[] {
-  const scores = new Map<string, Hit>();
-  const addList = (list: Hit[]) => {
-    list.forEach((row, rank) => {
-      const key = hitKey(row);
-      const current = scores.get(key);
-      scores.set(key, {
-        ...row,
-        score: (current?.score ?? 0) + rrfScore(rank),
-      });
-    });
-  };
-  addList(lexical);
-  addList(dense);
-  return [...scores.values()].sort((a, b) => b.score - a.score).slice(0, k);
-}
-
-export function retrieveDenseFromVecs(
-  queryVec: number[],
-  rows: { article: Article; vec: number[]; text: string; chunkId?: string }[],
-): Hit[] {
-  return rows
-    .map((row) => ({
-      article: row.article,
-      score: dot(queryVec, row.vec),
-      text: row.text,
-      chunkId: row.chunkId,
-    }))
-    .sort((a, b) => b.score - a.score);
-}
-
-function dot(a: number[], b: number[]): number {
-  const n = Math.min(a.length, b.length);
-  let sum = 0;
-  for (let i = 0; i < n; i += 1) sum += a[i] * b[i];
-  return sum;
-}
-
-export async function retrieveHybrid(
-  question: string,
-  options: RetrieveOptions = {},
-): Promise<Hit[]> {
-  const corpus = options.corpus ?? DEMO_CORPUS;
-  const k = options.k ?? 3;
-  const titleWeight = options.titleWeight ?? 4;
-  const unit = options.unit ?? "article";
-  const q = tokenize(question);
-  if (q.length === 0) return [];
-  const embed = await import("./embed");
-  const [queryVec, denseRows] = await Promise.all([
-    embed.embedQuery(question),
-    unit === "chunk" ? embed.chunkEmbeddings(corpus) : embed.articleEmbeddings(corpus),
-  ]);
-  const lexical =
-    unit === "chunk"
-      ? retrieveCountChunks(corpus, q, corpus.chunks.length, titleWeight)
-      : retrieveCountArticles(corpus, q, corpus.articles.length, titleWeight);
-  const dense = retrieveDenseFromVecs(queryVec, denseRows);
-  return fuseRrf(lexical, dense, k);
 }
 
 function citationsFromHits(hits: Hit[]): Citation[] {

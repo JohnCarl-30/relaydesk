@@ -107,9 +107,9 @@ npx --yes tsx eval/compare-retrievers.ts
 
 After the 2026-09-11 corpus split, count was **44/44** hit@1 and hit@3 on the 44 labeled rows, and chunked 42/44 and 43/44. With the hard rows (2026-10-22), count is **50/60** and **55/60**, chunked **46/60** and **49/60**. Do not promote chunked.
 
-The 10 count misses at hit@1 are all hard rows. Five still miss at hit@3: "pay for 10 people", "who can delete the whole workspace", "data to stay unsampled", "pull our raw data out every night" and the typo row. Most are vocabulary gaps, which a lexical retriever with no stemming can't close. That makes them the rows to watch when hybrid comes back. The tables below are the 2026-08-28 A/B snapshots.
+The 10 count misses at hit@1 are all hard rows. Five still miss at hit@3: "pay for 10 people", "who can delete the whole workspace", "data to stay unsampled", "pull our raw data out every night" and the typo row. Most are vocabulary gaps, which a lexical retriever with no stemming can't close. That makes them the rows to watch if hybrid comes back. The tables below are the 2026-08-28 A/B snapshots.
 
-`compare-retrievers.ts` runs count and chunked. BM25 and hybrid below came from the old endpoint's variants; `retrieve(q, { mode: "bm25" })` and `retrieveHybrid()` in `src/lib/rag.ts` still exist to re-run them in code.
+`compare-retrievers.ts` runs count and chunked. BM25 and hybrid below came from the old endpoint's variants; `retrieve(q, { mode: "bm25" })` in `src/lib/rag.ts` still re-runs BM25 in code.
 
 Lexical means (rag-eval-harness), 40-row golden, 2026-08-28:
 
@@ -124,7 +124,7 @@ Hit@1 / hit@3 vs `expected_slug` on 36 in-corpus rows: both **30/36** and **35/3
 
 ## Hybrid (MiniLM + RRF)
 
-Local `Xenova/all-MiniLM-L6-v2` via `@huggingface/transformers`. First call downloads the model into `.cache/transformers` (gitignored). The widget does not use it.
+Local `Xenova/all-MiniLM-L6-v2` via `@huggingface/transformers`. Removed on 2026-11-19 because nothing called it. To re-run it, restore `src/lib/embed.ts`, `retrieveHybrid` and `fuseRrf` from the commit before "Delete the unused hybrid retriever".
 
 Lexical means (rag-eval-harness), 40-row golden, 2026-08-28:
 

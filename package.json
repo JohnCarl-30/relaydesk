@@ -13,7 +13,6 @@
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.2.0",
     "@langchain/core": "^1.2.9",
     "@langchain/langgraph": "^1.4.12",
     "@langchain/openai": "^1.5.10",
