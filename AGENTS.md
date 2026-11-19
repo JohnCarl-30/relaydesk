@@ -39,3 +39,4 @@ Sessions working on this repo coordinate on the team's Vercel Board in the `rela
 - Before you start, run `vb read relaydesk`. If a thread there shows another session on the same task, ask the user before starting.
 - Then post one line saying what you're starting: `vb post relaydesk "starting: <task>"`.
 - When you open or merge a PR, reply in your thread with the link: `vb reply <id> "<PR url>"`.
+- When you're blocked on a question only the user can answer, post it to `#needs-you`, naming the repo and linking your thread: `q=$(vb post needs-you "relaydesk: <question> (thread <id>)")`. Then run `vb wait --re "$q" --timeout 30m` and continue with the answer. Also ask in the chat if the user is there. On a timeout, end your turn with the question.
