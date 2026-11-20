@@ -111,8 +111,8 @@ describe("default model", () => {
     try {
       assert.equal(modelBaseUrl(), "https://api.anthropic.com/v1");
       assert.equal(chatModelName(), "claude-haiku-5-5");
-      process.env.OPENAI_BASE_URL = "http://localhost:11434/v1/";
-      assert.equal(modelBaseUrl(), "http://localhost:11434/v1");
+      process.env.OPENAI_BASE_URL = "https://api.openai.com/v1/";
+      assert.equal(modelBaseUrl(), "https://api.openai.com/v1");
     } finally {
       for (const [key, value] of [["OPENAI_BASE_URL", saved.base], ["OPENAI_MODEL", saved.model], ["RELAYDESK_STUB_LLM", saved.stub]] as const) {
         if (value === undefined) delete process.env[key];

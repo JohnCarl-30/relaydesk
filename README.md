@@ -62,7 +62,7 @@ docker compose up --build
 
 The SQLite database lives in the `relaydesk-data` volume, so tickets survive a restart, and a `backup` service snapshots it daily. Settings come from `.env.docker` (copy `.env.example`). To put it online for free from your own computer with a Cloudflare Tunnel, or on a server, see [RUNBOOK.md → Hosting](RUNBOOK.md#hosting).
 
-Answers go through a LangGraph loop. Retrieve help articles, write a reply, rewrite the query and search again if the first pass is weak. No API key still quotes when retrieve is confident. Out of corpus refuses and opens a ticket. Set `OPENAI_API_KEY` to an Anthropic key (Claude Haiku 5.5 by default; `OPENAI_BASE_URL` and `OPENAI_MODEL` switch to OpenAI or Ollama) if you want the generate and rewrite nodes to call the model.
+Answers go through a LangGraph loop. Retrieve help articles, write a reply, rewrite the query and search again if the first pass is weak. No API key still quotes when retrieve is confident. Out of corpus refuses and opens a ticket. Set `OPENAI_API_KEY` to an Anthropic key (Claude Haiku 5.5 by default; `OPENAI_BASE_URL` and `OPENAI_MODEL` switch to OpenAI) if you want the generate and rewrite nodes to call the model.
 
 OpenTelemetry spans sit on those nodes. [`eval/traces/extractive.txt`](eval/traces/extractive.txt) is the no-key path. [`eval/traces/llm-rewrite.txt`](eval/traces/llm-rewrite.txt) is the rewrite loop. See [eval/traces/README.md](eval/traces/README.md). Set the Langfuse keys in `.env.example` and the same spans go to Langfuse, with model calls as generations and each chat as one session.
 

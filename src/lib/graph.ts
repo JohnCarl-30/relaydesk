@@ -128,7 +128,7 @@ export function chatModelName(): string {
   return usingStubLlm() ? "stub" : (process.env.OPENAI_MODEL ?? "claude-haiku-5-5");
 }
 
-/** Anthropic's OpenAI-compatible endpoint, unless OPENAI_BASE_URL points elsewhere (OpenAI, Ollama). */
+/** Anthropic's OpenAI-compatible endpoint, unless OPENAI_BASE_URL points elsewhere (e.g. OpenAI). */
 export function modelBaseUrl(): string {
   return (process.env.OPENAI_BASE_URL ?? "https://api.anthropic.com/v1").replace(/\/$/, "");
 }
