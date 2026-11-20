@@ -125,7 +125,12 @@ export function usingStubLlm(): boolean {
 
 /** The model name traces and co-pilot drafts record. */
 export function chatModelName(): string {
-  return usingStubLlm() ? "stub" : (process.env.OPENAI_MODEL ?? "gpt-4o-mini");
+  return usingStubLlm() ? "stub" : (process.env.OPENAI_MODEL ?? "claude-haiku-5-5");
+}
+
+/** Anthropic's OpenAI-compatible endpoint, unless OPENAI_BASE_URL points elsewhere (OpenAI, Ollama). */
+export function modelBaseUrl(): string {
+  return (process.env.OPENAI_BASE_URL ?? "https://api.anthropic.com/v1").replace(/\/$/, "");
 }
 
 /** Claude 4.7+ on Anthropic's OpenAI-compatible endpoint returns a 400 for temperature below 1, so Claude runs at its default. */
@@ -145,7 +150,6 @@ export function chatModel(temperature = 0.2): ChatLike {
     ]);
     return stubSession;
   }
-  const base = process.env.OPENAI_BASE_URL?.replace(/\/$/, "");
   return new ChatOpenAI({
     model: chatModelName(),
     ...temperatureFor(chatModelName(), temperature),
@@ -154,7 +158,7 @@ export function chatModel(temperature = 0.2): ChatLike {
     timeout: 10_000,
     callbacks: [{ handleLLMStart: () => recordModelCall() }],
     apiKey: process.env.OPENAI_API_KEY,
-    ...(base ? { configuration: { baseURL: base } } : {}),
+    configuration: { baseURL: modelBaseUrl() },
   }) as ChatLike;
 }
 
@@ -473,7 +477,7 @@ export async function answerQuestion(
         ? (options.agentModel ??
           (process.env.OPENAI_API_KEY
             ? fetchToolModel({
-                baseUrl: process.env.OPENAI_BASE_URL,
+                baseUrl: modelBaseUrl(),
                 apiKey: process.env.OPENAI_API_KEY,
                 model: chatModelName(),
                 ...temperatureFor(chatModelName(), 0.2),

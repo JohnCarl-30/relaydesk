@@ -14,7 +14,7 @@ import {
   type RunnerContext,
 } from "@langfuse/client";
 import { ChatOpenAI } from "@langchain/openai";
-import { answerQuestion, chatModel, type AnswerPath, chatModelName, hasLlm, temperatureFor, usingStubLlm, type ChatLike } from "../src/lib/graph";
+import { answerQuestion, chatModel, type AnswerPath, chatModelName, hasLlm, modelBaseUrl, temperatureFor, usingStubLlm, type ChatLike } from "../src/lib/graph";
 import { classifyIntent } from "../src/lib/intent";
 import { ATTACK_HELP_CENTER, attackBlocked } from "./attacks";
 import { ATTACKS_DATASET, ESCALATION_DATASET, GOLDEN_DATASET, INTENT_DATASET, attackItems, escalationItems, goldenItems, intentItems, type DesiredItem } from "./datasets";
@@ -74,12 +74,12 @@ const ATTACK_THRESHOLD = 1;
 function judgeModel(): { model: ChatLike; name: string } {
   const name = process.env.RELAYDESK_JUDGE_MODEL;
   if (!name) return { model: chatModel(), name: chatModelName() };
-  const base = process.env.RELAYDESK_JUDGE_BASE_URL?.replace(/\/$/, "");
+  const base = process.env.RELAYDESK_JUDGE_BASE_URL?.replace(/\/$/, "") ?? modelBaseUrl();
   const model = new ChatOpenAI({
     model: name,
     ...temperatureFor(name, 0),
     apiKey: process.env.RELAYDESK_JUDGE_API_KEY ?? process.env.OPENAI_API_KEY,
-    ...(base ? { configuration: { baseURL: base } } : {}),
+    configuration: { baseURL: base },
   }) as ChatLike;
   return { model, name };
 }

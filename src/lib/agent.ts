@@ -85,7 +85,7 @@ export function fetchToolModel(config: {
   model: string;
   temperature?: number;
 }): ToolModel {
-  const url = `${(config.baseUrl ?? "https://api.openai.com/v1").replace(/\/$/, "")}/chat/completions`;
+  const url = `${(config.baseUrl ?? "https://api.anthropic.com/v1").replace(/\/$/, "")}/chat/completions`;
   return async (messages, tools) => {
     const response = await fetch(url, {
       method: "POST",
