@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import type { ChatLike } from "../src/lib/graph";
 import {
   answerTask,
+  conversationCorrect,
+  conversationTurnAccuracy,
   escalationMatch,
   englishReply,
   escalationPrecisionRecall,
@@ -109,6 +111,39 @@ describe("experiment evaluators", () => {
     const run = Object.fromEntries(result.runEvaluations.map((e) => [e.name, e.value]));
     assert.equal(run.intent_correct, 3 / 5);
     assert.equal(run.intent_deal_precision, 2 / 3);
+  });
+
+  it("scores each conversation, and the share of graded turns per run", async () => {
+    const result = await runLocal({
+      data: [
+        {
+          input: { turns: ["What is the Growth plan event quota?", "and Starter?"] },
+          expectedOutput: { expect: [null, { slug: "billing-plans" }] },
+          metadata: { labels: ["billing-plans", "billing-plans"] },
+        },
+        {
+          input: { turns: ["thanks", "Can I pay in bitcoin?"] },
+          expectedOutput: { expect: [{ ack: true }, { escalated: true }] },
+          metadata: { labels: ["ack", "billing-plans"] },
+        },
+      ],
+      task: async (item) =>
+        (item.metadata as { labels: string[] }).labels.map((label, i) => ({
+          visitor: (item.input as { turns: string[] }).turns[i],
+          label,
+          escalated: label === "escalated",
+        })),
+      evaluators: [conversationCorrect],
+      runEvaluators: [conversationTurnAccuracy],
+    });
+    assert.deepEqual(
+      result.itemResults.map((r) => [r.evaluations[0].value, r.evaluations[0].comment]),
+      [
+        [1, "1/1 turns"],
+        [0, "turn 2: want escalated=true, got billing-plans"],
+      ],
+    );
+    assert.deepEqual(result.runEvaluations, [{ name: "conversation_turns", value: 2 / 3, comment: "2/3 turns" }]);
   });
 
   it("leaves a run score out when no item had one", async () => {

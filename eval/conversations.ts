@@ -4,69 +4,36 @@
  *   npx --yes tsx eval/conversations.ts
  *
  * Keyless. Replays each conversation through answerQuestion with the real
- * replies as history and writes eval/conversations.json.
+ * replies as history and writes eval/conversations.json. The same set gates
+ * PRs as the relaydesk-conversations experiment (eval/suite.ts).
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ACKNOWLEDGEMENT_REPLY, type ConversationTurn } from "../src/lib/conversation-context";
 import { answerQuestion } from "../src/lib/graph";
 import { forceExtractiveAnswers } from "../src/lib/keyless";
-import type { RagResult } from "../src/lib/rag";
-
-type Expect = { slug?: string | string[]; escalated?: boolean; ack?: boolean };
-
-type Conversation = {
-  id: string;
-  category: string;
-  why: string;
-  turns: { visitor: string; expect?: Expect }[];
-};
+import { loadConversations, replayConversation, turnFailure } from "./conversation-set";
 
 type Tally = { pass: number; total: number };
 
 forceExtractiveAnswers();
 
-function outcomeLabel(result: RagResult): string {
-  if (result.answer === ACKNOWLEDGEMENT_REPLY) return "ack";
-  if (result.escalated) return "escalated";
-  return result.citations[0]?.slug ?? "no citation";
-}
-
-function failure(expect: Expect, result: RagResult): string | null {
-  const got = outcomeLabel(result);
-  if (expect.ack) return got === "ack" ? null : `want ack, got ${got}`;
-  if (expect.escalated !== undefined && result.escalated !== expect.escalated) {
-    return `want escalated=${expect.escalated}, got ${got}`;
-  }
-  if (expect.slug) {
-    const allowed = [expect.slug].flat();
-    if (!allowed.includes(got)) return `want ${allowed.join(" or ")}, got ${got}`;
-  }
-  return null;
-}
-
 async function main() {
   const here = dirname(fileURLToPath(import.meta.url));
-  const conversations = readFileSync(join(here, "conversations.jsonl"), "utf8")
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line) as Conversation);
+  const conversations = loadConversations(join(here, "conversations.jsonl"));
 
   const byCategory = new Map<string, Tally>();
   const failures: { id: string; turn: number; visitor: string; reason: string }[] = [];
 
   for (const conversation of conversations) {
-    const history: ConversationTurn[] = [];
+    const outcomes = await replayConversation(
+      conversation.turns.map((t) => t.visitor),
+      (question, history) => answerQuestion(question, { history }),
+    );
     for (const [index, turn] of conversation.turns.entries()) {
-      const result = await answerQuestion(turn.visitor, { history: [...history] });
-      history.push(
-        { role: "visitor", body: turn.visitor },
-        { role: "assistant", body: result.answer },
-      );
       if (!turn.expect) continue;
-
-      const reason = failure(turn.expect, result);
+      const outcome = outcomes[index];
+      const reason = turnFailure(turn.expect, outcome);
       const tally = byCategory.get(conversation.category) ?? { pass: 0, total: 0 };
       tally.total += 1;
       if (!reason) tally.pass += 1;
@@ -76,7 +43,7 @@ async function main() {
         (reason ? "FAIL" : "pass").padEnd(5),
         conversation.category.padEnd(15),
         `${conversation.id}#${index + 1}`.padEnd(24),
-        reason ?? outcomeLabel(result),
+        reason ?? outcome.label,
       );
     }
   }

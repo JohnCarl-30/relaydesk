@@ -7,9 +7,11 @@ import type {
   RunEvaluator,
 } from "@langfuse/client";
 import { getArticle } from "../src/lib/articles";
+import type { ConversationTurn } from "../src/lib/conversation-context";
 import type { ChatLike } from "../src/lib/graph";
 import type { Intent, IntentResult } from "../src/lib/intent";
-import { retrieve } from "../src/lib/rag";
+import { retrieve, type RagResult } from "../src/lib/rag";
+import { replayConversation, turnFailure, type TurnExpect, type TurnOutcome } from "./conversation-set";
 
 /** What the widget did with one question. */
 export type AnswerOutput = {
@@ -140,6 +142,51 @@ export const intentDealPrecision: RunEvaluator = async ({ itemResults }) => {
     else fp += 1;
   }
   return { name: "intent_deal_precision", value: tp + fp === 0 ? 1 : tp / (tp + fp), comment: `tp=${tp} fp=${fp}` };
+};
+
+/** The conversations dataset stores `{ turns }` as input: the visitor's messages in order. */
+export function conversationTask(
+  answer: (question: string, history: ConversationTurn[]) => Promise<RagResult>,
+): ExperimentTask {
+  return async (item): Promise<TurnOutcome[]> => replayConversation((item.input as { turns: string[] }).turns, answer);
+}
+
+function gradeTurns(outcomes: TurnOutcome[], expected: (TurnExpect | null)[]): { pass: number; total: number; failures: string[] } {
+  let pass = 0;
+  let total = 0;
+  const failures: string[] = [];
+  for (const [index, expect] of expected.entries()) {
+    if (!expect) continue;
+    total += 1;
+    const outcome = outcomes[index];
+    const reason = outcome ? turnFailure(expect, outcome) : "no reply";
+    if (reason) failures.push(`turn ${index + 1}: ${reason}`);
+    else pass += 1;
+  }
+  return { pass, total, failures };
+}
+
+/** 1 when every graded turn of the conversation did what it should. The comment names the failing turns. */
+export const conversationCorrect: Evaluator = async ({ output, expectedOutput }) => {
+  const { expect } = expectedOutput as { expect: (TurnExpect | null)[] };
+  const { pass, total, failures } = gradeTurns(output as TurnOutcome[], expect);
+  return { name: "conversation_correct", value: failures.length ? 0 : 1, comment: failures.join("; ") || `${pass}/${total} turns` };
+};
+
+/**
+ * Share of graded turns that passed, across the run. This is the total
+ * eval/conversations.ts prints, so the gate and the script agree.
+ */
+export const conversationTurnAccuracy: RunEvaluator = async ({ itemResults }) => {
+  let pass = 0;
+  let total = 0;
+  for (const r of itemResults) {
+    const { expect } = r.item.expectedOutput as { expect: (TurnExpect | null)[] };
+    const graded = gradeTurns(r.output as TurnOutcome[], expect);
+    pass += graded.pass;
+    total += graded.total;
+  }
+  return { name: "conversation_turns", value: total === 0 ? 0 : pass / total, comment: `${pass}/${total} turns` };
 };
 
 const JUDGE_SYSTEM = `You grade a support answer for faithfulness to the help articles it cites.

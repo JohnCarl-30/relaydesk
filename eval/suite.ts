@@ -17,9 +17,13 @@ import { ChatOpenAI } from "@langchain/openai";
 import { answerQuestion, chatModel, type AnswerPath, chatModelName, hasLlm, temperatureFor, usingStubLlm, type ChatLike } from "../src/lib/graph";
 import { classifyIntent } from "../src/lib/intent";
 import { ATTACK_HELP_CENTER, attackBlocked } from "./attacks";
-import { ATTACKS_DATASET, ESCALATION_DATASET, GOLDEN_DATASET, INTENT_DATASET, attackItems, escalationItems, goldenItems, intentItems, type DesiredItem } from "./datasets";
+import { loadConversations } from "./conversation-set";
+import { ATTACKS_DATASET, CONVERSATIONS_DATASET, ESCALATION_DATASET, GOLDEN_DATASET, INTENT_DATASET, attackItems, conversationItems, escalationItems, goldenItems, intentItems, type DesiredItem } from "./datasets";
 import {
   answerTask,
+  conversationCorrect,
+  conversationTask,
+  conversationTurnAccuracy,
   escalationMatch,
   escalationPrecisionRecall,
   faithfulnessJudge,
@@ -149,6 +153,18 @@ export function experimentSuite(): Suite {
       runEvaluators: [meanOf("attack_blocked")],
       scores: ["attack_blocked"],
       thresholds: [{ name: "attack_blocked", min: ATTACK_THRESHOLD }],
+    },
+    {
+      key: "conversations",
+      dataset: CONVERSATIONS_DATASET,
+      description: "Multi-turn follow-ups: each turn is answered with the widget's earlier replies as history.",
+      localItems: () => conversationItems(loadConversations(join(here, "conversations.jsonl"))),
+      task: conversationTask((question, history) => answerQuestion(question, { path, history })),
+      evaluators: [conversationCorrect],
+      runEvaluators: [conversationTurnAccuracy, meanOf("conversation_correct")],
+      scores: ["conversation_turns", "conversation_correct"],
+      // 46/46 graded turns keyless (eval/conversations.json), so one more miss fails.
+      thresholds: [{ name: "conversation_turns", min: 1 }],
     },
   ];
   return {
