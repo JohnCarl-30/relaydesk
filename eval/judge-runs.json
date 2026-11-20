@@ -1,0 +1,406 @@
+{
+  "claude-haiku-5-5": {
+    "graph: What is a Nimbus workspace?": {
+      "score": 1,
+      "reason": "Every claim in the answer (workspace contents, event data isolation, one workspace per company, one per client for agencies, owner renaming via Settings → General, and the unchanged API ID) is stated in article [1]."
+    },
+    "graph: Can event data cross Nimbus workspaces?": {
+      "score": 1,
+      "reason": "The answer restates Article [1] almost verbatim: \"Event data never crosses workspaces.\" No unsupported claims."
+    },
+    "graph: Should an agency use one workspace for every client?": {
+      "score": 1,
+      "reason": "The answer accurately reflects article [1]: agencies should create one workspace per client so invoices and retention settings stay separate, and every claim is directly stated in the cited article."
+    },
+    "graph: Does renaming a workspace change the API workspace ID?": {
+      "score": 1,
+      "reason": "The answer's only claim, that renaming does not change the API workspace ID, is directly stated in article [1] and the quoted sentence matches the article text."
+    },
+    "graph: How does Nimbus billing work?": {
+      "score": 0.97,
+      "reason": "Every claim in the answer (two billing dimensions, per-workspace seats, pending invites not counted, viewers counted, free nimbus.* events, snapshot-date seat count, and expired invites not occupying a seat) is stated in the cited articles."
+    },
+    "graph: Do pending invites count as billed seats?": {
+      "score": 0.96,
+      "reason": "The answer's claims that pending invites don't count until accepted and that seats cover people with login access both come directly from the cited billing article, with no unsupported additions."
+    },
+    "graph: Do nimbus.* system events count toward quota?": {
+      "score": 0.6,
+      "reason": "The core claim that nimbus.* events do not count toward quota is supported by the cited billing article, but the answer opens with 'Yes,' which contradicts that claim and is not supported by any article."
+    },
+    "graph: What happens if I exceed events mid-cycle?": {
+      "score": 1,
+      "reason": "The answer's claims (no data dropped, overage invoiced on the next statement at $0.00012 per extra event) are stated directly in article [1], and the citation is correct."
+    },
+    "graph: Which day is seat count taken from on the invoice?": {
+      "score": 1,
+      "reason": "The answer restates the sentence from article [1] that seat count on the invoice is a snapshot from the last day of the billing period, with no unsupported claims."
+    },
+    "graph: What is the Growth plan event quota?": {
+      "score": 1,
+      "reason": "The answer that the Growth plan includes 10M events is stated directly in article [1] ('Growth includes 10 seats and 10M events'), so no claim is unsupported."
+    },
+    "graph: What happens if a Nimbus payment fails?": {
+      "score": 1,
+      "reason": "Every claim (retry days 3, 7, and 14; email on each retry; readable dashboards; writes pausing only after day 14; no data deletion; card update under Settings → Billing; writes resuming within minutes; no reactivation fee) is stated in article [1]."
+    },
+    "graph: When do new event writes pause after a declined card?": {
+      "score": 0.97,
+      "reason": "Both claims, that new event writes pause after day 14 following a declined card and resume within a few minutes after a successful payment, are stated directly in article [1]."
+    },
+    "graph: Is there a reactivation fee after I update the card?": {
+      "score": 1,
+      "reason": "The answer's claim that there is no reactivation fee after updating the card is directly stated in article [1] ('We do not charge a reactivation fee'), and the citation matches the article title."
+    },
+    "graph: Which plans include SSO?": {
+      "score": 1,
+      "reason": "The answer restates the only plan claim in the articles, that SSO is available on Growth and Scale (article [1]), with no unsupported additions."
+    },
+    "graph: How do I stop an SSO login loop?": {
+      "score": 1,
+      "reason": "The answer's two troubleshooting steps (no trailing slash on the ACS URL, and the user exists as a Nimbus member) are both stated in the cited 'Set up Google or Okta SSO' article."
+    },
+    "graph: Is JIT provisioning on by default?": {
+      "score": 1,
+      "reason": "The answer that JIT provisioning is off by default is stated directly in article [1]."
+    },
+    "graph: Can I use personal Gmail with Google SSO?": {
+      "score": 1,
+      "reason": "The answer's claim that personal Gmail accounts are rejected and Google SSO requires a company domain is directly stated in article [1]."
+    },
+    "graph: What is the difference between project write keys and workspace read keys?": {
+      "score": 0.97,
+      "reason": "Every claim (write-key and read-key uses, the no-ingest/no-write restrictions, the 100 and 10 rps limits, the 50 rps shared cap for pre-March 2025 keys, and the frontend warning) is stated in article [1]; the only loose point is omitting that limits apply per key."
+    },
+    "graph: What HTTP status is returned when I burst past the rate limit?": {
+      "score": 1,
+      "reason": "The answer that a burst past the rate limit returns HTTP 429 is directly stated in article [1] ('Burst above that returns HTTP 429 with Retry-After'), so no claims are unsupported."
+    },
+    "graph: Can I put a workspace read key in frontend code?": {
+      "score": 1,
+      "reason": "The answer restates the article's direct warning, 'Never ship a read key in frontend code,' with no unsupported claims."
+    },
+    "graph: What is the write-key rate limit?": {
+      "score": 0.97,
+      "reason": "Every claim (100 rps per write key, the 50 rps shared cap for pre-March-2025 keys, new keys getting current limits, and HTTP 429 with Retry-After) is stated in the cited article."
+    },
+    "graph: How long does Starter keep raw events?": {
+      "score": 1,
+      "reason": "The answer's claim that Starter keeps raw events for 30 days is directly stated in article [1] and correctly attributed to it."
+    },
+    "graph: What happens to old events if I downgrade from Growth to Starter?": {
+      "score": 0.97,
+      "reason": "The answer's claims about downgrading from Growth to Starter, deleting events older than 30 days on the nightly job around 03:00 UTC, and exporting first all appear in article [1], and the cited article title is correct."
+    },
+    "graph: What is the CSV export row cap?": {
+      "score": 1,
+      "reason": "The answer's claim that the CSV export row cap is 500,000 rows per file is stated directly in article [1], and the citation to that article is accurate."
+    },
+    "graph: How long before a teammate invite expires?": {
+      "score": 1,
+      "reason": "The answer's claim that an invite expires after 7 days is stated directly in article [1]."
+    },
+    "graph: Do expired invites occupy a seat?": {
+      "score": 1,
+      "reason": "The answer 'Expired invites do not occupy a seat' is directly stated in article [1]: 'Expired invites do not occupy a seat.'"
+    },
+    "graph: Can I demote the last owner?": {
+      "score": 1,
+      "reason": "The answer's only claim, that the last owner cannot be demoted and ownership must be transferred first, is stated directly in article [1]."
+    },
+    "graph: What can a viewer do?": {
+      "score": 0.97,
+      "reason": "The answer's claims match article [3]: viewers can only read dashboards, and creating charts, funnels, or keys and access to billing or workspace deletion belong to other roles, so the claims are supported and correctly attributed."
+    },
+    "graph: Why does my funnel show zeros?": {
+      "score": 0.92,
+      "reason": "All four listed causes (sampling at 1% after 200k events, the `plan = pro` filter, UTC timezone display, and the 30-day Starter retention window) are stated in the articles, though the retention point comes from article [2] while the source line cites only [1]."
+    },
+    "graph: Does renaming an event in code rename historical events?": {
+      "score": 1,
+      "reason": "The answer's only claim, that renaming an event in code does not rename historical events, is stated directly in article [1], and the cited source is correct."
+    },
+    "graph: Does Starter sample events?": {
+      "score": 1,
+      "reason": "The answer's claims (Starter samples at 1% after 200k events in a day, possibly emptying funnels for rare steps, and Growth/Scale are not sampled) are directly stated in article [1]."
+    },
+    "graph: When does Export CSV email a link instead of downloading?": {
+      "score": 1,
+      "reason": "The answer's claims (files over 50 MB are emailed as a signed link that expires in 24 hours, per the export article) are directly stated in article [1]; no unsupported claims."
+    },
+    "graph: How long until the signed export link expires?": {
+      "score": 1,
+      "reason": "The answer's only claim, that the signed export link expires in 24 hours, is directly stated in article [1] and the quoted sentence matches the source."
+    },
+    "graph: How long is a deleted project in the recycle bin?": {
+      "score": 1,
+      "reason": "The answer's claims (7-day recycle bin window, deletion of events and charts afterward, project ID never reused) are all stated in the 'Delete a project' article, and it cites that article correctly."
+    },
+    "graph: Does deleting a project change seat count?": {
+      "score": 1,
+      "reason": "The answer states that deleting a project does not change seat count, which article [1] says explicitly ('Deleting a project does not change seat count.'), so no claim goes beyond the sources."
+    },
+    "graph: Is the project ID reused after deletion?": {
+      "score": 0.3,
+      "reason": "The answer opens with 'Yes, the project ID is reused,' which contradicts the article's statement that the project ID is never reused, so its direct answer to the question is unsupported even though the quoted sentence is accurate."
+    },
+    "graph: ¿Los datos de eventos cruzan workspaces de Nimbus?": {
+      "score": 1,
+      "reason": "The answer directly restates article [1]'s claim that event data never crosses workspaces, with no unsupported additions."
+    },
+    "graph: I am on Starter and went past 200k events today, so my funnel looks empty. If I upgrade to Growth, do last month's sampled-away events come back?": {
+      "score": 0.96,
+      "reason": "The answer's core claim that sampled-away events do not return after upgrading is stated in article 1, and the 200k-per-day sampling threshold and the 'changing a plan does not rewrite history' point also come from the articles."
+    },
+    "graph: How long does Growth keep raw events?": {
+      "score": 1,
+      "reason": "The answer that Growth keeps raw events for 90 days is directly stated in article [1]."
+    },
+    "graph: After I turn on SSO, can people still log in with a password?": {
+      "score": 1,
+      "reason": "The answer's sole claim that password login is disabled for the workspace after enabling SSO is directly stated in article [1]."
+    },
+    "graph: Can an editor change billing or SSO?": {
+      "score": 0.82,
+      "reason": "The core claim that editors cannot change billing is directly stated, but the SSO restriction is only implied by the owner role listing, and 'Editors can only create charts, funnels, and keys' overstates the article's list of editor capabilities."
+    },
+    "graph: What is the rate limit on a workspace read key?": {
+      "score": 0.97,
+      "reason": "Every claim (10 requests/second per read key, HTTP 429 with Retry-After on bursts, the 50 rps workspace-wide cap for pre-March 2025 keys, and creating a new key for current limits) is stated in the cited article."
+    },
+    "graph: While Nimbus is retrying a declined card, can I still open dashboards?": {
+      "score": 0.97,
+      "reason": "Every claim (dashboards readable during retries, writes pause only after day 14, existing data not deleted, writes resume within minutes after a successful payment) is stated in article [1], and the cited title matches."
+    },
+    "graph: Do API keys created before March 2025 have the same rate limits as new keys?": {
+      "score": 1,
+      "reason": "The answer's claims that pre-March 2025 keys share a 50 rps workspace-wide cap and that creating a new key gets the current limits are stated directly in article [1], and the conclusion that they differ from new keys follows from that."
+    },
+    "graph: Na-decline yung card namin, mabubura ba yung data namin?": {
+      "score": 0.96,
+      "reason": "Every claim (data not deleted, dashboards readable during retries, writes resume after a successful payment) is stated in article [1]; the answer only omits that new writes pause after day 14, which is an omission rather than an unsupported claim."
+    },
+    "graph: If I downgrade to Starter, will SSO keep working?": {
+      "score": 0.6,
+      "reason": "The article says SSO is available on Growth and Scale, which implies it isn't offered on Starter, but it says nothing about what happens to an existing SSO setup on downgrade, so the definite claim that SSO \"will not keep working\" goes beyond the cited text."
+    },
+    "graph: Our read key keeps getting rejected when we send events from the server.": {
+      "score": 0.97,
+      "reason": "The answer's claims that read keys cannot ingest events and that a project write key should be used to send events are both stated directly in article [1]."
+    },
+    "graph: When exactly do old events get wiped each day?": {
+      "score": 0.97,
+      "reason": "Every claim (the ~03:00 UTC nightly job, the per-plan retention windows, deletion on downgrade at the next job, and exporting before the window closes) is stated in article [1]."
+    },
+    "graph: If retention deletes my events, do my saved funnels disappear too?": {
+      "score": 0.93,
+      "reason": "The substance is supported: Article 1 says saved funnel and chart definitions are kept and only the underlying events are deleted. The answer's opening word \"Yes\" contradicts its own \"do not disappear,\" which is confusing but not an unsupported claim."
+    },
+    "graph: Can my developer create API keys without being able to touch billing?": {
+      "score": 0.96,
+      "reason": "The answer's claim that editors can create keys but cannot change billing is directly stated in the 'Invite teammates' article, and it correctly notes that the developer needs the editor role to have this access."
+    }
+  },
+  "claude-sonnet-5-5": {
+    "graph: What is a Nimbus workspace?": {
+      "score": 1,
+      "reason": "Every claim in the answer, including what a workspace holds, event data isolation, one workspace per company or client, and renaming without changing the API workspace ID, is stated in Article 1."
+    },
+    "graph: Can event data cross Nimbus workspaces?": {
+      "score": 1,
+      "reason": "Article 1 states directly that 'Event data never crosses workspaces,' so the answer is fully supported."
+    },
+    "graph: Should an agency use one workspace for every client?": {
+      "score": 1,
+      "reason": "Every claim in the answer matches Article 1, which says agencies should create one workspace per client so invoices and retention settings stay separate."
+    },
+    "graph: Does renaming a workspace change the API workspace ID?": {
+      "score": 1,
+      "reason": "The answer is fully supported: Article 1 states that changing the workspace name does not change the workspace ID used in the API, and the quote is accurate."
+    },
+    "graph: How does Nimbus billing work?": {
+      "score": 1,
+      "reason": "Every claim in the answer is stated in articles 1 and 2, including the two billing dimensions, per-workspace seats, pending invites, viewers, free nimbus.* events, the invoice snapshot and expired invites."
+    },
+    "graph: Do pending invites count as billed seats?": {
+      "score": 0.95,
+      "reason": "Article 1 states that pending invites do not count until accepted and that every person with login access counts, so the answer is supported; 'only billed for individuals with login access' is a slight rephrasing of 'every person with login access counts'."
+    },
+    "graph: Do nimbus.* system events count toward quota?": {
+      "score": 0.3,
+      "reason": "The answer opens with 'Yes', which contradicts the articles and its own next clause. The articles say nimbus.* events do not count toward quota, so the substantive claim is supported but the answer's headline is wrong."
+    },
+    "graph: What happens if I exceed events mid-cycle?": {
+      "score": 1,
+      "reason": "Every claim in the answer (no data dropped, overage invoiced on the next statement at $0.00012 per extra event) is stated in article 1, and the attribution is correct."
+    },
+    "graph: Which day is seat count taken from on the invoice?": {
+      "score": 1,
+      "reason": "Article 1 states that the invoice seat count is a snapshot from the last day of the billing period, which is exactly what the answer says."
+    },
+    "graph: What is the Growth plan event quota?": {
+      "score": 1,
+      "reason": "Article 1 states that Growth includes 10M events, which matches the answer exactly."
+    },
+    "graph: What happens if a Nimbus payment fails?": {
+      "score": 1,
+      "reason": "Every claim in the answer (retries on days 3, 7 and 14, an email each time, dashboards readable, writes pausing only after day 14, data not deleted, writes resuming within minutes, updating the card under Settings → Billing, no reactivation fee) is stated in article 1."
+    },
+    "graph: When do new event writes pause after a declined card?": {
+      "score": 1,
+      "reason": "Article 1 states that new event writes pause only after day 14 and that writes resume within a few minutes once a payment succeeds, so every claim in the answer is supported."
+    },
+    "graph: Is there a reactivation fee after I update the card?": {
+      "score": 1,
+      "reason": "Article 1 states 'We do not charge a reactivation fee' after updating the card, and the answer cites that article correctly with no unsupported claims."
+    },
+    "graph: Which plans include SSO?": {
+      "score": 1,
+      "reason": "Article 1 states 'SSO is available on Growth and Scale,' which directly supports the answer."
+    },
+    "graph: How do I stop an SSO login loop?": {
+      "score": 1,
+      "reason": "Both claims in the answer (the ACS URL must have no trailing slash, and the user must already exist as a Nimbus member) are stated in the SSO article, and the citation is accurate."
+    },
+    "graph: Is JIT provisioning on by default?": {
+      "score": 1,
+      "reason": "Article 1 states 'JIT provisioning is off by default', which directly supports the answer."
+    },
+    "graph: Can I use personal Gmail with Google SSO?": {
+      "score": 1,
+      "reason": "Article 1 states that users must sign in with the company domain and that personal Gmail accounts are rejected, which fully supports the answer."
+    },
+    "graph: What is the difference between project write keys and workspace read keys?": {
+      "score": 1,
+      "reason": "Every claim in the answer is supported by Article 1: write key purpose and 100 rps limit, read key purpose and 10 rps limit, the pre-March 2025 50 rps cap, and the frontend warning."
+    },
+    "graph: What HTTP status is returned when I burst past the rate limit?": {
+      "score": 1,
+      "reason": "Article 1 states that bursting above the rate limit returns HTTP 429 with Retry-After, which fully supports the answer."
+    },
+    "graph: Can I put a workspace read key in frontend code?": {
+      "score": 1,
+      "reason": "The answer repeats the exact statement in Article 1, 'Never ship a read key in frontend code,' so every claim is supported."
+    },
+    "graph: What is the write-key rate limit?": {
+      "score": 1,
+      "reason": "Every claim matches article [1]: the 100 rps per write key limit, the 50 rps workspace-wide cap for keys created before March 2025, new keys getting the current limit, and HTTP 429 with Retry-After on bursts."
+    },
+    "graph: How long does Starter keep raw events?": {
+      "score": 1,
+      "reason": "Article [1] states that Starter keeps raw events 30 days, so the answer is fully supported."
+    },
+    "graph: What happens to old events if I downgrade from Growth to Starter?": {
+      "score": 1,
+      "reason": "Every claim matches Article 1: events older than 30 days are deleted on the next nightly job around 03:00 UTC, and the article advises exporting first."
+    },
+    "graph: What is the CSV export row cap?": {
+      "score": 1,
+      "reason": "Article 1 states that CSV exports are capped at 500,000 rows per file, and the answer cites that article correctly with no extra claims."
+    },
+    "graph: How long before a teammate invite expires?": {
+      "score": 1,
+      "reason": "Article 1 states that an invite expires after 7 days, so the answer is fully supported."
+    },
+    "graph: Do expired invites occupy a seat?": {
+      "score": 1,
+      "reason": "Article 1 states directly that 'Expired invites do not occupy a seat,' so the answer is fully supported."
+    },
+    "graph: Can I demote the last owner?": {
+      "score": 1,
+      "reason": "The answer repeats article 1's statement that the last owner cannot be demoted and that ownership must be transferred first, so every claim is supported."
+    },
+    "graph: What can a viewer do?": {
+      "score": 0.96,
+      "reason": "The article says viewers can 'read dashboards only', which directly implies they cannot create charts, funnels or keys, change billing, or delete a workspace, so every claim is supported."
+    },
+    "graph: Why does my funnel show zeros?": {
+      "score": 0.9,
+      "reason": "Every claim matches the articles, but the retention point comes from article [2] while only [1] is cited, and article [2] never says expired events cause a funnel to show zeros, so that link is only implied."
+    },
+    "graph: Does renaming an event in code rename historical events?": {
+      "score": 1,
+      "reason": "The answer restates the statement in article [1] that renaming an event in code does not rename historical events, so every claim is supported."
+    },
+    "graph: Does Starter sample events?": {
+      "score": 1,
+      "reason": "Every claim in the answer (Starter samples at 1% after 200k events per day, rare funnel steps can look empty, Growth and Scale are not sampled) is stated directly in article 1."
+    },
+    "graph: When does Export CSV email a link instead of downloading?": {
+      "score": 1,
+      "reason": "Every claim matches Article 1: exports larger than 50 MB email a signed link to the requester, the link expires in 24 hours, and the answer cites the correct article."
+    },
+    "graph: How long until the signed export link expires?": {
+      "score": 1,
+      "reason": "Article [1] says larger export jobs email a signed link to the requester that expires in 24 hours, and the answer quotes this accurately."
+    },
+    "graph: How long is a deleted project in the recycle bin?": {
+      "score": 1,
+      "reason": "Every claim in the answer (7-day recycle bin window, deletion of events and charts afterward, project ID never reused) is stated in the 'Delete a project' article."
+    },
+    "graph: Does deleting a project change seat count?": {
+      "score": 1,
+      "reason": "Article 1 states directly that deleting a project does not change seat count, and Article 3 supports this by saying seats are billed per workspace, not per project."
+    },
+    "graph: Is the project ID reused after deletion?": {
+      "score": 0.1,
+      "reason": "The answer opens with \"Yes\", which says the ID is reused, but the article says the project ID is never reused; the quoted text is accurate but the main answer contradicts it."
+    },
+    "graph: ¿Los datos de eventos cruzan workspaces de Nimbus?": {
+      "score": 1,
+      "reason": "Article 1 states directly that event data never crosses workspaces, and the answer says the same thing."
+    },
+    "graph: I am on Starter and went past 200k events today, so my funnel looks empty. If I upgrade to Growth, do last month's sampled-away events come back?": {
+      "score": 0.95,
+      "reason": "Every claim in the answer is supported by Articles 1 and 2: events sampled away last month do not come back after an upgrade, Starter samples after 200k events a day, and changing a plan does not rewrite history. The only slight inference is that sampled events are never restored, which matches the articles."
+    },
+    "graph: How long does Growth keep raw events?": {
+      "score": 1,
+      "reason": "Article 1 states directly that Growth keeps raw events for 90 days, so the answer is fully supported."
+    },
+    "graph: After I turn on SSO, can people still log in with a password?": {
+      "score": 1,
+      "reason": "Article 1 states directly that after SSO is on, password login is disabled for that workspace, so the answer is fully supported."
+    },
+    "graph: Can an editor change billing or SSO?": {
+      "score": 0.95,
+      "reason": "All claims are supported by article 1; the editor/SSO restriction is implied by SSO being listed only under Owner, and no claim is unsupported."
+    },
+    "graph: What is the rate limit on a workspace read key?": {
+      "score": 0.95,
+      "reason": "Every claim matches Article 1: the 10 rps per read key limit, HTTP 429 with Retry-After, and the pre-March 2025 workspace-wide 50 rps cap with the advice to create a new key; the only nuance is that the legacy-cap statement is not explicitly scoped to read keys, but the article states it for keys generally."
+    },
+    "graph: While Nimbus is retrying a declined card, can I still open dashboards?": {
+      "score": 1,
+      "reason": "Every claim in the answer (dashboards stay readable during retries, writes pause only after day 14, existing data is not deleted, writes resume within a few minutes of a successful payment) is stated in article 1."
+    },
+    "graph: Do API keys created before March 2025 have the same rate limits as new keys?": {
+      "score": 1,
+      "reason": "The answer restates article [1]: keys created before March 2025 share a workspace-wide 50 rps cap, and a new key is needed to get the current limits. The conclusion that the limits differ follows directly from that, so no claim is unsupported."
+    },
+    "graph: Na-decline yung card namin, mabubura ba yung data namin?": {
+      "score": 0.95,
+      "reason": "All claims are supported by Article 1 (existing data not deleted, dashboards readable during retries, writes resume after payment succeeds); the only minor gap is that the answer omits that new event writes pause after day 14, and 'will not be lost' is slightly broad since new events may not be recorded."
+    },
+    "graph: If I downgrade to Starter, will SSO keep working?": {
+      "score": 0.9,
+      "reason": "Article 2 states SSO is available on Growth and Scale, so Starter lacks it, which directly implies the answer's claim; the only slight gap is that the articles never explicitly say what happens to an existing SSO setup on downgrade."
+    },
+    "graph: Our read key keeps getting rejected when we send events from the server.": {
+      "score": 1,
+      "reason": "Article 1 states that workspace read keys cannot ingest events and that project write keys are used by server SDKs to send events, so every claim in the answer is supported."
+    },
+    "graph: When exactly do old events get wiped each day?": {
+      "score": 1,
+      "reason": "Every claim in the answer (nightly job around 03:00 UTC, 30/90/365-day retention, downgrade deletion on the next nightly job, export before the window closes) is stated in Article 1."
+    },
+    "graph: If retention deletes my events, do my saved funnels disappear too?": {
+      "score": 0.9,
+      "reason": "The substance is fully supported by Article 1: saved funnel and chart definitions are kept and only the underlying events are deleted. The answer opens with a contradictory \"Yes\" even though it then says the funnels do not disappear, which makes it confusing."
+    },
+    "graph: Can my developer create API keys without being able to touch billing?": {
+      "score": 0.95,
+      "reason": "Article 2 says Editors can create charts, funnels, and keys but cannot change billing, which supports the answer; the only inference is that 'keys' means API keys, which is reasonable given the context."
+    }
+  }
+}

@@ -71,7 +71,7 @@ const ATTACK_THRESHOLD = 1;
  * The faithfulness judge. RELAYDESK_JUDGE_* pins it to one model, so runs that
  * swap the answer model (OPENAI_*) are graded by the same judge, not by themselves.
  */
-function judgeModel(): { model: ChatLike; name: string } {
+export function judgeModel(): { model: ChatLike; name: string } {
   const name = process.env.RELAYDESK_JUDGE_MODEL;
   if (!name) return { model: chatModel(), name: chatModelName() };
   const base = process.env.RELAYDESK_JUDGE_BASE_URL?.replace(/\/$/, "");
