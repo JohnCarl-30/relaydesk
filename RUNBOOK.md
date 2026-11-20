@@ -11,7 +11,7 @@ What to check and do when something is wrong, and how to host it. Production is 
 | Backups | Service `backup`: daily snapshot to `/data/backups` (last 7), plus an S3-compatible bucket if set | `RELAYDESK_BACKUP_*`; last result in `/data/backups/last.json` |
 | Secrets | `.env.docker` on the host, never in git or the image | Copy `.env.example` |
 | Traces | `eval/traces/live.jsonl`, one OpenTelemetry span per line | `RELAYDESK_TRACE_FILE` (a path, or `0` for none) |
-| Model | Optional. Without a key everything still works without a model. | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (default `gpt-4o-mini`) |
+| Model | Optional. Without a key everything still works without a model. | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (default `claude-haiku-5-5` on `https://api.anthropic.com/v1`, so an Anthropic key is enough) |
 | Businesses | `businesses`, `articles`, `staff`, `invites` tables; Nimbus is seeded | `/signup` (gate it with `RELAYDESK_SIGNUP_CODE`), or `scripts/add-business.ts`. `businesses.live = 0` hides one from the public |
 | MCP | `/api/mcp`, Streamable HTTP, stateless | Per-business tokens in `mcp_tokens` (hashed; **Setup** to create or revoke). `RELAYDESK_MCP_TOKEN` is the Nimbus demo's. 404 when neither exists |
 | Public URL | Embed snippets, invite links, links in staff emails | `RELAYDESK_PUBLIC_URL`, else the request's `Host` (never `X-Forwarded-Host`, which visitors can set) |

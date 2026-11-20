@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { after, before, describe, it } from "node:test";
-import { chatModel, temperatureFor } from "../src/lib/graph";
+import { chatModel, chatModelName, modelBaseUrl, temperatureFor } from "../src/lib/graph";
 import { experimentSuite } from "./suite";
 
 // #56/#57 run Claude through Anthropic's OpenAI-compatible endpoint by pointing OPENAI_* at it.
@@ -101,3 +101,23 @@ describe("Claude through the OpenAI-compatible endpoint", () => {
   });
 });
 
+
+describe("default model", () => {
+  it("is Claude Haiku 5.5 on Anthropic's endpoint unless OPENAI_* says otherwise", () => {
+    const saved = { base: process.env.OPENAI_BASE_URL, model: process.env.OPENAI_MODEL, stub: process.env.RELAYDESK_STUB_LLM };
+    delete process.env.OPENAI_BASE_URL;
+    delete process.env.OPENAI_MODEL;
+    delete process.env.RELAYDESK_STUB_LLM;
+    try {
+      assert.equal(modelBaseUrl(), "https://api.anthropic.com/v1");
+      assert.equal(chatModelName(), "claude-haiku-5-5");
+      process.env.OPENAI_BASE_URL = "https://api.openai.com/v1/";
+      assert.equal(modelBaseUrl(), "https://api.openai.com/v1");
+    } finally {
+      for (const [key, value] of [["OPENAI_BASE_URL", saved.base], ["OPENAI_MODEL", saved.model], ["RELAYDESK_STUB_LLM", saved.stub]] as const) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+});
