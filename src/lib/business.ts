@@ -13,8 +13,8 @@ export type { HelpCenter };
 const cache = new Map<string, { version: number; center: HelpCenter }>();
 
 /** The business's help center from the database, or undefined for an unknown id. */
-export function loadHelpCenter(businessId: string): HelpCenter | undefined {
-  const business = getBusiness(businessId);
+export async function loadHelpCenter(businessId: string): Promise<HelpCenter | undefined> {
+  const business = await getBusiness(businessId);
   if (!business) return undefined;
   const cached = cache.get(business.id);
   if (cached && cached.version === business.articles_version && cached.center.name === business.name) {
@@ -23,7 +23,7 @@ export function loadHelpCenter(businessId: string): HelpCenter | undefined {
   const center: HelpCenter = {
     businessId: business.id,
     name: business.name,
-    corpus: buildCorpus(listArticles(business.id)),
+    corpus: buildCorpus(await listArticles(business.id)),
     searchHint:
       business.id === DEMO_BUSINESS_ID ? DEMO_HELP_CENTER.searchHint : GENERIC_SEARCH_HINT,
   };
@@ -32,8 +32,8 @@ export function loadHelpCenter(businessId: string): HelpCenter | undefined {
 }
 
 /** The help center the public may see: undefined until the business goes live. */
-export function loadLiveHelpCenter(businessId: string): HelpCenter | undefined {
-  return getBusiness(businessId)?.live ? loadHelpCenter(businessId) : undefined;
+export async function loadLiveHelpCenter(businessId: string): Promise<HelpCenter | undefined> {
+  return (await getBusiness(businessId))?.live ? loadHelpCenter(businessId) : undefined;
 }
 
 /** Where a business's public help center lives. */

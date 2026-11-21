@@ -9,7 +9,7 @@ export default async function HostedHelpArticle({
   params: Promise<{ business: string; slug: string }>;
 }) {
   const { business, slug } = await params;
-  const center = loadLiveHelpCenter(business);
+  const center = await loadLiveHelpCenter(business);
   const article = center && articleBySlug(center, slug);
   if (!center || !article) notFound();
   return (

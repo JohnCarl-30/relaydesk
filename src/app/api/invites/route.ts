@@ -12,10 +12,10 @@ export async function POST(request: Request) {
   if (isPublicDemo(staff)) return demoReadOnly();
   const body = await readBody(request, z.object({ email: Email }));
   if ("error" in body) return body.error;
-  if (getStaffByEmail(body.data.email)) {
+  if (await getStaffByEmail(body.data.email)) {
     return NextResponse.json({ error: "That email already has a login." }, { status: 409 });
   }
-  const { invite, token } = createInvite({
+  const { invite, token } = await createInvite({
     businessId: staff.business_id,
     email: body.data.email,
     invitedBy: staff.id,

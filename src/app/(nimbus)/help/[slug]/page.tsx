@@ -10,7 +10,7 @@ export default async function HelpArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const center = loadHelpCenter(DEMO_WIDGET.business.id);
+  const center = await loadHelpCenter(DEMO_WIDGET.business.id);
   const article = center && articleBySlug(center, slug);
   if (!center || !article) notFound();
   return (

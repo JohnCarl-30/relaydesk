@@ -12,12 +12,12 @@ export async function POST(request: Request) {
   const body = await readBody(request, ArticleInput);
   if ("error" in body) return body.error;
   const article = toArticle(body.data);
-  if (listArticles(staff.business_id).some((a) => a.slug === article.slug)) {
+  if ((await listArticles(staff.business_id)).some((a) => a.slug === article.slug)) {
     return NextResponse.json(
       { error: `An article already uses the link "${article.slug}". Change the title or link.` },
       { status: 409 },
     );
   }
-  saveArticles(staff.business_id, [article]);
+  await saveArticles(staff.business_id, [article]);
   return NextResponse.json({ article });
 }

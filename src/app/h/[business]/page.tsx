@@ -7,7 +7,7 @@ export default async function HostedHelpIndex({
 }: {
   params: Promise<{ business: string }>;
 }) {
-  const center = loadLiveHelpCenter((await params).business);
+  const center = await loadLiveHelpCenter((await params).business);
   if (!center) notFound();
   return (
     <HelpIndex

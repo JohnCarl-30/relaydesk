@@ -40,45 +40,51 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
 }
 
 /** A fresh Nimbus ticket the way the chat route leaves one. */
-function ticket(question = "Do pending invites count as billed seats?") {
-  const conversation = db.createConversation(DEMO_BUSINESS_ID, "priya@northline.io");
-  db.addMessage(conversation.id, "visitor", question);
-  db.addMessage(conversation.id, "visitor", "This didn't help");
+async function ticket(question = "Do pending invites count as billed seats?") {
+  const conversation = await db.createConversation(DEMO_BUSINESS_ID, "priya@northline.io");
+  await db.addMessage(conversation.id, "visitor", question);
+  await db.addMessage(conversation.id, "visitor", "This didn't help");
   return db.createTicket(conversation.id, "priya@northline.io");
 }
 
 describe("authenticateMcp", () => {
-  it("is off until a token exists", () => {
-    assert.equal(authenticateMcp("Bearer anything"), "off");
+  it("is off until a token exists", async () => {
+    assert.equal(await authenticateMcp("Bearer anything"), "off");
   });
 
-  it("maps the demo token to Nimbus and a business token to its business", () => {
+  it("maps the demo token to Nimbus and a business token to its business", async () => {
     process.env.RELAYDESK_MCP_TOKEN = "demo-token-123";
     try {
-      assert.deepEqual(authenticateMcp("Bearer demo-token-123"), { businessId: DEMO_BUSINESS_ID });
-      assert.equal(authenticateMcp("Bearer demo-token-12"), "unauthorized");
-      assert.equal(authenticateMcp(null), "unauthorized");
-      assert.equal(authenticateMcp("demo-token-123"), "unauthorized", "needs the Bearer scheme");
+      assert.deepEqual(await authenticateMcp("Bearer demo-token-123"), { businessId: DEMO_BUSINESS_ID });
+      assert.equal(await authenticateMcp("Bearer demo-token-12"), "unauthorized");
+      assert.equal(await authenticateMcp(null), "unauthorized");
+      assert.equal(await authenticateMcp("demo-token-123"), "unauthorized", "needs the Bearer scheme");
     } finally {
       delete process.env.RELAYDESK_MCP_TOKEN;
     }
 
-    db.createBusiness({ id: OTHER, name: "Other Shop" });
-    const owner = db.createStaff({ businessId: OTHER, email: "o@other.test", name: "Olga", password: "long password 1" });
-    const { token, row } = db.createMcpToken({ businessId: OTHER, name: "Claude", createdBy: owner.id });
+    await db.createBusiness({ id: OTHER, name: "Other Shop" });
+    const owner = await db.createStaff({ businessId: OTHER, email: "o@other.test", name: "Olga", password: "long password 1" });
+    const { token, row } = await db.createMcpToken({ businessId: OTHER, name: "Claude", createdBy: owner.id });
     assert.match(token, /^rdk_/);
-    assert.deepEqual(authenticateMcp(`Bearer ${token}`), { businessId: OTHER });
-    assert.ok(db.listMcpTokens(OTHER)[0].last_used_at, "records use");
-    assert.equal(authenticateMcp("Bearer rdk_wrong"), "unauthorized");
+    assert.deepEqual(await authenticateMcp(`Bearer ${token}`), { businessId: OTHER });
+    assert.ok((await db.listMcpTokens(OTHER))[0].last_used_at, "records use");
+    assert.equal(await authenticateMcp("Bearer rdk_wrong"), "unauthorized");
 
-    assert.equal(db.revokeMcpToken(DEMO_BUSINESS_ID, row.id), false, "only its own business can revoke it");
-    assert.equal(db.revokeMcpToken(OTHER, row.id), true);
-    assert.equal(authenticateMcp(`Bearer ${token}`), "off", "no tokens left");
+    assert.equal(await db.revokeMcpToken(DEMO_BUSINESS_ID, row.id), false, "only its own business can revoke it");
+    assert.equal(await db.revokeMcpToken(OTHER, row.id), true);
+    assert.equal(await authenticateMcp(`Bearer ${token}`), "off", "no tokens left");
   });
 
-  it("stores only a hash of the token", () => {
-    const { token } = db.createMcpToken({ businessId: OTHER, name: "Cursor", createdBy: "x" });
-    const rows = db.db().prepare("SELECT * FROM mcp_tokens").all() as Record<string, unknown>[];
+  it("stores only a hash of the token", async () => {
+    const { token } = await db.createMcpToken({ businessId: OTHER, name: "Cursor", createdBy: "x" });
+    // Read the raw rows with a PGlite of our own; only one may hold the directory, so the app's closes first.
+    await db.closeDb();
+    const { PGlite } = await import("@electric-sql/pglite");
+    const raw = await PGlite.create(process.env.RELAYDESK_DB_PATH);
+    const { rows } = await raw.query<Record<string, unknown>>("SELECT * FROM mcp_tokens");
+    await raw.close();
+    assert.ok(rows.length > 0);
     assert.ok(rows.every((row) => !Object.values(row).includes(token)));
   });
 });
@@ -131,7 +137,7 @@ describe("MCP tools", () => {
   });
 
   it("updates a ticket with the inbox's own rules", async () => {
-    const t = ticket();
+    const t = await ticket();
     const bad = await call(client, "update_ticket", { ticket_id: t.id, status: "done" });
     assert.equal(bad.isError, true);
     assert.match(bad.text, /bad status/);
@@ -143,12 +149,12 @@ describe("MCP tools", () => {
     const done = (await call(client, "update_ticket", { ticket_id: t.id, status: "waiting", assignee: "You" })).json();
     assert.deepEqual(done.ticket, { id: t.id, status: "waiting", assignee: "You" });
     await call(client, "update_ticket", { ticket_id: t.id, assignee: null });
-    assert.equal(db.getTicket(DEMO_BUSINESS_ID, t.id)?.assignee, null);
+    assert.equal((await db.getTicket(DEMO_BUSINESS_ID, t.id))?.assignee, null);
   });
 
   it("saves a draft for review without posting anything to the customer", async () => {
-    const t = ticket();
-    const before = db.listMessages(t.conversation_id);
+    const t = await ticket();
+    const before = await db.listMessages(t.conversation_id);
     const first = await call(client, "draft_reply", {
       ticket_id: t.id,
       body: "Hi Priya, pending invites don't count until they're accepted.",
@@ -162,14 +168,14 @@ describe("MCP tools", () => {
       rationale: "Holding reply.",
     });
 
-    assert.deepEqual(db.listMessages(t.conversation_id), before, "messages are unchanged");
-    const pending = db.getPendingDraft(t.id);
+    assert.deepEqual(await db.listMessages(t.conversation_id), before, "messages are unchanged");
+    const pending = await db.getPendingDraft(t.id);
     assert.equal(pending?.id, second.json().draft.id);
     assert.equal(pending?.model, MCP_DRAFT_MODEL);
     assert.equal(pending?.kind, "holding");
-    assert.equal(db.getDraft(DEMO_BUSINESS_ID, first.json().draft.id)?.status, "superseded");
+    assert.equal((await db.getDraft(DEMO_BUSINESS_ID, first.json().draft.id))?.status, "superseded");
     assert.equal(
-      db.getDraft(DEMO_BUSINESS_ID, first.json().draft.id)?.citations,
+      (await db.getDraft(DEMO_BUSINESS_ID, first.json().draft.id))?.citations,
       JSON.stringify(["How billing works: seats and the invoice"]),
     );
 
@@ -179,18 +185,18 @@ describe("MCP tools", () => {
   });
 
   it("regenerates with the co-pilot's switch and daily limit", async () => {
-    const t = ticket();
+    const t = await ticket();
     const ran = await call(client, "regenerate_draft", { ticket_id: t.id });
     assert.equal(ran.isError, false);
     assert.equal(ran.json().outcome, "holding");
 
-    db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "off");
+    await db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "off");
     try {
       const off = await call(client, "regenerate_draft", { ticket_id: t.id });
       assert.equal(off.isError, true);
       assert.match(off.text, /switched off/);
     } finally {
-      db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "on");
+      await db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "on");
     }
 
     for (let i = 1; i < MAX_RUNS_PER_DAY; i += 1) await call(client, "regenerate_draft", { ticket_id: t.id });
@@ -223,6 +229,6 @@ describe("MCP tools for another business", () => {
       assert.equal((await call(client, tool, args)).isError, true, tool);
     }
     assert.deepEqual((await call(client, "search_help_center", { query: "SSO" })).json().results, []);
-    assert.equal(db.getTicket(DEMO_BUSINESS_ID, "tkt_seats")?.status, "open");
+    assert.equal((await db.getTicket(DEMO_BUSINESS_ID, "tkt_seats"))?.status, "open");
   });
 });

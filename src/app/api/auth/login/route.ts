@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if (limited) return limited;
   const body = await readBody(request, Login);
   if ("error" in body) return body.error;
-  const staff = checkStaffLogin(body.data.email, body.data.password);
+  const staff = await checkStaffLogin(body.data.email, body.data.password);
   if (!staff) {
     return NextResponse.json({ error: "wrong email or password" }, { status: 401 });
   }

@@ -31,21 +31,21 @@ export type VoiceStatus = {
   provider: VoiceProvider;
 };
 
-export function voiceStatus(businessId: string): VoiceStatus {
+export async function voiceStatus(businessId: string): Promise<VoiceStatus> {
   const configured = elevenLabsConfig() !== null;
-  const enabled = getSetting(businessId, VOICE_SETTING) === "elevenlabs";
-  const usedSeconds = voiceSecondsUsed(businessId);
+  const enabled = (await getSetting(businessId, VOICE_SETTING)) === "elevenlabs";
+  const usedSeconds = await voiceSecondsUsed(businessId);
   const capSeconds = voiceMinutesCap() * 60;
   const provider = configured && enabled && usedSeconds < capSeconds ? "elevenlabs" : "browser";
   return { configured, enabled, usedSeconds, capSeconds, provider };
 }
 
-export function setVoiceProvider(businessId: string, provider: VoiceProvider) {
-  setSetting(businessId, VOICE_SETTING, provider);
+export async function setVoiceProvider(businessId: string, provider: VoiceProvider) {
+  await setSetting(businessId, VOICE_SETTING, provider);
 }
 
-export function recordVoiceSeconds(businessId: string, seconds: number) {
-  addVoiceSeconds(businessId, seconds);
+export async function recordVoiceSeconds(businessId: string, seconds: number) {
+  await addVoiceSeconds(businessId, seconds);
 }
 
 /**

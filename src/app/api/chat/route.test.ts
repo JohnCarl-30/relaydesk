@@ -21,13 +21,13 @@ const post = (body: unknown, ip: string) =>
 
 describe("POST /api/chat", () => {
   it("refuses a message too long to be a question, before saving it or asking the model", async () => {
-    const conversation = db.createConversation(DEMO_BUSINESS_ID);
+    const conversation = await db.createConversation(DEMO_BUSINESS_ID);
     const res = await post(
       { business: DEMO_BUSINESS_ID, conversationId: conversation.id, message: "x".repeat(2_001) },
       "203.0.113.21",
     );
     assert.equal(res.status, 400);
-    assert.equal(db.listMessages(conversation.id).length, 0);
+    assert.equal((await db.listMessages(conversation.id)).length, 0);
   });
 
   it("refuses an email that isn't one, so it can't write extra lines into the staff's new-ticket email", async () => {
@@ -39,9 +39,9 @@ describe("POST /api/chat", () => {
   });
 
   it("reopens the customer's ticket and moves it up when they write again", async () => {
-    const conversation = db.createConversation(DEMO_BUSINESS_ID, "priya@northline.io");
-    const ticket = db.createTicket(conversation.id, "priya@northline.io");
-    const waiting = db.updateTicket(DEMO_BUSINESS_ID, ticket.id, { status: "waiting" })!;
+    const conversation = await db.createConversation(DEMO_BUSINESS_ID, "priya@northline.io");
+    const ticket = await db.createTicket(conversation.id, "priya@northline.io");
+    const waiting = (await db.updateTicket(DEMO_BUSINESS_ID, ticket.id, { status: "waiting" }))!;
     await new Promise((resolve) => setTimeout(resolve, 5)); // so updated_at can move
 
     const res = await POST(
@@ -52,7 +52,7 @@ describe("POST /api/chat", () => {
       }),
     );
     assert.equal(res.status, 200);
-    const after = db.getTicket(DEMO_BUSINESS_ID, ticket.id)!;
+    const after = (await db.getTicket(DEMO_BUSINESS_ID, ticket.id))!;
     assert.equal(after.status, "open");
     assert.ok(after.updated_at > waiting.updated_at);
   });

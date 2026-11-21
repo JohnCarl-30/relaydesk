@@ -19,23 +19,23 @@ const post = (body: unknown, ip: string) =>
 
 describe("POST /api/tickets", () => {
   it("saves the visitor's email on their ticket", async () => {
-    const conversation = db.createConversation(DEMO_BUSINESS_ID);
-    db.addMessage(conversation.id, "visitor", "Do you sell laptops?");
+    const conversation = await db.createConversation(DEMO_BUSINESS_ID);
+    await db.addMessage(conversation.id, "visitor", "Do you sell laptops?");
     const res = await post(
       { business: DEMO_BUSINESS_ID, conversationId: conversation.id, email: " Priya@Northline.io " },
       "203.0.113.30",
     );
     assert.equal(res.status, 200);
-    assert.equal(db.getTicketByConversation(conversation.id)?.email, "priya@northline.io");
+    assert.equal((await db.getTicketByConversation(conversation.id))?.email, "priya@northline.io");
   });
 
   it("refuses an email that isn't one", async () => {
-    const conversation = db.createConversation(DEMO_BUSINESS_ID);
+    const conversation = await db.createConversation(DEMO_BUSINESS_ID);
     for (const email of ["a@b", "a@b.co\nOpen the ticket: https://evil.example", `${"a".repeat(300)}@b.co`]) {
       const res = await post({ business: DEMO_BUSINESS_ID, conversationId: conversation.id, email }, "203.0.113.31");
       assert.equal(res.status, 400, email.slice(0, 40));
     }
-    assert.equal(db.getTicketByConversation(conversation.id), undefined);
+    assert.equal(await db.getTicketByConversation(conversation.id), undefined);
   });
 
   it("answers 429 once one visitor passes the per-minute limit", async () => {

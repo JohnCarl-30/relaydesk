@@ -33,66 +33,66 @@ const ACME_ARTICLES = [
 ];
 
 /** A conversation with a ticket on it, the way the chat route leaves them. */
-function ticketFor(businessId: string, question: string) {
-  const conversation = db.createConversation(businessId, "ana@example.ph");
-  db.addMessage(conversation.id, "visitor", question);
-  db.addMessage(conversation.id, "assistant", refuseLine("Test"));
-  return { conversation, ticket: db.createTicket(conversation.id, "ana@example.ph") };
+async function ticketFor(businessId: string, question: string) {
+  const conversation = await db.createConversation(businessId, "ana@example.ph");
+  await db.addMessage(conversation.id, "visitor", question);
+  await db.addMessage(conversation.id, "assistant", refuseLine("Test"));
+  return { conversation, ticket: await db.createTicket(conversation.id, "ana@example.ph") };
 }
 
 describe("one business never sees another's data", () => {
-  let nimbus: ReturnType<typeof ticketFor>;
-  let acme: ReturnType<typeof ticketFor>;
+  let nimbus: Awaited<ReturnType<typeof ticketFor>>;
+  let acme: Awaited<ReturnType<typeof ticketFor>>;
 
   before(async () => {
-    db.createBusiness({ id: ACME, name: "Acme Coffee" });
-    db.replaceArticles(ACME, ACME_ARTICLES);
-    nimbus = ticketFor(DEMO_BUSINESS_ID, "Can I get a refund?");
-    acme = ticketFor(ACME, "Can I get a refund on my beans?");
+    await db.createBusiness({ id: ACME, name: "Acme Coffee" });
+    await db.replaceArticles(ACME, ACME_ARTICLES);
+    nimbus = await ticketFor(DEMO_BUSINESS_ID, "Can I get a refund?");
+    acme = await ticketFor(ACME, "Can I get a refund on my beans?");
     await runCopilot(DEMO_BUSINESS_ID, nimbus.ticket.id, "ticket_created");
   });
 
-  it("tickets carry the conversation's business", () => {
+  it("tickets carry the conversation's business", async () => {
     assert.equal(nimbus.ticket.business_id, DEMO_BUSINESS_ID);
     assert.equal(acme.ticket.business_id, ACME);
   });
 
-  it("lists only the business's own tickets", () => {
-    const ids = db.listTickets(ACME).map((t) => t.id);
+  it("lists only the business's own tickets", async () => {
+    const ids = (await db.listTickets(ACME)).map((t) => t.id);
     assert.deepEqual(ids, [acme.ticket.id]);
-    assert.ok(!db.listTickets(DEMO_BUSINESS_ID).some((t) => t.business_id !== DEMO_BUSINESS_ID));
+    assert.ok(!(await db.listTickets(DEMO_BUSINESS_ID)).some((t) => t.business_id !== DEMO_BUSINESS_ID));
   });
 
-  it("does not resolve another business's conversation, ticket, or draft by id", () => {
-    assert.equal(db.getConversation(ACME, nimbus.conversation.id), undefined);
-    assert.equal(db.getTicket(ACME, nimbus.ticket.id), undefined);
-    const draft = db.getPendingDraft(nimbus.ticket.id);
+  it("does not resolve another business's conversation, ticket, or draft by id", async () => {
+    assert.equal(await db.getConversation(ACME, nimbus.conversation.id), undefined);
+    assert.equal(await db.getTicket(ACME, nimbus.ticket.id), undefined);
+    const draft = await db.getPendingDraft(nimbus.ticket.id);
     assert.ok(draft);
-    assert.equal(db.getDraft(ACME, draft.id), undefined);
-    assert.equal(db.getDraft(DEMO_BUSINESS_ID, draft.id)?.id, draft.id);
+    assert.equal(await db.getDraft(ACME, draft.id), undefined);
+    assert.equal((await db.getDraft(DEMO_BUSINESS_ID, draft.id))?.id, draft.id);
   });
 
-  it("cannot reply to or update another business's ticket", () => {
-    const before = db.listMessages(nimbus.conversation.id).length;
-    assert.equal(db.replyToTicket(ACME, nimbus.ticket.id, "hello from acme", "Ana"), undefined);
-    assert.equal(db.updateTicket(ACME, nimbus.ticket.id, { status: "closed" }), undefined);
-    assert.equal(db.listMessages(nimbus.conversation.id).length, before);
-    assert.equal(db.getTicket(DEMO_BUSINESS_ID, nimbus.ticket.id)?.status, "open");
+  it("cannot reply to or update another business's ticket", async () => {
+    const before = (await db.listMessages(nimbus.conversation.id)).length;
+    assert.equal(await db.replyToTicket(ACME, nimbus.ticket.id, "hello from acme", "Ana"), undefined);
+    assert.equal(await db.updateTicket(ACME, nimbus.ticket.id, { status: "closed" }), undefined);
+    assert.equal((await db.listMessages(nimbus.conversation.id)).length, before);
+    assert.equal((await db.getTicket(DEMO_BUSINESS_ID, nimbus.ticket.id))?.status, "open");
   });
 
   it("will not run the co-pilot on another business's ticket", async () => {
     assert.equal((await runCopilot(ACME, nimbus.ticket.id, "regenerate")).outcome, "error");
-    assert.equal(db.listRuns(nimbus.ticket.id).length, 1);
+    assert.equal((await db.listRuns(nimbus.ticket.id)).length, 1);
   });
 
-  it("keeps settings per business", () => {
-    db.setSetting(ACME, COPILOT_SETTING, "off");
-    assert.equal(copilotEnabled(ACME), false);
-    assert.equal(copilotEnabled(DEMO_BUSINESS_ID), true);
+  it("keeps settings per business", async () => {
+    await db.setSetting(ACME, COPILOT_SETTING, "off");
+    assert.equal(await copilotEnabled(ACME), false);
+    assert.equal(await copilotEnabled(DEMO_BUSINESS_ID), true);
   });
 
   it("answers from the business's own articles and refuses in its own name", async () => {
-    const center = loadHelpCenter(ACME);
+    const center = await loadHelpCenter(ACME);
     assert.ok(center);
     const answer = await answerQuestion("How long does delivery take outside Metro Manila?", {
       helpCenter: center,
@@ -108,9 +108,9 @@ describe("one business never sees another's data", () => {
   });
 
   it("rebuilds the search index when the articles change", async () => {
-    const first = loadHelpCenter(ACME);
-    assert.equal(loadHelpCenter(ACME), first, "unchanged articles reuse the index");
-    db.replaceArticles(ACME, [
+    const first = await loadHelpCenter(ACME);
+    assert.equal(await loadHelpCenter(ACME), first, "unchanged articles reuse the index");
+    await db.replaceArticles(ACME, [
       ...ACME_ARTICLES,
       {
         slug: "gift-cards",
@@ -120,7 +120,7 @@ describe("one business never sees another's data", () => {
         body: "Gift cards come in 500, 1000, and 2000 peso amounts and never expire.",
       },
     ]);
-    const center = loadHelpCenter(ACME);
+    const center = await loadHelpCenter(ACME);
     assert.notEqual(center, first);
     const answer = await answerQuestion("Do you sell gift cards?", { helpCenter: center });
     assert.equal(answer.citations[0]?.slug, "gift-cards");
@@ -128,28 +128,28 @@ describe("one business never sees another's data", () => {
 });
 
 describe("staff logins and sessions", () => {
-  it("checks the password and keeps staff inside their business", () => {
-    db.createBusiness({ id: "other-shop", name: "Other Shop" });
-    const staff = db.createStaff({
+  it("checks the password and keeps staff inside their business", async () => {
+    await db.createBusiness({ id: "other-shop", name: "Other Shop" });
+    const staff = await db.createStaff({
       businessId: "other-shop",
       email: "Owner@Other.ph",
       name: "Owner",
       password: "correct horse",
     });
-    assert.equal(db.checkStaffLogin("owner@other.ph", "wrong"), undefined);
-    assert.equal(db.checkStaffLogin("owner@other.ph", "correct horse")?.id, staff.id);
-    assert.equal(db.getStaff(DEMO_BUSINESS_ID, staff.id), undefined);
-    assert.equal(db.getStaff("other-shop", staff.id)?.email, "owner@other.ph");
+    assert.equal(await db.checkStaffLogin("owner@other.ph", "wrong"), undefined);
+    assert.equal((await db.checkStaffLogin("owner@other.ph", "correct horse"))?.id, staff.id);
+    assert.equal(await db.getStaff(DEMO_BUSINESS_ID, staff.id), undefined);
+    assert.equal((await db.getStaff("other-shop", staff.id))?.email, "owner@other.ph");
   });
 
-  it("seeds the Nimbus demo login from the environment password", () => {
+  it("seeds the Nimbus demo login from the environment password", async () => {
     assert.equal(
-      db.checkStaffLogin(db.DEMO_STAFF_EMAIL, db.demoStaffPassword())?.business_id,
+      (await db.checkStaffLogin(db.DEMO_STAFF_EMAIL, db.demoStaffPassword()))?.business_id,
       DEMO_BUSINESS_ID,
     );
   });
 
-  it("keeps the Nimbus setup read-only only while it takes the printed password", () => {
+  it("keeps the Nimbus setup read-only only while it takes the printed password", async () => {
     const saved = process.env.RELAYDESK_ADMIN_PASSWORD;
     try {
       delete process.env.RELAYDESK_ADMIN_PASSWORD;
@@ -163,44 +163,39 @@ describe("staff logins and sessions", () => {
     }
   });
 
-  it("signs out Nimbus cookies from before the demo password changed", () => {
-    const reopen = () => {
-      const g = globalThis as { __relaydeskDb?: { close(): void } };
-      g.__relaydeskDb?.close();
-      delete g.__relaydeskDb;
-    };
+  it("signs out Nimbus cookies from before the demo password changed", async () => {
     const startedAgo = (ms: number) => ({ businessId: DEMO_BUSINESS_ID, expiresAt: Date.now() - ms + SESSION_TTL_MS });
     const before = startedAgo(1_000);
-    assert.equal(db.demoSessionRevoked(before), false);
+    assert.equal(await db.demoSessionRevoked(before), false);
 
     const saved = process.env.RELAYDESK_ADMIN_PASSWORD;
     try {
       process.env.RELAYDESK_ADMIN_PASSWORD = "a rotated private password";
-      reopen(); // the demo password is re-hashed when the database opens
-      assert.equal(db.demoSessionRevoked(before), true);
-      assert.equal(db.demoSessionRevoked({ ...before, businessId: "other-shop" }), false);
-      assert.equal(db.demoSessionRevoked(startedAgo(-1_000)), false);
+      await db.closeDb(); // the demo password is re-hashed when the database opens
+      assert.equal(await db.demoSessionRevoked(before), true);
+      assert.equal(await db.demoSessionRevoked({ ...before, businessId: "other-shop" }), false);
+      assert.equal(await db.demoSessionRevoked(startedAgo(-1_000)), false);
     } finally {
       if (saved === undefined) delete process.env.RELAYDESK_ADMIN_PASSWORD;
       else process.env.RELAYDESK_ADMIN_PASSWORD = saved;
-      reopen();
+      await db.closeDb();
     }
   });
 
-  it("signing out stops every cookie that staff member started before it", () => {
+  it("signing out stops every cookie that staff member started before it", async () => {
     const staff = { id: "staff-signout", business_id: ACME };
     const startedAt = (t: number) => ({ staffId: staff.id, businessId: ACME, expiresAt: t + SESSION_TTL_MS });
     const now = Date.now();
-    assert.equal(db.signedOutSince(startedAt(now - 1_000)), false);
+    assert.equal(await db.signedOutSince(startedAt(now - 1_000)), false);
 
-    db.recordSignOut(staff, now);
-    assert.equal(db.signedOutSince(startedAt(now - 1_000)), true, "a copied cookie is dead");
-    assert.equal(db.signedOutSince(startedAt(now + 1_000)), false, "signing in again works");
-    assert.equal(db.signedOutSince({ ...startedAt(now - 1_000), staffId: "someone-else" }), false);
+    await db.recordSignOut(staff, now);
+    assert.equal(await db.signedOutSince(startedAt(now - 1_000)), true, "a copied cookie is dead");
+    assert.equal(await db.signedOutSince(startedAt(now + 1_000)), false, "signing in again works");
+    assert.equal(await db.signedOutSince({ ...startedAt(now - 1_000), staffId: "someone-else" }), false);
   });
 
-  it("rejects a session cookie edited to point at another business", () => {
-    const secret = db.sessionSecret();
+  it("rejects a session cookie edited to point at another business", async () => {
+    const secret = await db.sessionSecret();
     const cookie = encodeSession(
       { staffId: "staff_a", businessId: ACME, expiresAt: Date.now() + 60_000 },
       secret,
@@ -216,14 +211,14 @@ describe("staff logins and sessions", () => {
     assert.equal(decodeSession(cookie, "another secret"), null);
   });
 
-  it("rejects an expired session", () => {
-    const secret = db.sessionSecret();
+  it("rejects an expired session", async () => {
+    const secret = await db.sessionSecret();
     const cookie = encodeSession({ staffId: "s", businessId: ACME, expiresAt: 1_000 }, secret);
     assert.equal(decodeSession(cookie, secret, 2_000), null);
   });
 
-  it("refuses business ids that would not be safe in a URL", () => {
-    assert.throws(() => db.createBusiness({ id: "Acme Coffee", name: "x" }));
-    assert.throws(() => db.createBusiness({ id: "../inbox", name: "x" }));
+  it("refuses business ids that would not be safe in a URL", async () => {
+    await assert.rejects(() => db.createBusiness({ id: "Acme Coffee", name: "x" }));
+    await assert.rejects(() => db.createBusiness({ id: "../inbox", name: "x" }));
   });
 });

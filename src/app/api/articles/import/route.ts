@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const message = err instanceof z.ZodError ? err.issues[0].message : (err as Error).message;
     return NextResponse.json({ error: message }, { status: 400 });
   }
-  if (body.data.mode === "replace") replaceArticles(staff.business_id, articles);
-  else saveArticles(staff.business_id, articles);
+  if (body.data.mode === "replace") await replaceArticles(staff.business_id, articles);
+  else await saveArticles(staff.business_id, articles);
   return NextResponse.json({ imported: articles.length });
 }

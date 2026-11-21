@@ -1,9 +1,6 @@
 # Production image: `next build`, then `next start` with dev dependencies pruned.
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
-# better-sqlite3 compiles from source when no prebuilt binary matches.
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
@@ -15,14 +12,12 @@ WORKDIR /app
 ENV NODE_ENV=production \
   NEXT_TELEMETRY_DISABLED=1 \
   PORT=3000 \
-  RELAYDESK_DB_PATH=/data/relaydesk.db \
+  RELAYDESK_DB_PATH=/data/pglite \
   RELAYDESK_TRACE_FILE=0
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
-# Backup and restore run from this image too (the `backup` service in docker-compose.yml).
-COPY --from=build /app/scripts/backup-lib.mjs /app/scripts/backup.mjs /app/scripts/restore.mjs ./scripts/
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME /data

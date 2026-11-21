@@ -8,20 +8,20 @@ import { InboxShell } from "./chrome";
 
 export async function generateMetadata(): Promise<Metadata> {
   const staff = await currentStaff();
-  const business = staff && getBusiness(staff.business_id);
+  const business = staff && await getBusiness(staff.business_id);
   return { title: business ? `${business.name} inbox · Relaydesk` : "Inbox · Relaydesk" };
 }
 
 export default async function InboxLayout({ children }: { children: React.ReactNode }) {
   const staff = await currentStaff();
   if (!staff) redirect("/login");
-  const business = getBusiness(staff.business_id);
+  const business = await getBusiness(staff.business_id);
   if (!business) redirect("/login");
   return (
     <InboxShell
       business={{ name: business.name, helpHref: helpCenterPath(business.id) }}
-      tickets={listTickets(business.id)}
-      copilotOn={copilotEnabled(business.id)}
+      tickets={await listTickets(business.id)}
+      copilotOn={await copilotEnabled(business.id)}
     >
       {children}
     </InboxShell>

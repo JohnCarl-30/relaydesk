@@ -31,7 +31,7 @@ Every pull request runs four Langfuse experiments ([`experiments.yml`](.github/w
 
 - **No tool sends to the customer.** The co-pilot and the MCP server can read, triage and draft. A person sends. [#33](https://github.com/JohnCarl-30/relaydesk/pull/33)
 - **Each business sees only its own data.** Every read that starts from an id the browser sent also takes the business. The same PR replaced a forgeable `relaydesk_admin=1` cookie with a signed session. [#31](https://github.com/JohnCarl-30/relaydesk/pull/31)
-- **Backups get restored, not just taken.** Daily backups with a tested restore, in the [runbook](RUNBOOK.md). [#34](https://github.com/JohnCarl-30/relaydesk/pull/34)
+- **Data in managed Postgres.** Neon in production, with point-in-time restore; PGlite (embedded Postgres) for dev and tests, so `npm test` still needs no database server. See the [runbook](RUNBOOK.md#restore).
 - **Rules before a model.** Sales intent scored 40/40 with keyword rules before any model was tried. Deal precision gates at 1.0, because a false lead wastes a salesperson's time. [#50](https://github.com/JohnCarl-30/relaydesk/pull/50)
 
 **Not proven yet**
@@ -60,7 +60,7 @@ Or run the production build in Docker:
 docker compose up --build
 ```
 
-The SQLite database lives in the `relaydesk-data` volume, so tickets survive a restart, and a `backup` service snapshots it daily. Settings come from `.env.docker` (copy `.env.example`). To put it online for free from your own computer with a Cloudflare Tunnel, or on a server, see [RUNBOOK.md → Hosting](RUNBOOK.md#hosting).
+Set `DATABASE_URL` to a Postgres (Neon) connection string. Without it, data goes to PGlite in the `relaydesk-data` volume, so tickets still survive a restart, but nothing backs it up. Settings come from `.env.docker` (copy `.env.example`). To put it online for free from your own computer with a Cloudflare Tunnel, or on a server, see [RUNBOOK.md → Hosting](RUNBOOK.md#hosting).
 
 Answers go through a LangGraph loop. Retrieve help articles, write a reply, rewrite the query and search again if the first pass is weak. No API key still quotes when retrieve is confident. Out of corpus refuses and opens a ticket. Set `OPENAI_API_KEY` (and optional `OPENAI_BASE_URL`) if you want the generate and rewrite nodes to call the model.
 
@@ -216,7 +216,7 @@ npm run bench     # vitest bench, keyless
 
 ## Operations
 
-[RUNBOOK.md](RUNBOOK.md) covers health checks, turning off the co-pilot, model outages, database backup and restore, and how to roll back.
+[RUNBOOK.md](RUNBOOK.md) covers health checks, turning off the co-pilot, model outages, database restore and the move from SQLite, and how to roll back.
 
 ## Roadmap
 

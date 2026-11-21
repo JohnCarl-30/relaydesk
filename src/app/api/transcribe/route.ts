@@ -11,9 +11,9 @@ import { MAX_QUESTION_BYTES, recordVoiceSeconds, voiceStatus } from "@/lib/serve
  */
 export async function POST(request: Request) {
   const business = new URL(request.url).searchParams.get("business")?.trim();
-  const center = business ? loadLiveHelpCenter(business) : undefined;
+  const center = business ? await loadLiveHelpCenter(business) : undefined;
   if (!center) return NextResponse.json({ error: "business not found" }, { status: 404 });
-  const status = voiceStatus(center.businessId);
+  const status = await voiceStatus(center.businessId);
   const config = elevenLabsConfig();
   if (status.provider !== "elevenlabs" || !config) {
     // Off, or out of minutes: the widget switches to the browser's voice.
@@ -40,6 +40,6 @@ export async function POST(request: Request) {
 
   const { text, seconds } = readTranscript(await upstream.json().catch(() => null));
   // A silent clip has no words to time, but it was still sent and billed. Count all of it: ElevenLabs bills all of it.
-  recordVoiceSeconds(center.businessId, seconds || 1);
+  await recordVoiceSeconds(center.businessId, seconds || 1);
   return NextResponse.json({ text });
 }

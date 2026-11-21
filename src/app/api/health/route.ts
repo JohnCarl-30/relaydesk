@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getBusiness } from "@/lib/db";
+import { DEMO_BUSINESS_ID } from "@/lib/help-center";
 
 /** For Docker's HEALTHCHECK and uptime monitors: the server answers and the database reads. */
 export async function GET() {
   try {
-    db().prepare("SELECT 1 FROM businesses LIMIT 1").get();
+    await getBusiness(DEMO_BUSINESS_ID);
     return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     return NextResponse.json(

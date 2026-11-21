@@ -1,8 +1,11 @@
 # Relaydesk in production, on any Docker host: your laptop, a free Oracle VM,
 # or a paid VPS. RUNBOOK.md "Hosting" walks through each.
 #
-#   docker compose up -d --build                      app + daily backups, on 127.0.0.1:3000
+#   docker compose up -d --build                      app on 127.0.0.1:3000
 #   docker compose --profile tunnel up -d --build     ...and a Cloudflare Tunnel for HTTPS on your domain
+#
+# Data goes to Postgres at DATABASE_URL (Neon in production). Without it, PGlite keeps it in the
+# relaydesk-data volume, which is fine on a laptop but has no backups.
 #
 # Secrets come from .env.docker (copy .env.example). It is git- and docker-ignored, and
 # named so Next.js never loads it on its own the way it would .env.production.
@@ -13,29 +16,6 @@ services:
     ports:
       # Loopback only: the public way in is the tunnel or a reverse proxy, not a raw port.
       - "127.0.0.1:${RELAYDESK_PORT:-3000}:3000"
-    env_file:
-      # Dokploy writes its Environment tab here and doesn't pass it to containers on its own.
-      - path: .env
-        required: false
-      - path: .env.docker
-        required: false
-    volumes:
-      - relaydesk-data:/data
-    restart: unless-stopped
-
-  # Same image, so it has the same better-sqlite3 build. Snapshots go to the
-  # same volume (/data/backups) and, with RELAYDESK_BACKUP_S3_* set, off the machine.
-  backup:
-    image: relaydesk:local
-    depends_on:
-      relaydesk:
-        condition: service_healthy
-    command: ["node", "scripts/backup.mjs"]
-    # The image's HEALTHCHECK fetches the app's /api/health, which this
-    # container doesn't serve, so it would always read unhealthy. Whether
-    # backups work is in /data/backups/last.json (RUNBOOK.md → Backups).
-    healthcheck:
-      disable: true
     env_file:
       # Dokploy writes its Environment tab here and doesn't pass it to containers on its own.
       - path: .env

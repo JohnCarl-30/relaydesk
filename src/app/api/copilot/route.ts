@@ -12,6 +12,6 @@ export async function POST(request: Request) {
   if (isPublicDemo(staff)) return demoReadOnly();
   const body = await readBody(request, z.object({ enabled: z.boolean() }));
   if ("error" in body) return body.error;
-  setSetting(staff.business_id, COPILOT_SETTING, body.data.enabled ? "on" : "off");
-  return NextResponse.json({ enabled: copilotEnabled(staff.business_id) });
+  await setSetting(staff.business_id, COPILOT_SETTING, body.data.enabled ? "on" : "off");
+  return NextResponse.json({ enabled: await copilotEnabled(staff.business_id) });
 }
