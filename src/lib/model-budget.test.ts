@@ -23,8 +23,8 @@ describe("the daily model budget", () => {
   });
 
   it("counts every real model call, and once spent, chat answers from the articles", async () => {
-    process.env.OPENAI_API_KEY = "test-key";
-    process.env.OPENAI_BASE_URL = "http://127.0.0.1:9"; // nothing listens, so the call fails fast
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.ANTHROPIC_BASE_URL = "http://127.0.0.1:9"; // nothing listens, so the call fails fast
     process.env.RELAYDESK_MODEL_CALLS_PER_DAY = "1";
     try {
       assert.equal(hasLlm(), true);
@@ -34,8 +34,8 @@ describe("the daily model budget", () => {
       assert.equal(answer.usedLlm, false);
       assert.ok(answer.answer.length > 0);
     } finally {
-      delete process.env.OPENAI_API_KEY;
-      delete process.env.OPENAI_BASE_URL;
+      delete process.env.ANTHROPIC_API_KEY;
+      delete process.env.ANTHROPIC_BASE_URL;
       delete process.env.RELAYDESK_MODEL_CALLS_PER_DAY;
     }
   });

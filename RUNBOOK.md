@@ -11,7 +11,7 @@ What to check and do when something is wrong, and how to host it. Production is 
 | Backups | Service `backup`: daily snapshot to `/data/backups` (last 7), plus an S3-compatible bucket if set | `RELAYDESK_BACKUP_*`; last result in `/data/backups/last.json` |
 | Secrets | `.env.docker` on the host, never in git or the image | Copy `.env.example` |
 | Traces | `eval/traces/live.jsonl`, one OpenTelemetry span per line | `RELAYDESK_TRACE_FILE` (a path, or `0` for none) |
-| Model | Optional. Without a key everything still works without a model. | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (default `claude-haiku-5-5` on `https://api.anthropic.com/v1`, so an Anthropic key is enough) |
+| Model | Optional. Without a key everything still works without a model. | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (default `claude-haiku-5-5`), through the Anthropic SDK |
 | Businesses | `businesses`, `articles`, `staff`, `invites` tables; Nimbus is seeded | `/signup` (gate it with `RELAYDESK_SIGNUP_CODE`), or `scripts/add-business.ts`. `businesses.live = 0` hides one from the public |
 | MCP | `/api/mcp`, Streamable HTTP, stateless | Per-business tokens in `mcp_tokens` (hashed; **Setup** to create or revoke). `RELAYDESK_MCP_TOKEN` is the Nimbus demo's. 404 when neither exists |
 | Public URL | Embed snippets, invite links, links in staff emails | `RELAYDESK_PUBLIC_URL`, else the request's `Host` (never `X-Forwarded-Host`, which visitors can set) |
@@ -68,7 +68,7 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
 ### Model provider down, slow, or too expensive
 
 - **What already happens:** a failed model call falls back on its own. The widget quotes articles, and the co-pilot writes holding replies.
-- **Mitigate:** unset `OPENAI_API_KEY` and restart. Everything then runs without a model, with no further model cost.
+- **Mitigate:** unset `ANTHROPIC_API_KEY` and restart. Everything then runs without a model, with no further model cost.
 
 ### The co-pilot drafts badly
 
@@ -135,7 +135,7 @@ One machine running `docker compose`: the app, a `backup` service, and (optional
    - `RELAYDESK_SIGNUP_CODE`: so strangers can't create businesses
    - `RELAYDESK_ADMIN_PASSWORD`: the Nimbus demo login is public otherwise
    - `RELAYDESK_PUBLIC_URL`: the `https://` address people will use
-   - `OPENAI_API_KEY`: optional; without it answers quote the articles
+   - `ANTHROPIC_API_KEY`: optional; without it answers quote the articles
 3. `docker compose up -d --build`. Check `curl -s 127.0.0.1:3000/api/health` returns `{"ok":true}`.
 4. Run the [health check](#health-check) against `http://127.0.0.1:3000`.
 

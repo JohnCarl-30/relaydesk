@@ -8,7 +8,7 @@ The widget can call a model. `/api/eval` should not. Retrieve is the thing CI ca
 npx --yes tsx eval/generate.ts
 ```
 
-`POST /api/eval?variant=generate` uses the same retrieve as baseline, then the generate-node prompt if `OPENAI_API_KEY` is set. Empty hits, no key, or a ticket-worthy question fall back to quotes. Rewrite stays off. Do not point the PR gate at this variant.
+`POST /api/eval?variant=generate` uses the same retrieve as baseline, then the generate-node prompt if `ANTHROPIC_API_KEY` is set. Empty hits, no key, or a ticket-worthy question fall back to quotes. Rewrite stays off. Do not point the PR gate at this variant.
 
 ## Same retrieve, two generators
 
@@ -29,7 +29,7 @@ Faithfulness is below the CI lock (0.782) because week 9 refuses 7 rows on `/api
 
 ## Who would call the model
 
-43 of 50 rows are not escalations and have hits. Those would hit ChatOpenAI. 7 would still refuse. 0 rows actually called a model in this run.
+43 of 50 rows are not escalations and have hits. Those would call the model. 7 would still refuse. 0 rows actually called a model in this run.
 
 Rewrite is a different filter. Only 5 of 50 are unconfident enough to search again. Generate is the common path once a key exists. Most questions would pay for a completion, not a second retrieve.
 

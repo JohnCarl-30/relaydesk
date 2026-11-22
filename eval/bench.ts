@@ -4,7 +4,7 @@
  *   npx --yes tsx eval/bench.ts
  *
  * Extractive path is retrieve + extractiveAnswer, the widget's keyless answer.
- * LLM $ is estimated from prompt size at gpt-4o-mini list prices. No live key required.
+ * LLM $ is estimated from prompt size at Claude Haiku 5.5 list prices. No live key required.
  */
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -22,8 +22,8 @@ import { loadGolden } from "./golden";
 const GENERATE_SYSTEM = generateSystem(DEMO_HELP_CENTER.name, REFUSE_LINE);
 const REWRITE_SYSTEM = rewriteSystem(DEMO_HELP_CENTER.searchHint);
 
-const INPUT_PER_M = 0.15;
-const OUTPUT_PER_M = 0.6;
+const INPUT_PER_M = 0.1;
+const OUTPUT_PER_M = 0.5;
 const GEN_OUT_TOKENS = 120;
 const REWRITE_OUT_TOKENS = 12;
 
@@ -138,7 +138,7 @@ async function main() {
       usd_per_golden: 0,
     },
     llm_generate_rewrite_estimate: {
-      note: "gpt-4o-mini $0.15/$0.60 per 1M tokens, chars/4, no live call",
+      note: "claude-haiku-5-5 $0.10/$0.50 per 1M tokens, chars/4, no live call",
       rewrite_rows: rewriteRows,
       input_tokens: llmInput,
       output_tokens: llmOutput,

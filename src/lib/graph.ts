@@ -1,5 +1,5 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatAnthropic } from "@langchain/anthropic";
 import {
   boundConversationHistory,
   heuristicStandaloneQuestion,
@@ -32,7 +32,7 @@ import {
   type RagResult,
 } from "./rag";
 import { modelBudgetLeft, recordModelCall } from "./rate-limit";
-import { fetchToolModel, runAgent, type ToolModel } from "./agent";
+import { anthropicToolModel, runAgent, type ToolModel } from "./agent";
 import { generationAttributes, initTracing, withSpan } from "./trace";
 import type { Channel } from "./voice";
 
@@ -115,33 +115,23 @@ export function rewriteSystem(searchHint: string): string {
 
 /** A model is configured and today's budget isn't spent. Over it, everything answers as if keyless. */
 export function hasLlm(): boolean {
-  if (process.env.OPENAI_API_KEY) return modelBudgetLeft();
+  if (process.env.ANTHROPIC_API_KEY) return modelBudgetLeft();
   return process.env.RELAYDESK_STUB_LLM === "1";
 }
 
 export function usingStubLlm(): boolean {
-  return !process.env.OPENAI_API_KEY && process.env.RELAYDESK_STUB_LLM === "1";
+  return !process.env.ANTHROPIC_API_KEY && process.env.RELAYDESK_STUB_LLM === "1";
 }
 
 /** The model name traces and co-pilot drafts record. */
 export function chatModelName(): string {
-  return usingStubLlm() ? "stub" : (process.env.OPENAI_MODEL ?? "claude-haiku-5-5");
-}
-
-/** Anthropic's OpenAI-compatible endpoint, unless OPENAI_BASE_URL points elsewhere (e.g. OpenAI). */
-export function modelBaseUrl(): string {
-  return (process.env.OPENAI_BASE_URL ?? "https://api.anthropic.com/v1").replace(/\/$/, "");
-}
-
-/** Claude 4.7+ on Anthropic's OpenAI-compatible endpoint returns a 400 for temperature below 1, so Claude runs at its default. */
-export function temperatureFor(model: string, temperature: number): { temperature?: number } {
-  return model.startsWith("claude-") ? {} : { temperature };
+  return usingStubLlm() ? "stub" : (process.env.ANTHROPIC_MODEL ?? "claude-haiku-5-5");
 }
 
 let stubSession: StubChatModel | undefined;
 
-/** Answers default to 0.2; classifiers pass 0, since a label gains nothing from sampling. */
-export function chatModel(temperature = 0.2): ChatLike {
+/** Claude at its default sampling: current models return a 400 for a non-default temperature. */
+export function chatModel(): ChatLike {
   if (usingStubLlm()) {
     stubSession ??= new StubChatModel([
       "Nimbus is the analytics product in the help center. I am not fully sure. Talk to a person if this is the wrong case.",
@@ -150,16 +140,25 @@ export function chatModel(temperature = 0.2): ChatLike {
     ]);
     return stubSession;
   }
-  return new ChatOpenAI({
+  return claudeChat(new ChatAnthropic({
     model: chatModelName(),
-    ...temperatureFor(chatModelName(), temperature),
     // The visitor is waiting: give up after one retry instead of the default backoff, which ran for minutes.
     maxRetries: 1,
-    timeout: 10_000,
+    clientOptions: { timeout: 10_000 },
     callbacks: [{ handleLLMStart: () => recordModelCall() }],
-    apiKey: process.env.OPENAI_API_KEY,
-    configuration: { baseURL: modelBaseUrl() },
-  }) as ChatLike;
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  }));
+}
+
+/** Text blocks only: with thinking on, a reply also carries thinking blocks. */
+export function claudeChat(model: ChatAnthropic): ChatLike & { chat: ChatAnthropic } {
+  return {
+    chat: model,
+    invoke: async (messages) => {
+      const response = await model.invoke(messages);
+      return { content: response.text, usage_metadata: response.usage_metadata };
+    },
+  };
 }
 
 function resolveQuestion(
@@ -437,7 +436,7 @@ export async function answerQuestion(
     channel?: Channel;
     /** "agent" lets the model pick its own tools (#70). It needs a model, so without one the graph answers. */
     path?: AnswerPath;
-    /** The agent's model. Defaults to /chat/completions on the OPENAI_* settings. */
+    /** The agent's model. Defaults to the Messages API with the ANTHROPIC_* settings. */
     agentModel?: ToolModel;
   } = {},
 ): Promise<RagResult> {
@@ -475,13 +474,8 @@ export async function answerQuestion(
     const agentModel =
       options.path === "agent"
         ? (options.agentModel ??
-          (process.env.OPENAI_API_KEY
-            ? fetchToolModel({
-                baseUrl: modelBaseUrl(),
-                apiKey: process.env.OPENAI_API_KEY,
-                model: chatModelName(),
-                ...temperatureFor(chatModelName(), 0.2),
-              })
+          (process.env.ANTHROPIC_API_KEY
+            ? anthropicToolModel(chatModelName())
             : undefined))
         : undefined;
     span.setAttribute("answer.path", agentModel ? "agent" : "graph");

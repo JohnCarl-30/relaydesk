@@ -25,8 +25,8 @@ describe("generateFromHits", () => {
 
 describe("answerQuestion when the model is down", () => {
   it("answers from the articles instead of throwing", async () => {
-    process.env.OPENAI_API_KEY = "test-key";
-    process.env.OPENAI_BASE_URL = "http://127.0.0.1:9"; // nothing listens there, so every call fails
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.ANTHROPIC_BASE_URL = "http://127.0.0.1:9"; // nothing listens there, so every call fails
     try {
       const started = Date.now();
       const result = await answerQuestion("what is nimbus");
@@ -34,12 +34,12 @@ describe("answerQuestion when the model is down", () => {
       assert.ok(result.answer.length > 0);
       assert.ok(Date.now() - started < 10_000, "no long retry loop");
       // A provider that accepts the call and never answers is cut off by these, not by a hung request.
-      const model = chatModel() as unknown as { timeout?: number; caller?: { maxRetries?: number } };
-      assert.equal(model.timeout, 10_000);
-      assert.equal(model.caller?.maxRetries, 1);
+      const { chat } = chatModel() as unknown as { chat: { clientOptions: { timeout?: number }; caller?: { maxRetries?: number } } };
+      assert.equal(chat.clientOptions.timeout, 10_000);
+      assert.equal(chat.caller?.maxRetries, 1);
     } finally {
-      delete process.env.OPENAI_API_KEY;
-      delete process.env.OPENAI_BASE_URL;
+      delete process.env.ANTHROPIC_API_KEY;
+      delete process.env.ANTHROPIC_BASE_URL;
     }
   });
 });

@@ -5,11 +5,11 @@
  *   npx --yes tsx eval/run-experiments.ts golden             # one of: golden, escalation, intent, attacks
  *   npx --yes tsx eval/run-experiments.ts --run-name baseline
  *
- * Reads LANGFUSE_* and OPENAI_API_KEY from the environment or .env.local.
+ * Reads LANGFUSE_* and ANTHROPIC_API_KEY from the environment or .env.local.
  * With both Langfuse keys, it runs on the datasets eval/upload-datasets.ts
  * wrote and records a dataset run with every score. Without them, it runs the
  * same task and evaluators on the CSVs and only prints the scores.
- * The answers use the model when OPENAI_API_KEY is set, like the widget. The
+ * The answers use the model when ANTHROPIC_API_KEY is set, like the widget. The
  * faithfulness judge needs that key too, and is skipped without it.
  * It exits non-zero when a run score is below its threshold in eval/suite.ts,
  * the same check the PR gate runs through eval/ci/.

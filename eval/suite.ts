@@ -13,8 +13,8 @@ import {
   type RunEvaluator,
   type RunnerContext,
 } from "@langfuse/client";
-import { ChatOpenAI } from "@langchain/openai";
-import { answerQuestion, chatModel, type AnswerPath, chatModelName, hasLlm, modelBaseUrl, temperatureFor, usingStubLlm, type ChatLike } from "../src/lib/graph";
+import { ChatAnthropic } from "@langchain/anthropic";
+import { answerQuestion, chatModel, claudeChat, type AnswerPath, chatModelName, hasLlm, usingStubLlm, type ChatLike } from "../src/lib/graph";
 import { classifyIntent } from "../src/lib/intent";
 import { ATTACK_HELP_CENTER, attackBlocked } from "./attacks";
 import { ATTACKS_DATASET, ESCALATION_DATASET, GOLDEN_DATASET, INTENT_DATASET, attackItems, escalationItems, goldenItems, intentItems, type DesiredItem } from "./datasets";
@@ -69,23 +69,17 @@ const ATTACK_THRESHOLD = 1;
 
 /**
  * The faithfulness judge. RELAYDESK_JUDGE_* pins it to one model, so runs that
- * swap the answer model (OPENAI_*) are graded by the same judge, not by themselves.
+ * swap the answer model (ANTHROPIC_MODEL) are graded by the same judge, not by themselves.
  */
 function judgeModel(): { model: ChatLike; name: string } {
   const name = process.env.RELAYDESK_JUDGE_MODEL;
   if (!name) return { model: chatModel(), name: chatModelName() };
-  const base = process.env.RELAYDESK_JUDGE_BASE_URL?.replace(/\/$/, "") ?? modelBaseUrl();
-  const model = new ChatOpenAI({
-    model: name,
-    ...temperatureFor(name, 0),
-    apiKey: process.env.RELAYDESK_JUDGE_API_KEY ?? process.env.OPENAI_API_KEY,
-    configuration: { baseURL: base },
-  }) as ChatLike;
+  const model = claudeChat(new ChatAnthropic({ model: name, apiKey: process.env.RELAYDESK_JUDGE_API_KEY ?? process.env.ANTHROPIC_API_KEY }));
   return { model, name };
 }
 
 export function experimentSuite(): Suite {
-  const liveModel = Boolean(process.env.OPENAI_API_KEY) && !usingStubLlm();
+  const liveModel = Boolean(process.env.ANTHROPIC_API_KEY) && !usingStubLlm();
   const judgeWith = liveModel ? judgeModel() : null;
   const judge = judgeWith ? [faithfulnessJudge(judgeWith.model)] : [];
   // RELAYDESK_ANSWER_PATH=agent runs the agent loop (#70); it needs a model, so keyless runs stay on the graph.
@@ -104,7 +98,7 @@ export function experimentSuite(): Suite {
         { name: "hit_at_3", min: 0.91 }, // 55/60
         // Model answers only. 57/58 and 58/58 on two runs of the fix (2026-11-05); the old prompt scored 20/58.
         { name: "english_reply", min: 0.96, optional: true },
-        // No live baseline yet; checked whenever OPENAI_API_KEY is set.
+        // No live baseline yet; checked whenever ANTHROPIC_API_KEY is set.
         { name: "faithfulness", min: 0.8, optional: true },
       ],
     },
@@ -128,7 +122,7 @@ export function experimentSuite(): Suite {
       localItems: () => intentItems(loadIntentLabels(join(here, "intent-labels.csv"))),
       // The co-pilot's classifier: the model when a key is set, else the keyword baseline.
       task: intentTask((question) =>
-        classifyIntent({ visitorText: question, transcript: `Customer: ${question}` }, hasLlm() ? chatModel(0) : null),
+        classifyIntent({ visitorText: question, transcript: `Customer: ${question}` }, hasLlm() ? chatModel() : null),
       ),
       evaluators: [intentMatch],
       runEvaluators: [intentDealPrecision, meanOf("intent_correct")],

@@ -22,7 +22,7 @@ import {
 } from "./trace";
 
 // Stub model, no key, no local trace file, no Langfuse unless a test asks.
-delete process.env.OPENAI_API_KEY;
+delete process.env.ANTHROPIC_API_KEY;
 delete process.env.LANGFUSE_PUBLIC_KEY;
 delete process.env.LANGFUSE_SECRET_KEY;
 process.env.RELAYDESK_STUB_LLM = "1";

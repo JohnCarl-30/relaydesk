@@ -57,7 +57,7 @@ jobs:
           # The action exports LANGFUSE_HOST; relaydesk's code reads LANGFUSE_BASE_URL.
           LANGFUSE_BASE_URL: https://us.cloud.langfuse.com
           # Optional. With it, the model writes the answers and the faithfulness judge runs.
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
           langfuse_public_key: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
           langfuse_secret_key: ${{ secrets.LANGFUSE_SECRET_KEY }}
