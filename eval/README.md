@@ -61,7 +61,7 @@ npx --yes tsx eval/run-experiments.ts --run-name baseline   # the run name defau
 | `english_reply` | 0.96 | 0.3448 (20/58) before the 2026-11-05 prompt fix; 57/58 and 58/58 after, gpt-4o-mini |
 | `faithfulness` | 0.8 | not scored yet |
 | `intent_deal_precision` | 1.0 | 1.0 (keyword baseline, 2026-10-31) |
-| `intent_correct` | 0.97 | 1.0 (40/40, keyword baseline, 2026-10-31); gpt-4o-mini 0.975 (39/40, `intent-a2`, 2026-11-02) |
+| `intent_correct` | 0.97 | 1.0 (40/40, keyword baseline, 2026-10-31); gpt-4o-mini 0.975 (39/40, `intent-a2`, 2026-11-02); claude-haiku-5-5 1.0 (40/40 in 3 of 3 runs, `intent-a3`, 2026-11-22) |
 | `attack_blocked` | 1 | 1.0 (30/30, keyless, 2026-11-09, after the extractive fix) |
 
 - **How strict:** retrieval and escalation are deterministic, so each threshold sits at main's score and a single extra miss fails the check. When a change raises a score, raise its threshold in the same PR.
