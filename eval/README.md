@@ -240,20 +240,30 @@ npx --yes tsx eval/bench.ts
 
 ## Agent loop
 
-`answerQuestion(question, { path: "agent" })` swaps the fixed graph for a loop where the model picks its own tools: `search_help_center`, `reply`, and `hand_off` ([`src/lib/agent.ts`](../src/lib/agent.ts), #70). It calls `/chat/completions` with `fetch`, no framework. The graph stays the default, and without a model the agent path falls back to the graph.
+By default the widget answers with a fixed pipeline: search the help center, write an answer, and search again with other words if the first results miss. The agent loop is the alternative. The model gets three tools, `search_help_center`, `reply` and `hand_off`, and decides for itself when to search, when to answer, and when to pass the question to a person. It's about 250 lines of TypeScript calling `/chat/completions` with plain `fetch`, no agent framework ([`src/lib/agent.ts`](../src/lib/agent.ts), #70).
 
-- **Before the loop:** acknowledgements, explicit requests for a person, follow-ups naming things the articles don't cover, and unpriced price questions. The model never sees these. The coverage check is left to the model, since searching again is the point of the loop.
-- **Step cap:** 4 model calls. A model still searching after that is handed to a person.
-- **Bad tool arguments** (invalid JSON, a missing field, an unknown tool) go back to the model as the tool result, so it can try again within the cap.
-- **Citations** are kept only for articles a search returned. A reply left with none goes back to the model.
-- **No tool call, or a failed model call:** the visitor gets the graph's extractive answer, as when the graph's own model call fails.
-- **Traces:** one `agent.model` generation and one `agent.tool` span per step under `support.answer`, which records `answer.path`, `agent.steps` and `agent.stop`.
+The widget doesn't use it yet. Nothing in the app passes `path: "agent"` to `answerQuestion()`, so only the evals below and `eval/judge-candidates.ts` run it. Without a model key it falls back to the fixed pipeline.
 
-To compare the two paths, run the same experiments with `RELAYDESK_ANSWER_PATH=agent` and a different `--run-name`. Compare faithfulness, escalation, `english_reply`, steps, latency and cost. `hit_at_1` and `hit_at_3` score the fixed first retrieval on the question, so they come out the same on both paths and say nothing about the agent's own searches.
+The model picks its tools, but the code decides what reaches the customer:
+
+- Some questions never reach the model: thank-yous, requests for a person, questions about the visitor's own records, follow-ups about things no article covers, and price questions the articles don't price. Thank-yous get a short reply and the rest open a ticket.
+- Whether the help center covers a question is left to the model, since searching again with other words is the reason the loop exists.
+- The model gets 4 calls. If it's still searching after that, the question goes to a person.
+- A reply can only cite articles a search returned. If it cites none of them, the model is told to cite one or hand off.
+- A reply worded as a refusal counts as a hand-off, so the customer still gets a ticket.
+- Retrieval decides whether an answer is confident, not the model. The best cited article has to score at least `CONFIDENT_MIN_SCORE`.
+- Broken tool calls (invalid JSON, a missing field, a tool that doesn't exist) go back to the model as an error, so it can retry within its 4 calls.
+- If the model makes no tool call or the API call fails, the visitor gets the fixed pipeline's extractive answer, quoted from the article.
+
+Every step is traced in Langfuse: an `agent.model` generation and an `agent.tool` span per step, under a `support.answer` trace that records `answer.path`, `agent.steps` and `agent.stop`.
+
+To compare the two paths, run the same experiments once per path with different `--run-name`s. Set `OPENAI_API_KEY` first. Without a model the suite quietly runs the fixed pipeline both times and the two runs come out identical.
 
 ```bash
 npx --yes tsx eval/run-experiments.ts --run-name graph
 RELAYDESK_ANSWER_PATH=agent npx --yes tsx eval/run-experiments.ts --run-name agent
 ```
+
+Compare faithfulness, escalation, `english_reply`, steps, latency and cost. `hit_at_1` and `hit_at_3` won't differ: they score the first search on the question, which is the same on both paths, and never see the agent's own searches.
 
 Not run yet. The comparison needs a funded model key.
