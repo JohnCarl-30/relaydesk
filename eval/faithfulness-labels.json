@@ -1,0 +1,648 @@
+[
+  {
+    "question": "What is a Nimbus workspace?",
+    "answer": "A Nimbus workspace holds your projects, teammates, and bill. Event data never crosses workspaces. Create one workspace per company. Agencies that run analytics for several clients should create one workspace per client so invoices and retention settings stay separate. The owner can rename a workspace from Settings → General. Changing the name does not change the workspace ID used in the API.",
+    "citations": [
+      "workspaces",
+      "billing-seats-events",
+      "sso"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Can event data cross Nimbus workspaces?",
+    "answer": "Event data never crosses workspaces.",
+    "citations": [
+      "workspaces",
+      "funnel-zeros",
+      "billing-seats-events"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Should an agency use one workspace for every client?",
+    "answer": "No, an agency should not use one workspace for every client. According to the article \"What is a Nimbus workspace?\", agencies that run analytics for several clients should create one workspace per client so that invoices and retention settings stay separate. Creating one workspace per client helps maintain separation of billing and retention settings.",
+    "citations": [
+      "workspaces",
+      "sso",
+      "api-keys"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Does renaming a workspace change the API workspace ID?",
+    "answer": "No, renaming a workspace does not change the API workspace ID. This is stated in the article \"What is a Nimbus workspace?\" which says, \"Changing the name does not change the workspace ID used in the API.\"",
+    "citations": [
+      "workspaces",
+      "api-keys",
+      "inviting-teammates"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "How does Nimbus billing work?",
+    "answer": "Nimbus bills two dimensions: seats and a monthly event quota. Seats are billed per workspace, not per project. Pending invites do not count until accepted. Every person with login access counts, including viewers. Internal nimbus.* system events are free and do not count toward quota. If your invoice shows extra seats, check the snapshot date—seat count is a snapshot from the last day of the billing period. Expired invites do not occupy a seat.",
+    "citations": [
+      "billing-seats-events",
+      "inviting-teammates",
+      "workspaces"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Do pending invites count as billed seats?",
+    "answer": "Pending invites do not count as billed seats until they are accepted. Seats are only billed for individuals with login access. This information is supported by the article \"How billing works: seats and the invoice.\"",
+    "citations": [
+      "billing-seats-events",
+      "billing-plans",
+      "inviting-teammates"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft: borderline 1, \"only billed for individuals with login access\" reads \"every person with login access counts\" as exclusive; implied, not stated"
+  },
+  {
+    "question": "Do nimbus.* system events count toward quota?",
+    "answer": "Yes, nimbus.* system events do not count toward quota. Internal nimbus.* system events are free and do not count toward quota, as stated in \"How billing works: seats and the invoice\".",
+    "citations": [
+      "billing-seats-events",
+      "data-retention",
+      "funnel-zeros"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 0,
+    "note": "claude draft: opens with \"Yes\" to \"do they count?\", which contradicts the article (they do not count)"
+  },
+  {
+    "question": "What happens if I exceed events mid-cycle?",
+    "answer": "If you exceed events mid-cycle, we do not drop data. We invoice the overage on the next statement at $0.00012 per extra event. This information is from the article \"Plan quota and mid-cycle overage\".",
+    "citations": [
+      "billing-plans",
+      "data-retention",
+      "funnel-zeros"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Which day is seat count taken from on the invoice?",
+    "answer": "Seat count on the invoice is a snapshot from the last day of the billing period.",
+    "citations": [
+      "billing-seats-events",
+      "delete-project",
+      "failed-payment"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "What is the Growth plan event quota?",
+    "answer": "The Growth plan includes 10M events as its event quota.",
+    "citations": [
+      "billing-plans",
+      "data-retention",
+      "funnel-zeros"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "What happens if a Nimbus payment fails?",
+    "answer": "If a payment fails, Nimbus retries the payment on day 3, 7, and 14. You will receive an email each time. During these retries, dashboards stay readable. New event writes pause only after day 14. Existing data is not deleted. As soon as a payment succeeds, writes resume within a few minutes. Update the card under Settings → Billing. No reactivation fee is charged. \n\nThis information is from the article titled \"If a payment fails, dashboards stay readable while retrying a declined card\".",
+    "citations": [
+      "failed-payment",
+      "workspaces",
+      "billing-seats-events"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "When do new event writes pause after a declined card?",
+    "answer": "New event writes pause after day 14 following a declined card. Writes resume within a few minutes once a payment succeeds.",
+    "citations": [
+      "failed-payment",
+      "funnel-zeros",
+      "billing-plans"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Is there a reactivation fee after I update the card?",
+    "answer": "No, there is no reactivation fee when you update the card. This is stated in the article \"If a payment fails, dashboards stay readable while retrying a declined card.\"",
+    "citations": [
+      "failed-payment",
+      "sso",
+      "api-keys"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Which plans include SSO?",
+    "answer": "SSO is available on Growth and Scale plans.",
+    "citations": [
+      "sso",
+      "csv-export",
+      "inviting-teammates"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "How do I stop an SSO login loop?",
+    "answer": "If your SSO login loop occurs, check that the ACS URL has no trailing slash and that the user exists as a Nimbus member. This information is from the article \"Set up Google or Okta SSO\".",
+    "citations": [
+      "sso",
+      "billing-seats-events",
+      "inviting-teammates"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Is JIT provisioning on by default?",
+    "answer": "JIT provisioning is off by default.",
+    "citations": [
+      "sso",
+      "funnel-zeros"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Can I use personal Gmail with Google SSO?",
+    "answer": "No, you cannot use personal Gmail with Google SSO. Google SSO requires a company domain, and personal Gmail accounts are rejected.",
+    "citations": [
+      "sso",
+      "inviting-teammates",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "What is the difference between project write keys and workspace read keys?",
+    "answer": "Project write keys send events and are used by the JS snippet and server SDKs to send events. They can only write and are limited to 100 requests per second. Workspace read keys query data and cannot ingest events; they are used for the query API and CSV exports and are limited to 10 requests per second. Keys created before March 2025 share a workspace-wide 50 rps cap; new keys get current limits. Never ship a read key in frontend code.",
+    "citations": [
+      "api-keys",
+      "workspaces",
+      "delete-project"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "What HTTP status is returned when I burst past the rate limit?",
+    "answer": "HTTP 429 is returned when you burst past the rate limit.",
+    "citations": [
+      "api-keys",
+      "data-retention"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Can I put a workspace read key in frontend code?",
+    "answer": "Never ship a read key in frontend code.",
+    "citations": [
+      "api-keys",
+      "workspaces",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "What is the write-key rate limit?",
+    "answer": "The write-key rate limit is 100 requests per second per write key. Keys created before March 2025 share a workspace-wide 50 rps cap; new keys get the current 100 rps limit. Bursting above these limits returns HTTP 429 with Retry-After. This information is from the article \"API keys and rate limits\".",
+    "citations": [
+      "api-keys",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "How long does Starter keep raw events?",
+    "answer": "Starter keeps raw events for 30 days. \n\n(Source: [1] How long Starter and Growth keep raw events)",
+    "citations": [
+      "data-retention",
+      "funnel-zeros",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "What happens to old events if I downgrade from Growth to Starter?",
+    "answer": "If you downgrade from Growth to Starter, raw events older than 30 days are deleted on the next nightly job around 03:00 UTC. Export your events before this window closes to preserve data. This is covered in the article \"How long Starter and Growth keep raw events\".",
+    "citations": [
+      "data-retention",
+      "funnel-zeros",
+      "billing-plans"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "What is the CSV export row cap?",
+    "answer": "The CSV export row cap is 500,000 rows per file. This information is from the article \"Export a chart or events to CSV\".",
+    "citations": [
+      "csv-export",
+      "api-keys",
+      "data-retention"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "How long before a teammate invite expires?",
+    "answer": "An invite expires after 7 days.",
+    "citations": [
+      "inviting-teammates",
+      "data-retention",
+      "api-keys"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Do expired invites occupy a seat?",
+    "answer": "Expired invites do not occupy a seat.",
+    "citations": [
+      "inviting-teammates",
+      "billing-seats-events",
+      "delete-project"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Can I demote the last owner?",
+    "answer": "You cannot demote the last owner. Transfer ownership first.",
+    "citations": [
+      "inviting-teammates",
+      "workspaces",
+      "billing-seats-events"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "What can a viewer do?",
+    "answer": "A viewer can only read dashboards. They cannot create charts, funnels, or keys, nor can they access billing or delete a workspace. This is stated in the article \"Invite teammates.\"",
+    "citations": [
+      "funnel-zeros",
+      "data-retention",
+      "inviting-teammates"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Why does my funnel show zeros?",
+    "answer": "If your funnel shows zeros, it could be because:\n\n- The Starter plan samples events at 1% after 200k events in a day, which can make rare steps appear as zero.  \n- A filter (like `plan = pro`) may be hiding free users.  \n- The funnel is in a timezone that makes the date range appear incorrect (Nimbus stores UTC).  \n- Events are older than the retention window (Starter keeps events only 30 days).  \n\nCheck each step's event name, filters, and timezone. If on Starter, consider upgrading or using a longer time range.  \n\nSource: [1] A funnel shows zeros. Does Starter sample events?",
+    "citations": [
+      "funnel-zeros",
+      "data-retention"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft: borderline 1, retention bullet (old events gone) is inferred from data-retention, not stated as a funnel-zero cause"
+  },
+  {
+    "question": "Does renaming an event in code rename historical events?",
+    "answer": "Renaming an event in code does not rename historical events. \n\nSource: [1] A funnel shows zeros. Does Starter sample events?",
+    "citations": [
+      "funnel-zeros",
+      "data-retention",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Does Starter sample events?",
+    "answer": "Yes, Starter samples events at 1% after 200k events in a day, which can make a funnel look empty for rare steps. Data is not sampled on Growth or Scale.",
+    "citations": [
+      "funnel-zeros",
+      "data-retention",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "When does Export CSV email a link instead of downloading?",
+    "answer": "When a CSV export file is larger than 50 MB, it emails a signed link to the requester instead of downloading it. The link expires in 24 hours. This is specified in the article \"Export a chart or events to CSV\".",
+    "citations": [
+      "csv-export",
+      "data-retention",
+      "failed-payment"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "How long until the signed export link expires?",
+    "answer": "The signed export link expires in 24 hours. \n\nThis is stated in article [1]: \"Larger jobs email a signed link to the requester that expires in 24 hours.\"",
+    "citations": [
+      "csv-export",
+      "data-retention",
+      "billing-seats-events"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "How long is a deleted project in the recycle bin?",
+    "answer": "A deleted project stays in the recycle bin for 7 days. After that, events and charts are deleted and the project ID is never reused. This information is from the article \"Delete a project\".",
+    "citations": [
+      "delete-project",
+      "data-retention",
+      "api-keys"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Does deleting a project change seat count?",
+    "answer": "Deleting a project does not change seat count.",
+    "citations": [
+      "delete-project",
+      "inviting-teammates",
+      "billing-seats-events"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Is the project ID reused after deletion?",
+    "answer": "Yes, the project ID is never reused after deletion. This is stated in the article \"Delete a project\": \"For 7 days an owner can restore it from Settings → Recycle bin. After that, events and charts are deleted and the project ID is never reused.\"",
+    "citations": [
+      "delete-project",
+      "api-keys",
+      "billing-seats-events"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 0,
+    "note": "claude draft: opens with \"Yes\" to \"is it reused?\", which contradicts the article (never reused)"
+  },
+  {
+    "question": "¿Los datos de eventos cruzan workspaces de Nimbus?",
+    "answer": "No, event data never crosses workspaces in Nimbus.",
+    "citations": [
+      "workspaces",
+      "billing-seats-events",
+      "sso"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "I am on Starter and went past 200k events today, so my funnel looks empty. If I upgrade to Growth, do last month's sampled-away events come back?",
+    "answer": "No, last month's sampled-away events do not come back if you upgrade from Starter to Growth. Sampling in Starter occurs after 200k events in a day, and once events are sampled, they are not restored upon plan upgrade. Changing a plan does not rewrite history.",
+    "citations": [
+      "funnel-zeros",
+      "data-retention",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "How long does Growth keep raw events?",
+    "answer": "Growth keeps raw events for 90 days.",
+    "citations": [
+      "data-retention",
+      "funnel-zeros",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "After I turn on SSO, can people still log in with a password?",
+    "answer": "After you turn on SSO, password login is disabled for that workspace.",
+    "citations": [
+      "sso",
+      "funnel-zeros",
+      "api-keys"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Can an editor change billing or SSO?",
+    "answer": "An editor cannot change billing or SSO. Only owners have the ability to change billing and set up SSO. Editors can only create charts, funnels, and keys. \n\nSource: [1] Invite teammates. Editors cannot change billing.",
+    "citations": [
+      "inviting-teammates",
+      "sso",
+      "billing-seats-events"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft: borderline 1, editor and SSO is implied by the role list (owner: billing, SSO), not stated for editors"
+  },
+  {
+    "question": "What is the rate limit on a workspace read key?",
+    "answer": "The rate limit on a workspace read key is 10 requests per second per read key. Burst requests above this limit return HTTP 429 with Retry-After. Keys created before March 2025 share a workspace-wide 50 rps cap; create a new key to get the current limits. \n\nThis information is from the article titled \"API keys and rate limits\".",
+    "citations": [
+      "api-keys",
+      "workspaces",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "While Nimbus is retrying a declined card, can I still open dashboards?",
+    "answer": "Yes, while Nimbus is retrying a declined card, dashboards stay readable. New event writes pause only after day 14, and existing data is not deleted. As soon as a payment succeeds, writes resume within a few minutes. This information is from the article titled \"If a payment fails, dashboards stay readable while retrying a declined card\".",
+    "citations": [
+      "failed-payment",
+      "workspaces",
+      "funnel-zeros"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Do API keys created before March 2025 have the same rate limits as new keys?",
+    "answer": "Keys created before March 2025 share a workspace-wide 50 rps cap; create a new key to get the current limits. Therefore, they do not have the same rate limits as new keys. \n\nAnswer from article [1]: \"Keys created before March 2025 share a workspace-wide 50 rps cap; create a new key to get the current limits.\"",
+    "citations": [
+      "api-keys",
+      "inviting-teammates",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "Na-decline yung card namin, mabubura ba yung data namin?",
+    "answer": "No, your data will not be lost if your card is declined. Existing data is not deleted, and dashboards stay readable during retries. Writes resume as soon as a payment succeeds.",
+    "citations": [
+      "failed-payment",
+      "workspaces",
+      "billing-plans"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "If I downgrade to Starter, will SSO keep working?",
+    "answer": "No, SSO will not keep working if you downgrade to Starter because SSO is only available on Growth and Scale plans. \n\nArticle: [2] Set up Google or Okta SSO",
+    "citations": [
+      "data-retention",
+      "sso",
+      "funnel-zeros"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft: borderline 1, article says SSO is on Growth and Scale; what happens on downgrade is inferred"
+  },
+  {
+    "question": "Our read key keeps getting rejected when we send events from the server.",
+    "answer": "Your read key is being rejected because read keys cannot ingest events — only write keys can send events. Use a project write key to send events from your server.\n\nSee: [1] API keys and rate limits.",
+    "citations": [
+      "api-keys",
+      "data-retention",
+      "funnel-zeros"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "When exactly do old events get wiped each day?",
+    "answer": "Old events are deleted on a nightly job around 03:00 UTC. Raw events older than the retention window are deleted during this job. For Starter, events older than 30 days are deleted; for Growth, older than 90 days; for Scale, older than 365 days or a custom window. Changing a plan (like downgrading) triggers deletion of events older than the new retention window on the next nightly job. Export before the window closes if you need a copy of data past retention. \n\nThis information is from: \"How long Starter and Growth keep raw events\".",
+    "citations": [
+      "data-retention",
+      "funnel-zeros",
+      "api-keys"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  },
+  {
+    "question": "If retention deletes my events, do my saved funnels disappear too?",
+    "answer": "Yes, if retention deletes your events, your saved funnels do not disappear. Only the underlying events are deleted; saved funnel and chart definitions are kept. This is stated in the article \"How long Starter and Growth keep raw events.\"",
+    "citations": [
+      "data-retention",
+      "funnel-zeros",
+      "csv-export"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 0,
+    "note": "claude draft: opens with \"Yes\" to \"do they disappear?\", which contradicts the article (definitions are kept)"
+  },
+  {
+    "question": "Can my developer create API keys without being able to touch billing?",
+    "answer": "Yes, your developer can create API keys without being able to touch billing. According to the article \"Invite teammates. Editors cannot change billing\", editors can create charts, funnels, and keys but cannot change billing. Since API keys fall under creating keys, a developer with editor permissions can create them without billing access.",
+    "citations": [
+      "api-keys",
+      "inviting-teammates",
+      "billing-seats-events"
+    ],
+    "model": "qwen3:4b-instruct",
+    "path": "graph",
+    "label": 1,
+    "note": "claude draft"
+  }
+]
