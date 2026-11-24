@@ -14,7 +14,7 @@ Open [`extractive.txt`](extractive.txt) and [`llm-rewrite.txt`](llm-rewrite.txt)
 
 Extractive: `retrieve` → `generate` → END. `usedLlm=false`, `attempts=1`, `graph.next=END`. Rewrite never runs.
 
-Stub LLM path: `retrieve` → `generate` (`graph.next=rewrite`) → `rewrite` → `retrieve` → `generate` (`attempts=2`) → END. The rewritten query `nimbus workspace definition` raised `retrieve.top_score` from 5 to 14. That is why rewrite exists. Stub `llm.*_tokens` are placeholders (48/32). A real `OPENAI_API_KEY` fills usage from the model.
+Stub LLM path: `retrieve` → `generate` (`graph.next=rewrite`) → `rewrite` → `retrieve` → `generate` (`attempts=2`) → END. The rewritten query `nimbus workspace definition` raised `retrieve.top_score` from 5 to 14. That is why rewrite exists. Stub `llm.*_tokens` are placeholders (48/32). A real `ANTHROPIC_API_KEY` fills usage from the model.
 
 Widget calls `answerQuestion` too. Live spans append to `eval/traces/live.jsonl` (gitignored) unless you set `RELAYDESK_TRACE_FILE=0`.
 

@@ -34,7 +34,7 @@ export default defineConfig({
     timeout: 240_000,
     env: {
       // No key means extractive answers: deterministic and free.
-      OPENAI_API_KEY: "",
+      ANTHROPIC_API_KEY: "",
       RELAYDESK_STUB_LLM: "",
       RELAYDESK_TRACE_FILE: "0",
       RELAYDESK_DB_PATH: process.env.RELAYDESK_E2E_DB,

@@ -4,7 +4,7 @@
  *   npx --yes tsx eval/rewrite.ts
  *
  * Keyless. The extra retrieve uses rewriteSearchQuery, the same tokens
- * retrieve already bags. Widget rewrite still needs OPENAI_API_KEY.
+ * retrieve already bags. Widget rewrite still needs ANTHROPIC_API_KEY.
  */
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

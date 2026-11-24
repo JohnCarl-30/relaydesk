@@ -55,7 +55,7 @@ LLM generate+rewrite is still the [cost.md](cost.md) estimate: about **$0.007** 
 
 ## What stayed in production
 
-The widget still rewrites when `OPENAI_API_KEY` is set. The [traced](traces/README.md) `what is nimbus` pass went retrieve score **5 → 14** after `nimbus workspace definition`. That is query expansion, not a second tokenize. Cap stays at one extra attempt.
+The widget still rewrites when `ANTHROPIC_API_KEY` is set. The [traced](traces/README.md) `what is nimbus` pass went retrieve score **5 → 14** after `nimbus workspace definition`. That is query expansion, not a second tokenize. Cap stays at one extra attempt.
 
 Eval and CI stay on one retrieve. `?variant=rewrite` exists so the no-op is reproducible. Do not promote it.
 

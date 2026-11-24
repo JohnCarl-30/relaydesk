@@ -5,8 +5,8 @@
  * so a script can restore it for a live pass.
  */
 export function forceExtractiveAnswers(): string | undefined {
-  const liveKey = process.env.OPENAI_API_KEY;
-  delete process.env.OPENAI_API_KEY;
+  const liveKey = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
   delete process.env.RELAYDESK_STUB_LLM;
   delete process.env.LANGFUSE_PUBLIC_KEY;
   delete process.env.LANGFUSE_SECRET_KEY;

@@ -5,7 +5,7 @@ import { tokenize } from "./tokenize";
 /**
  * Keyless stand-in for the rewrite node. Same tokens retrieve already uses,
  * so a second pass does not change the ranking. The widget still calls the
- * model when OPENAI_API_KEY is set.
+ * model when ANTHROPIC_API_KEY is set.
  */
 export function rewriteSearchQuery(question: string): string {
   const tokens = tokenize(question);

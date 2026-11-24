@@ -4,7 +4,7 @@
  *   npx --yes tsx eval/generate.ts
  *
  * Timed extractive arm is keyless. Generate calls the model only when
- * OPENAI_API_KEY is already in the environment. Otherwise it falls back
+ * ANTHROPIC_API_KEY is already in the environment. Otherwise it falls back
  * and $ is estimated.
  */
 import { writeFileSync } from "node:fs";
@@ -20,8 +20,8 @@ import { loadGolden } from "./golden";
 const GENERATE_SYSTEM =
   "You are the Nimbus support assistant on a customer site. Answer only from the provided help articles. Be short. If the articles do not contain the answer, say you are unsure and suggest talking to a human. Mention article titles naturally. Do not invent policies, prices, or product behavior.";
 
-const INPUT_PER_M = 0.15;
-const OUTPUT_PER_M = 0.6;
+const INPUT_PER_M = 0.1;
+const OUTPUT_PER_M = 0.5;
 const GEN_OUT_TOKENS = 120;
 
 function pct(sorted: number[], p: number): number {
@@ -118,7 +118,7 @@ async function main() {
     }
   }
 
-  if (liveKey) process.env.OPENAI_API_KEY = liveKey;
+  if (liveKey) process.env.ANTHROPIC_API_KEY = liveKey;
 
   const generateMs: number[] = [];
   let actuallyCalled = 0;
@@ -171,7 +171,7 @@ async function main() {
       },
     },
     generate_only_estimate: {
-      note: "gpt-4o-mini $0.15/$0.60 per 1M tokens, chars/4, ~120 output tokens. Rows that would call the model only. No rewrite loop.",
+      note: "claude-haiku-5-5 $0.10/$0.50 per 1M tokens, chars/4, ~120 output tokens. Rows that would call the model only. No rewrite loop.",
       would_call_model: wouldCall,
       input_tokens: llmInput,
       output_tokens: llmOutput,

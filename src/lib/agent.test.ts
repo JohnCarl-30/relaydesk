@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { MAX_AGENT_STEPS, runAgent, type AgentMessage, type ModelTurn, type ToolModel } from "./agent";
+import type Anthropic from "@anthropic-ai/sdk";
+import { MAX_AGENT_STEPS, runAgent, type ModelTurn, type ToolModel } from "./agent";
 import { REFUSE_LINE } from "./escalate";
 import { answerQuestion } from "./graph";
 import { DEMO_HELP_CENTER } from "./help-center";
@@ -9,21 +10,17 @@ import { dumpSpans, resetSpans, snapshotSpans } from "./trace";
 
 forceExtractiveAnswers();
 
-type Turn = ModelTurn["message"];
+type Turn = ModelTurn["content"];
 
-const call = (name: string, args: unknown, id = name): Turn => ({
-  content: null,
-  tool_calls: [
-    { id, type: "function", function: { name, arguments: typeof args === "string" ? args : JSON.stringify(args) } },
-  ],
-});
+const call = (name: string, input: unknown, id = name): Turn => [{ type: "tool_use", id, name, input } as Anthropic.ToolUseBlock];
+const text = (body: string): Turn => [{ type: "text", text: body, citations: null } as Anthropic.TextBlock];
 
 /** Plays back one turn per model call, repeating the last, and records what the model was sent. */
-function scripted(turns: Turn[]): ToolModel & { sent: AgentMessage[][] } {
-  const sent: AgentMessage[][] = [];
-  const model: ToolModel = async (messages) => {
+function scripted(turns: Turn[]): ToolModel & { sent: Anthropic.MessageParam[][] } {
+  const sent: Anthropic.MessageParam[][] = [];
+  const model: ToolModel = async (_system, messages) => {
     sent.push(structuredClone(messages));
-    return { message: turns[Math.min(sent.length - 1, turns.length - 1)], usage: { input_tokens: 10, output_tokens: 5 } };
+    return { content: turns[Math.min(sent.length - 1, turns.length - 1)], usage: { input_tokens: 10, output_tokens: 5 } };
   };
   return Object.assign(model, { sent });
 }
@@ -42,8 +39,11 @@ function run(model: ToolModel) {
 }
 
 /** The tool results the model got back on its last call. */
-const toolResults = (model: { sent: AgentMessage[][] }) =>
-  model.sent.at(-1)!.flatMap((m) => (m.role === "tool" ? [m.content] : []));
+const toolResults = (model: { sent: Anthropic.MessageParam[][] }) =>
+  model.sent
+    .at(-1)!
+    .flatMap((m) => (typeof m.content === "string" ? [] : m.content))
+    .flatMap((block) => (block.type === "tool_result" ? [String(block.content)] : []));
 
 describe("runAgent", () => {
   it("searches, then replies citing what it found", async () => {
@@ -83,8 +83,8 @@ describe("runAgent", () => {
     const { result, stop } = await run(model);
     assert.equal(stop, "reply");
     assert.deepEqual(result.citations.map((c) => c.slug), ["workspaces"]);
-    const [badJson, missingField] = toolResults(model);
-    assert.equal(badJson, "Arguments were not valid JSON.");
+    const [notAnObject, missingField] = toolResults(model);
+    assert.match(notAnObject, /^Invalid arguments/);
     assert.match(missingField, /^Invalid arguments: query/);
   });
 
@@ -108,7 +108,7 @@ describe("runAgent", () => {
   });
 
   it("falls back to the extractive answer on plain text or a failed model call", async () => {
-    const plain = await run(scripted([{ content: "Event data never crosses workspaces." }]));
+    const plain = await run(scripted([text("Event data never crosses workspaces.")]));
     assert.deepEqual([plain.stop, plain.result], ["no_tool_call", FALLBACK]);
     const failed = await run(async () => {
       throw new Error("429");
@@ -120,7 +120,7 @@ describe("runAgent", () => {
     const model = scripted([call("hand_off", "{reason"), call("hand_off", { reason: "not covered" })]);
     const { stop, steps } = await run(model);
     assert.deepEqual([stop, steps], ["hand_off", 2]);
-    assert.equal(toolResults(model)[0], "Arguments were not valid JSON.");
+    assert.match(toolResults(model)[0], /^Invalid arguments/);
   });
 
   it("answers an unknown tool with an error", async () => {
@@ -168,7 +168,7 @@ describe("answerQuestion with the agent path", () => {
     ];
     const question = "Does that also happen on Growth?";
     const graph = await answerQuestion(question, { history });
-    const agent = await answerQuestion(question, { history, path: "agent", agentModel: scripted([{ content: "plain text" }]) });
+    const agent = await answerQuestion(question, { history, path: "agent", agentModel: scripted([text("plain text")]) });
     assert.equal(graph.citations[0]?.slug, "funnel-zeros");
     assert.deepEqual(agent, graph);
   });

@@ -255,7 +255,7 @@ export async function runCopilot(
       const drafted =
         (canAnswer ? await modelDraft(center.name, context, sources).catch(() => null) : null) ??
         holdingDraft(context, sources);
-      const intent = await classifyIntent(context, hasLlm() ? chatModel(0) : null);
+      const intent = await classifyIntent(context, hasLlm() ? chatModel() : null);
 
       // Staff replied, or the customer wrote again, while the model ran: this draft answers an older conversation.
       // No await from here to setTicketTriage, so nothing can land in between.

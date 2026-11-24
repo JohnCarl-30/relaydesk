@@ -44,7 +44,7 @@ Scored the committed Nimbus snapshot in-process. No HTTP. Raw JSON: in rag-eval-
 | lexical | 40 | 1.6 | 0.04 | 0.8799 | 0.0634 |
 | stub | 10 | 0.1 | 0.01 | 0.7415 | 0.6979 |
 | lexical | 10 | 0.4 | 0.04 | 0.9611 | 0.0674 |
-| ragas (live) | 10 | skipped | | | OPENAI_API_KEY unset |
+| ragas (live) | 10 | skipped | | | ANTHROPIC_API_KEY unset |
 | ragas (token floor) | 10 | n/a | n/a | | **$0.0056** |
 | ragas (token floor) | 40 | n/a | n/a | | **$0.021** |
 

@@ -3,7 +3,7 @@
  *
  *   npx --yes tsx eval/trace-conversation.ts
  *
- * OPENAI_API_KEY uses the real model. Without it, RELAYDESK_STUB_LLM=1 walks
+ * ANTHROPIC_API_KEY uses the real model. Without it, RELAYDESK_STUB_LLM=1 walks
  * generate → rewrite → retrieve → generate so you can still open the tree.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -39,7 +39,7 @@ type Capture = {
 
 async function capture(mode: "extractive" | "llm"): Promise<Capture> {
   resetSpans();
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   const stub = mode === "llm" && !apiKey;
   if (mode === "extractive") {
     // graph.ts calls the model whenever a key is set, so hide it for this pass.
@@ -51,7 +51,7 @@ async function capture(mode: "extractive" | "llm"): Promise<Capture> {
   try {
     rag = await answerQuestion(QUESTION);
   } finally {
-    if (apiKey !== undefined) process.env.OPENAI_API_KEY = apiKey;
+    if (apiKey !== undefined) process.env.ANTHROPIC_API_KEY = apiKey;
   }
   await flushTracing();
   const traceId = latestTraceId(snapshotSpans());
