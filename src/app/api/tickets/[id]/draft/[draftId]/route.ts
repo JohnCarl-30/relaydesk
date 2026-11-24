@@ -26,7 +26,7 @@ export async function POST(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id, draftId } = await context.params;
-  const draft = getDraft(staff.business_id, draftId);
+  const draft = await getDraft(staff.business_id, draftId);
   if (!draft || draft.ticket_id !== id) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
@@ -40,14 +40,14 @@ export async function POST(
   if (body.action === "send") {
     const finalBody = body.body?.trim() || draft.body;
     // Of two clicks that both read "pending" above, only one sends.
-    const ticket = sendDraft(staff.business_id, draft, finalBody, staff.name);
+    const ticket = await sendDraft(staff.business_id, draft, finalBody, staff.name);
     if (!ticket) return NextResponse.json({ error: "draft is already decided" }, { status: 409 });
-    const businessName = getBusiness(staff.business_id)?.name ?? staff.business_id;
+    const businessName = (await getBusiness(staff.business_id))?.name ?? staff.business_id;
     after(() => notifyCustomerReply({ businessId: staff.business_id, businessName, ticket, body: finalBody }));
     return NextResponse.json({ ticket });
   }
   const reason = REJECT_REASONS.find((r) => r === body.reason) ?? "other";
-  if (!decideDraft(draft.id, { status: "rejected", rejectReason: reason })) {
+  if (!await decideDraft(draft.id, { status: "rejected", rejectReason: reason })) {
     return NextResponse.json({ error: "draft is already decided" }, { status: 409 });
   }
   return NextResponse.json({ ok: true });

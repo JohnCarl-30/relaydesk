@@ -25,18 +25,18 @@ forceExtractiveAnswers();
 process.env.RELAYDESK_DB_PATH = join(tmpdir(), `relaydesk-copilot-eval-${process.pid}-${Date.now()}.db`);
 
 async function replay(turns: string[]) {
-  const conversation = db.createConversation(DEMO_BUSINESS_ID, null);
+  const conversation = await db.createConversation(DEMO_BUSINESS_ID, null);
   let ticket: db.Ticket | undefined;
   for (const text of turns) {
-    const history = db.listMessages(conversation.id).map(({ role, body }) => ({ role, body }));
-    db.addMessage(conversation.id, "visitor", text);
+    const history = (await db.listMessages(conversation.id)).map(({ role, body }) => ({ role, body }));
+    await db.addMessage(conversation.id, "visitor", text);
     const rag = await answerQuestion(text, { history });
     let reply = rag.answer;
     if (rag.escalated) {
-      ticket ??= db.createTicket(conversation.id, "unassigned@nimbus.demo");
+      ticket ??= await db.createTicket(conversation.id, "unassigned@nimbus.demo");
       reply = `${rag.answer}\n\nTicket ${ticket.id} is in the staff inbox.`;
     }
-    db.addMessage(conversation.id, "assistant", reply, rag.citations.map((c) => c.title));
+    await db.addMessage(conversation.id, "assistant", reply, rag.citations.map((c) => c.title));
   }
   return ticket;
 }
@@ -60,8 +60,8 @@ async function main() {
       continue;
     }
     await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
-    const filed = db.getTicket(DEMO_BUSINESS_ID, ticket.id);
-    const context = readTicket(ticket, db.listMessages(ticket.conversation_id));
+    const filed = await db.getTicket(DEMO_BUSINESS_ID, ticket.id);
+    const context = readTicket(ticket, await db.listMessages(ticket.conversation_id));
     const got: Expect = { reason: context.reason, topic: filed?.topic ?? "", question: context.question };
     const misses = fields.filter((f) => got[f] !== c.expect[f]);
     for (const f of fields) if (!misses.includes(f)) tally[f] += 1;
@@ -79,6 +79,7 @@ async function main() {
     join(here, "copilot.json"),
     `${JSON.stringify({ n: cases.length, correct: tally, failures }, null, 2)}\n`,
   );
+  await db.closeDb();
 }
 
 main().catch((err) => {

@@ -7,9 +7,9 @@ import { ArticleEditor, ArticleList, ImportArticles } from "./article-forms";
 export default async function ArticlesPage() {
   const staff = await currentStaff();
   if (!staff) redirect("/login");
-  const business = getBusiness(staff.business_id);
+  const business = await getBusiness(staff.business_id);
   if (!business) redirect("/login");
-  const articles = listArticles(business.id);
+  const articles = await listArticles(business.id);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">

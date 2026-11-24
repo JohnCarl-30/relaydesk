@@ -9,7 +9,7 @@ export async function GET() {
   if (!staff) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  return NextResponse.json({ tickets: listTickets(staff.business_id) });
+  return NextResponse.json({ tickets: await listTickets(staff.business_id) });
 }
 
 const TicketEmail = z.object({
@@ -26,9 +26,9 @@ export async function POST(request: Request) {
   const body = await readBody(request, TicketEmail);
   if ("error" in body) return body.error;
   const { business, conversationId, email } = body.data;
-  if (!getConversation(business, conversationId)) {
+  if (!await getConversation(business, conversationId)) {
     return NextResponse.json({ error: "conversation not found" }, { status: 404 });
   }
-  const ticket = createTicket(conversationId, email);
+  const ticket = await createTicket(conversationId, email);
   return NextResponse.json({ ticket });
 }

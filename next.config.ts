@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: [
-    "better-sqlite3",
+    "pg",
+    "@electric-sql/pglite",
     "@langchain/langgraph",
     "@langchain/core",
     "@opentelemetry/sdk-trace-node",

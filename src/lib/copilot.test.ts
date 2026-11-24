@@ -15,28 +15,28 @@ process.env.RELAYDESK_DB_PATH = join(tmpdir(), `relaydesk-copilot-${process.pid}
 type Turn = ["visitor" | "assistant", string];
 
 /** Builds a conversation the way the chat route does, then opens a ticket on it. */
-function ticketFrom(turns: Turn[], email = "priya@northline.io") {
-  const conversation = db.createConversation(DEMO_BUSINESS_ID, email);
-  for (const [role, body] of turns) db.addMessage(conversation.id, role, body);
+async function ticketFrom(turns: Turn[], email = "priya@northline.io") {
+  const conversation = await db.createConversation(DEMO_BUSINESS_ID, email);
+  for (const [role, body] of turns) await db.addMessage(conversation.id, role, body);
   return db.createTicket(conversation.id, email);
 }
 
 const REFUSED = `${REFUSE_LINE}\n\nTicket tkt_x is in the staff inbox.`;
 
 describe("readTicket", () => {
-  const read = (turns: Turn[], email?: string) => {
-    const ticket = ticketFrom(turns, email);
-    return readTicket(ticket, db.listMessages(ticket.conversation_id));
+  const read = async (turns: Turn[], email?: string) => {
+    const ticket = await ticketFrom(turns, email);
+    return readTicket(ticket, await db.listMessages(ticket.conversation_id));
   };
 
-  it("files an out-of-scope question as not in the help center", () => {
-    const context = read([["visitor", "How do I connect Nimbus to Salesforce?"], ["assistant", REFUSED]]);
+  it("files an out-of-scope question as not in the help center", async () => {
+    const context = await read([["visitor", "How do I connect Nimbus to Salesforce?"], ["assistant", REFUSED]]);
     assert.equal(context.reason, "not_in_help_center");
     assert.equal(context.question, "How do I connect Nimbus to Salesforce?");
   });
 
-  it("keeps the real question when the customer says it didn't help", () => {
-    const context = read([
+  it("keeps the real question when the customer says it didn't help", async () => {
+    const context = await read([
       ["visitor", "Do pending invites count as billed seats?"],
       ["assistant", "Pending invites do not count until they accept."],
       ["visitor", "This didn't help"],
@@ -46,8 +46,8 @@ describe("readTicket", () => {
     assert.equal(context.question, "Do pending invites count as billed seats?");
   });
 
-  it("treats pushback after an answer as asking for a person", () => {
-    const context = read([
+  it("treats pushback after an answer as asking for a person", async () => {
+    const context = await read([
       ["visitor", "Our invoice shows 12 seats but we only have 9 people."],
       ["assistant", "Seat count on the invoice is a snapshot from the last day of the billing period."],
       ["visitor", "That doesn't match what sales told us. I need a human."],
@@ -56,15 +56,15 @@ describe("readTicket", () => {
     assert.equal(context.question, "Our invoice shows 12 seats but we only have 9 people.");
   });
 
-  it("flags refunds and similar as a person's decision", () => {
-    const context = read([["visitor", "I want a refund for last month"], ["assistant", REFUSED]]);
+  it("flags refunds and similar as a person's decision", async () => {
+    const context = await read([["visitor", "I want a refund for last month"], ["assistant", REFUSED]]);
     assert.equal(context.reason, "policy");
     assert.equal(context.policyTerm, "refund");
   });
 
-  it("greets by first name, or 'there' without a real email", () => {
-    assert.equal(read([["visitor", "hi"]], "priya.santos@northline.io").name, "Priya");
-    assert.equal(read([["visitor", "hi"]], "unassigned@nimbus.demo").name, "there");
+  it("greets by first name, or 'there' without a real email", async () => {
+    assert.equal((await read([["visitor", "hi"]], "priya.santos@northline.io")).name, "Priya");
+    assert.equal((await read([["visitor", "hi"]], "unassigned@nimbus.demo")).name, "there");
   });
 });
 
@@ -77,81 +77,81 @@ describe("runCopilot without a model", () => {
   ];
 
   it("saves a holding draft, files the ticket, and never posts to the customer", async () => {
-    const ticket = ticketFrom(didntHelp);
-    const before = db.listMessages(ticket.conversation_id).length;
+    const ticket = await ticketFrom(didntHelp);
+    const before = (await db.listMessages(ticket.conversation_id)).length;
 
     const result = await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
 
     assert.equal(result.outcome, "holding");
-    const draft = db.getPendingDraft(ticket.id);
+    const draft = await db.getPendingDraft(ticket.id);
     assert.ok(draft);
     assert.equal(draft.kind, "holding");
     assert.equal(draft.model, "template");
     assert.match(draft.body, /^Hi Priya, thanks for letting us know the article didn't answer it\./);
-    const filed = db.getTicket(DEMO_BUSINESS_ID, ticket.id);
+    const filed = await db.getTicket(DEMO_BUSINESS_ID, ticket.id);
     assert.equal(filed?.topic, "Billing");
     assert.equal(filed?.summary, "Do pending invites count as billed seats?");
     assert.match(filed?.needs_human_reason ?? "", /didn't help/);
     assert.equal(filed?.intent, "none");
     assert.equal(filed?.intent_reason, "No sales signal.");
-    assert.equal(db.listRuns(ticket.id)[0].outcome, "holding");
-    assert.equal(db.listMessages(ticket.conversation_id).length, before, "co-pilot must not send");
+    assert.equal((await db.listRuns(ticket.id))[0].outcome, "holding");
+    assert.equal((await db.listMessages(ticket.conversation_id)).length, before, "co-pilot must not send");
   });
 
   it("reads a sales signal from what the customer wrote, keyless", async () => {
-    const ticket = ticketFrom([
+    const ticket = await ticketFrom([
       ["visitor", "Do you have a plan for a 15-person team?"],
       ["assistant", REFUSED],
     ]);
     await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
-    const filed = db.getTicket(DEMO_BUSINESS_ID, ticket.id);
+    const filed = await db.getTicket(DEMO_BUSINESS_ID, ticket.id);
     assert.equal(filed?.intent, "lead");
     assert.equal(filed?.intent_reason, 'Mentions "Do you have".');
   });
 
   it("keeps one pending draft per ticket; regenerating supersedes the old one", async () => {
-    const ticket = ticketFrom(didntHelp);
+    const ticket = await ticketFrom(didntHelp);
     const first = (await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created")).draft;
     const second = (await runCopilot(DEMO_BUSINESS_ID, ticket.id, "regenerate")).draft;
     assert.ok(first && second && first.id !== second.id);
-    assert.equal(db.getDraft(DEMO_BUSINESS_ID, first.id)?.status, "superseded");
-    assert.equal(db.getPendingDraft(ticket.id)?.id, second.id);
+    assert.equal((await db.getDraft(DEMO_BUSINESS_ID, first.id))?.status, "superseded");
+    assert.equal((await db.getPendingDraft(ticket.id))?.id, second.id);
   });
 
   it("sends a draft once, so a double-clicked Send replies once", async () => {
-    const ticket = ticketFrom(didntHelp);
+    const ticket = await ticketFrom(didntHelp);
     const draft = (await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created")).draft;
     assert.ok(draft);
-    const replies = () => db.listMessages(ticket.conversation_id).filter((m) => m.role === "agent").length;
-    assert.equal(db.sendDraft(DEMO_BUSINESS_ID, draft, draft.body, "Ana")?.status, "waiting");
-    assert.equal(db.sendDraft(DEMO_BUSINESS_ID, draft, draft.body, "Ana"), undefined);
-    assert.equal(db.decideDraft(draft.id, { status: "rejected", rejectReason: "other" }), false);
-    assert.equal(db.getDraft(DEMO_BUSINESS_ID, draft.id)?.status, "sent");
-    assert.equal(replies(), 1);
+    const replies = async () => (await db.listMessages(ticket.conversation_id)).filter((m) => m.role === "agent").length;
+    assert.equal((await db.sendDraft(DEMO_BUSINESS_ID, draft, draft.body, "Ana"))?.status, "waiting");
+    assert.equal(await db.sendDraft(DEMO_BUSINESS_ID, draft, draft.body, "Ana"), undefined);
+    assert.equal(await db.decideDraft(draft.id, { status: "rejected", rejectReason: "other" }), false);
+    assert.equal((await db.getDraft(DEMO_BUSINESS_ID, draft.id))?.status, "sent");
+    assert.equal(await replies(), 1);
   });
 
   it("drops a draft when staff replied while the model was drafting", async () => {
-    const ticket = ticketFrom(didntHelp);
+    const ticket = await ticketFrom(didntHelp);
     const run = runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
-    db.replyToTicket(DEMO_BUSINESS_ID, ticket.id, "On it, Priya.", "Ana");
+    await db.replyToTicket(DEMO_BUSINESS_ID, ticket.id, "On it, Priya.", "Ana");
     assert.equal((await run).outcome, "stale");
-    assert.equal(db.getPendingDraft(ticket.id), undefined);
-    assert.equal(db.getTicket(DEMO_BUSINESS_ID, ticket.id)?.needs_human_reason, null);
+    assert.equal(await db.getPendingDraft(ticket.id), undefined);
+    assert.equal((await db.getTicket(DEMO_BUSINESS_ID, ticket.id))?.needs_human_reason, null);
   });
 
   it("does nothing when switched off", async () => {
-    const ticket = ticketFrom(didntHelp);
-    db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "off");
+    const ticket = await ticketFrom(didntHelp);
+    await db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "off");
     try {
       assert.equal((await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created")).outcome, "disabled");
-      assert.equal(db.getPendingDraft(ticket.id), undefined);
+      assert.equal(await db.getPendingDraft(ticket.id), undefined);
     } finally {
-      db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "on");
+      await db.setSetting(DEMO_BUSINESS_ID, COPILOT_SETTING, "on");
     }
   });
 
   it("stops after the daily run limit", async () => {
-    const ticket = ticketFrom(didntHelp);
+    const ticket = await ticketFrom(didntHelp);
     for (let i = 0; i < MAX_RUNS_PER_DAY; i += 1) await runCopilot(DEMO_BUSINESS_ID, ticket.id, "regenerate");
     assert.equal((await runCopilot(DEMO_BUSINESS_ID, ticket.id, "regenerate")).outcome, "rate_limited");
   });
@@ -161,7 +161,7 @@ describe("runCopilot with a model (stub)", () => {
   it("drafts an answer when articles apply, but holds anything about refunds", async () => {
     process.env.RELAYDESK_STUB_LLM = "1";
     try {
-      const answerable = ticketFrom([
+      const answerable = await ticketFrom([
         ["visitor", "Do pending invites count as billed seats?"],
         ["assistant", "Pending invites do not count until they accept."],
         ["visitor", "This didn't help"],
@@ -170,9 +170,9 @@ describe("runCopilot with a model (stub)", () => {
       const answer = await runCopilot(DEMO_BUSINESS_ID, answerable.id, "ticket_created");
       assert.equal(answer.outcome, "answer");
       assert.equal(answer.draft?.model, "stub");
-      assert.equal(db.getTicket(DEMO_BUSINESS_ID, answerable.id)?.needs_human_reason, null);
+      assert.equal((await db.getTicket(DEMO_BUSINESS_ID, answerable.id))?.needs_human_reason, null);
 
-      const refund = ticketFrom([["visitor", "Can I get a refund for unused seats?"], ["assistant", REFUSED]]);
+      const refund = await ticketFrom([["visitor", "Can I get a refund for unused seats?"], ["assistant", REFUSED]]);
       assert.equal((await runCopilot(DEMO_BUSINESS_ID, refund.id, "ticket_created")).outcome, "holding");
     } finally {
       delete process.env.RELAYDESK_STUB_LLM;

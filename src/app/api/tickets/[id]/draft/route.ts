@@ -13,7 +13,7 @@ export async function POST(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
-  if (!getTicket(staff.business_id, id)) {
+  if (!await getTicket(staff.business_id, id)) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
   const result = await runCopilot(staff.business_id, id, "regenerate");

@@ -11,12 +11,12 @@ export async function PATCH(request: Request) {
   if (isPublicDemo(staff)) return demoReadOnly();
   const body = await readBody(request, z.object({ live: z.boolean() }));
   if ("error" in body) return body.error;
-  if (body.data.live && listArticles(staff.business_id).length === 0) {
+  if (body.data.live && (await listArticles(staff.business_id)).length === 0) {
     return NextResponse.json(
       { error: "Add at least one article before going live." },
       { status: 409 },
     );
   }
-  setBusinessLive(staff.business_id, body.data.live);
+  await setBusinessLive(staff.business_id, body.data.live);
   return NextResponse.json({ live: body.data.live });
 }

@@ -14,11 +14,11 @@ export async function GET(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
-  const ticket = getTicket(staff.business_id, id);
+  const ticket = await getTicket(staff.business_id, id);
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
-  const messages = listMessages(ticket.conversation_id);
+  const messages = await listMessages(ticket.conversation_id);
   return NextResponse.json({ ticket, messages });
 }
 
@@ -34,12 +34,12 @@ export async function PATCH(
   // checkTicketPatch does the checking; this is for the size limit.
   const body = await readBody(request, z.object({ status: z.unknown().optional(), assignee: z.unknown().optional() }));
   if ("error" in body) return body.error;
-  const checked = checkTicketPatch(staff.business_id, body.data);
+  const checked = await checkTicketPatch(staff.business_id, body.data);
   if ("error" in checked) {
     return NextResponse.json({ error: checked.error }, { status: 400 });
   }
 
-  const ticket = updateTicket(staff.business_id, id, checked.patch);
+  const ticket = await updateTicket(staff.business_id, id, checked.patch);
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }

@@ -7,8 +7,8 @@ export const metadata = { title: "Join your team · Relaydesk" };
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const invite = findInvite(token);
-  const business = invite && getBusiness(invite.business_id);
+  const invite = await findInvite(token);
+  const business = invite && await getBusiness(invite.business_id);
   if (!invite || !business) {
     return (
       <AuthCard title="This invite doesn't work" intro="It was already used, it expired, or the link got cut off. Ask for a new one.">

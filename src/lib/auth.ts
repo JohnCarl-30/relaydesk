@@ -15,9 +15,9 @@ const COOKIE = "relaydesk_session";
 /** The signed-in staff member, whose business_id scopes everything the inbox shows. */
 export async function currentStaff(): Promise<Staff | null> {
   const jar = await cookies();
-  const session = decodeSession(jar.get(COOKIE)?.value, sessionSecret());
-  if (!session || demoSessionRevoked(session) || signedOutSince(session)) return null;
-  return getStaff(session.businessId, session.staffId) ?? null;
+  const session = decodeSession(jar.get(COOKIE)?.value, await sessionSecret());
+  if (!session || (await demoSessionRevoked(session)) || (await signedOutSince(session))) return null;
+  return (await getStaff(session.businessId, session.staffId)) ?? null;
 }
 
 /** True when the browser reached us over https, directly or through a TLS proxy. */
@@ -32,7 +32,7 @@ export async function startSession(staff: Staff, options: { secure: boolean }) {
   const jar = await cookies();
   const value = encodeSession(
     { staffId: staff.id, businessId: staff.business_id, expiresAt: Date.now() + SESSION_TTL_MS },
-    sessionSecret(),
+    await sessionSecret(),
   );
   jar.set(COOKIE, value, {
     httpOnly: true,
@@ -46,7 +46,7 @@ export async function startSession(staff: Staff, options: { secure: boolean }) {
 export async function endSession() {
   const staff = await currentStaff();
   // The public demo login is shared, so one visitor signing out must not sign out the others.
-  if (staff && !isPublicDemo(staff)) recordSignOut(staff);
+  if (staff && !isPublicDemo(staff)) await recordSignOut(staff);
   const jar = await cookies();
   jar.delete(COOKIE);
 }

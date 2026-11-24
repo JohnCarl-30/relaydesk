@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if (isPublicDemo(staff)) return demoReadOnly();
   const body = await readBody(request, z.object({ name: z.string().trim().min(1).max(80) }));
   if ("error" in body) return body.error;
-  const { token, row } = createMcpToken({
+  const { token, row } = await createMcpToken({
     businessId: staff.business_id,
     name: body.data.name,
     createdBy: staff.id,

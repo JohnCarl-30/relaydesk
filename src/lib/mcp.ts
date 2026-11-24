@@ -56,7 +56,7 @@ export function buildMcpServer(businessId: string): McpServer {
   function traced<A>(name: string, fn: (args: A, center: HelpCenter) => ToolResult | Promise<ToolResult>) {
     return (args: A) =>
       withSpan(`mcp.${name}`, { "business.id": businessId, "mcp.tool": name }, async (span) => {
-        const center = loadHelpCenter(businessId);
+        const center = await loadHelpCenter(businessId);
         if (!center) return fail("This business no longer exists.");
         const result = await fn(args, center);
         span.setAttribute("mcp.is_error", Boolean(result.isError));
@@ -80,8 +80,8 @@ export function buildMcpServer(businessId: string): McpServer {
       },
       annotations: { title: "List tickets", ...READ_ONLY },
     },
-    traced("list_tickets", ({ status, assignee, has_draft, limit }) => {
-      const tickets = listTickets(businessId)
+    traced("list_tickets", async ({ status, assignee, has_draft, limit }) => {
+      const tickets = (await listTickets(businessId))
         .filter((t) => status === undefined || t.status === status)
         .filter((t) => assignee === undefined || t.assignee === assignee)
         .filter((t) => has_draft === undefined || Boolean(t.has_draft) === has_draft)
@@ -111,10 +111,10 @@ export function buildMcpServer(businessId: string): McpServer {
       inputSchema: { ticket_id: z.string().describe("e.g. tkt_1a2b3c4d") },
       annotations: { title: "Get a ticket", ...READ_ONLY },
     },
-    traced("get_ticket", ({ ticket_id }) => {
-      const ticket = getTicket(businessId, ticket_id);
+    traced("get_ticket", async ({ ticket_id }) => {
+      const ticket = await getTicket(businessId, ticket_id);
       if (!ticket) return notFound(ticket_id);
-      const draft = getPendingDraft(ticket.id);
+      const draft = await getPendingDraft(ticket.id);
       return ok({
         ticket: {
           id: ticket.id,
@@ -129,7 +129,7 @@ export function buildMcpServer(businessId: string): McpServer {
           created_at: ticket.created_at,
           updated_at: ticket.updated_at,
         },
-        messages: listMessages(ticket.conversation_id).map((m) => ({
+        messages: (await listMessages(ticket.conversation_id)).map((m) => ({
           role: m.role === "visitor" ? "customer" : m.role === "agent" ? "staff" : "bot",
           body: m.body,
           cited: m.citations ? (JSON.parse(m.citations) as string[]) : [],
@@ -145,7 +145,7 @@ export function buildMcpServer(businessId: string): McpServer {
               model: draft.model,
             }
           : null,
-        copilot_runs: listRuns(ticket.id, 5).map((r) => ({
+        copilot_runs: (await listRuns(ticket.id, 5)).map((r) => ({
           trigger: r.trigger,
           outcome: r.outcome,
           detail: r.detail,
@@ -206,13 +206,13 @@ export function buildMcpServer(businessId: string): McpServer {
       },
       annotations: { title: "Update a ticket", ...INBOX_WRITE, idempotentHint: true },
     },
-    traced("update_ticket", ({ ticket_id, status, assignee }) => {
+    traced("update_ticket", async ({ ticket_id, status, assignee }) => {
       if (status === undefined && assignee === undefined) {
         return fail("Pass status, assignee, or both.");
       }
-      const checked = checkTicketPatch(businessId, { status, assignee });
+      const checked = await checkTicketPatch(businessId, { status, assignee });
       if ("error" in checked) return fail(checked.error);
-      const ticket = updateTicket(businessId, ticket_id, checked.patch);
+      const ticket = await updateTicket(businessId, ticket_id, checked.patch);
       if (!ticket) return notFound(ticket_id);
       return ok({ ticket: { id: ticket.id, status: ticket.status, assignee: ticket.assignee } });
     }),
@@ -232,20 +232,20 @@ export function buildMcpServer(businessId: string): McpServer {
       },
       annotations: { title: "Draft a reply", ...INBOX_WRITE, idempotentHint: false },
     },
-    traced("draft_reply", ({ ticket_id, body, rationale, citations }, center) => {
-      const ticket = getTicket(businessId, ticket_id);
+    traced("draft_reply", async ({ ticket_id, body, rationale, citations }, center) => {
+      const ticket = await getTicket(businessId, ticket_id);
       if (!ticket) return notFound(ticket_id);
       const articles = citations.map((slug) => ({ slug, article: articleBySlug(center, slug) }));
       const missing = articles.filter((a) => !a.article).map((a) => a.slug);
       if (missing.length) return fail(`Unknown article slugs: ${missing.join(", ")}.`);
       const titles = articles.map((a) => a.article!.title);
-      const draft = insertDraft({
+      const draft = await insertDraft({
         ticket_id: ticket.id,
         kind: titles.length ? "answer" : "holding",
         body: body.trim(),
         citations: titles.length ? JSON.stringify(titles) : null,
         rationale: rationale.trim(),
-        based_on_message_id: listMessages(ticket.conversation_id).at(-1)?.id ?? null,
+        based_on_message_id: (await listMessages(ticket.conversation_id)).at(-1)?.id ?? null,
         model: MCP_DRAFT_MODEL,
         prompt_version: MCP_PROMPT_VERSION,
       });
@@ -266,7 +266,7 @@ export function buildMcpServer(businessId: string): McpServer {
       annotations: { title: "Regenerate the co-pilot draft", ...INBOX_WRITE, idempotentHint: false },
     },
     traced("regenerate_draft", async ({ ticket_id }) => {
-      if (!getTicket(businessId, ticket_id)) return notFound(ticket_id);
+      if (!(await getTicket(businessId, ticket_id))) return notFound(ticket_id);
       const { outcome, draft } = await runCopilot(businessId, ticket_id, "regenerate");
       if (outcome === "disabled") return fail("The co-pilot is switched off for this inbox.");
       if (outcome === "rate_limited") return fail("This ticket hit the co-pilot's daily run limit.");

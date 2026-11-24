@@ -8,6 +8,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
   if (!staff) return unauthorized();
   if (isPublicDemo(staff)) return demoReadOnly();
   const { id } = await context.params;
-  if (!revokeMcpToken(staff.business_id, id)) return notFound();
+  if (!await revokeMcpToken(staff.business_id, id)) return notFound();
   return NextResponse.json({ ok: true });
 }

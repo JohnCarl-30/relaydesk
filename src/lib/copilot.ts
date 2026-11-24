@@ -200,8 +200,8 @@ async function modelDraft(
   });
 }
 
-export function copilotEnabled(businessId: string): boolean {
-  return getSetting(businessId, COPILOT_SETTING) !== "off";
+export async function copilotEnabled(businessId: string): Promise<boolean> {
+  return (await getSetting(businessId, COPILOT_SETTING)) !== "off";
 }
 
 export async function runCopilot(
@@ -210,8 +210,8 @@ export async function runCopilot(
   trigger: CopilotTrigger,
 ): Promise<{ outcome: CopilotOutcome; draft?: AgentDraft }> {
   return withSpan("copilot.run", { "copilot.trigger": trigger, "copilot.ticket": ticketId }, async (span) => {
-    const log = (outcome: CopilotOutcome, detail: string | null, tokens?: Drafted) => {
-      recordRun({
+    const log = async (outcome: CopilotOutcome, detail: string | null, tokens?: Drafted) => {
+      await recordRun({
         ticket_id: ticketId,
         trigger,
         outcome,
@@ -222,23 +222,25 @@ export async function runCopilot(
       span.setAttribute("copilot.outcome", outcome);
     };
 
-    const ticket = getTicket(businessId, ticketId);
-    const center = loadHelpCenter(businessId);
+    const ticket = await getTicket(businessId, ticketId);
+    // Read the conversation before anything else, so a reply that lands while drafting fails the stale check below.
+    const messages = ticket ? await listMessages(ticket.conversation_id) : [];
+    const center = await loadHelpCenter(businessId);
     if (!ticket || !center) return { outcome: "error" };
     span.setAttribute("session.id", ticket.conversation_id);
     span.setAttribute("business.id", businessId);
-    if (!copilotEnabled(businessId)) {
-      log("disabled", "Co-pilot is off.");
+    if (!(await copilotEnabled(businessId))) {
+      await log("disabled", "Co-pilot is off.");
       return { outcome: "disabled" };
     }
     const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
-    if (countRunsSince(ticket.id, dayAgo) >= MAX_RUNS_PER_DAY) {
-      log("rate_limited", `${MAX_RUNS_PER_DAY} runs in the last 24 hours.`);
+    if ((await countRunsSince(ticket.id, dayAgo)) >= MAX_RUNS_PER_DAY) {
+      await log("rate_limited", `${MAX_RUNS_PER_DAY} runs in the last 24 hours.`);
       return { outcome: "rate_limited" };
     }
 
     try {
-      const context = readTicket(ticket, listMessages(ticket.conversation_id));
+      const context = readTicket(ticket, messages);
       const result = await answerQuestion(context.question, {
         history: context.history,
         rewrite: false,
@@ -258,12 +260,12 @@ export async function runCopilot(
       const intent = await classifyIntent(context, hasLlm() ? chatModel(0) : null);
 
       // Staff replied, or the customer wrote again, while the model ran: this draft answers an older conversation.
-      // No await from here to setTicketTriage, so nothing can land in between.
-      if (listMessages(ticket.conversation_id).at(-1)?.id !== context.lastMessageId) {
-        log("stale", "The conversation moved on while drafting.");
+      // shortcut: a message landing in the milliseconds between this check and the insert still gets this draft; the next run supersedes it.
+      if ((await listMessages(ticket.conversation_id)).at(-1)?.id !== context.lastMessageId) {
+        await log("stale", "The conversation moved on while drafting.");
         return { outcome: "stale" };
       }
-      const draft = insertDraft({
+      const draft = await insertDraft({
         ticket_id: ticket.id,
         kind: drafted.kind,
         body: drafted.body,
@@ -273,7 +275,7 @@ export async function runCopilot(
         model: drafted.model,
         prompt_version: COPILOT_PROMPT_VERSION,
       });
-      setTicketTriage(ticket.id, {
+      await setTicketTriage(ticket.id, {
         topic: sources[0]?.category ?? "Other",
         summary: oneLine(context.question),
         needsHumanReason: drafted.kind === "holding" ? drafted.rationale : null,
@@ -282,10 +284,10 @@ export async function runCopilot(
       });
       span.setAttribute("copilot.reason", context.reason);
       span.setAttribute("copilot.intent", intent.intent);
-      log(drafted.kind, drafted.rationale, drafted);
+      await log(drafted.kind, drafted.rationale, drafted);
       return { outcome: drafted.kind, draft };
     } catch (err) {
-      log("error", err instanceof Error ? err.message : String(err));
+      await log("error", err instanceof Error ? err.message : String(err));
       return { outcome: "error" };
     }
   });

@@ -13,7 +13,7 @@ export async function PUT(request: Request, context: Context) {
   const { slug } = await context.params;
   const body = await readBody(request, ArticleInput);
   if ("error" in body) return body.error;
-  const existing = listArticles(staff.business_id);
+  const existing = await listArticles(staff.business_id);
   if (!existing.some((a) => a.slug === slug)) return notFound();
   const article = toArticle({ ...body.data, slug: body.data.slug || slug });
   if (article.slug !== slug && existing.some((a) => a.slug === article.slug)) {
@@ -22,7 +22,7 @@ export async function PUT(request: Request, context: Context) {
       { status: 409 },
     );
   }
-  saveArticles(staff.business_id, [article], { replacing: slug });
+  await saveArticles(staff.business_id, [article], { replacing: slug });
   return NextResponse.json({ article });
 }
 
@@ -31,6 +31,6 @@ export async function DELETE(_request: Request, context: Context) {
   if (!staff) return unauthorized();
   if (isPublicDemo(staff)) return demoReadOnly();
   const { slug } = await context.params;
-  if (!deleteArticle(staff.business_id, slug)) return notFound();
+  if (!await deleteArticle(staff.business_id, slug)) return notFound();
   return NextResponse.json({ ok: true });
 }

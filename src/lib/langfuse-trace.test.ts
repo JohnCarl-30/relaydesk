@@ -138,11 +138,11 @@ describe("runCopilot traces", () => {
   });
 
   it("puts the draft model call in its own generation span under the conversation's session", async () => {
-    const conversation = db.createConversation(DEMO_BUSINESS_ID, "priya@northline.io");
-    db.addMessage(conversation.id, "visitor", "Do pending invites count as billed seats?");
-    db.addMessage(conversation.id, "assistant", "Pending invites do not count until they accept.");
-    db.addMessage(conversation.id, "visitor", "This didn't help");
-    const ticket = db.createTicket(conversation.id, "priya@northline.io");
+    const conversation = await db.createConversation(DEMO_BUSINESS_ID, "priya@northline.io");
+    await db.addMessage(conversation.id, "visitor", "Do pending invites count as billed seats?");
+    await db.addMessage(conversation.id, "assistant", "Pending invites do not count until they accept.");
+    await db.addMessage(conversation.id, "visitor", "This didn't help");
+    const ticket = await db.createTicket(conversation.id, "priya@northline.io");
 
     const { outcome } = await runCopilot(DEMO_BUSINESS_ID, ticket.id, "ticket_created");
     assert.equal(outcome, "answer");

@@ -17,17 +17,17 @@ export async function GET(request: Request) {
   const business = params.get("business")?.trim();
   const conversationId = params.get("conversationId")?.trim();
   const messageId = params.get("messageId")?.trim();
-  const center = business ? loadLiveHelpCenter(business) : undefined;
+  const center = business ? await loadLiveHelpCenter(business) : undefined;
   if (!center) return NextResponse.json({ error: "business not found" }, { status: 404 });
   const config = elevenLabsConfig();
-  if (voiceStatus(center.businessId).provider !== "elevenlabs" || !config) {
+  if ((await voiceStatus(center.businessId)).provider !== "elevenlabs" || !config) {
     // Off, or out of minutes: the widget reads the answer with the browser's voice.
     return NextResponse.json({ error: "voice unavailable" }, { status: 409 });
   }
-  if (!conversationId || !messageId || !getConversation(center.businessId, conversationId)) {
+  if (!conversationId || !messageId || !await getConversation(center.businessId, conversationId)) {
     return NextResponse.json({ error: "conversation not found" }, { status: 404 });
   }
-  const message = listMessages(conversationId).find((m) => m.id === messageId && m.role === "assistant");
+  const message = (await listMessages(conversationId)).find((m) => m.id === messageId && m.role === "assistant");
   if (!message) return NextResponse.json({ error: "message not found" }, { status: 404 });
   if (!allowPlay(message.id)) return NextResponse.json({ error: "already played" }, { status: 429 });
 
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     // The widget falls back to the browser's voice on any error.
     return NextResponse.json({ error: "speech failed" }, { status: 502 });
   }
-  recordVoiceSeconds(center.businessId, speakingSeconds(text));
+  await recordVoiceSeconds(center.businessId, speakingSeconds(text));
   return new Response(upstream.body, {
     headers: { "Content-Type": "audio/mpeg", "Cache-Control": "private, no-store" },
   });

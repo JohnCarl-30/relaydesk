@@ -40,8 +40,8 @@ function ticketEmail(bodyEmail: string | undefined, visitorEmail: string | null)
   return PENDING_TICKET_EMAIL;
 }
 
-function serializeMessages(center: HelpCenter, conversationId: string) {
-  return listMessages(conversationId).map((m) => ({
+async function serializeMessages(center: HelpCenter, conversationId: string) {
+  return (await listMessages(conversationId)).map((m) => ({
     id: m.id,
     role: m.role,
     body: m.body,
@@ -63,19 +63,19 @@ function unknownBusiness(business: string | undefined) {
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const business = params.get("business")?.trim();
-  const center = business ? loadLiveHelpCenter(business) : undefined;
+  const center = business ? await loadLiveHelpCenter(business) : undefined;
   if (!center) return unknownBusiness(business);
   const conversationId = params.get("conversationId")?.trim();
   if (!conversationId) {
     return NextResponse.json({ error: "conversationId required" }, { status: 400 });
   }
-  if (!getConversation(center.businessId, conversationId)) {
+  if (!await getConversation(center.businessId, conversationId)) {
     return NextResponse.json({ error: "conversation not found" }, { status: 404 });
   }
   return NextResponse.json({
     conversationId,
-    ticketId: getTicketByConversation(conversationId)?.id ?? null,
-    messages: serializeMessages(center, conversationId),
+    ticketId: (await getTicketByConversation(conversationId))?.id ?? null,
+    messages: await serializeMessages(center, conversationId),
   });
 }
 
@@ -86,37 +86,37 @@ export async function POST(request: Request) {
   const read = await readBody(request, ChatMessage);
   if ("error" in read) return read.error;
   const body = read.data;
-  const center = body.business ? loadLiveHelpCenter(body.business) : undefined;
+  const center = body.business ? await loadLiveHelpCenter(body.business) : undefined;
   if (!center) return unknownBusiness(body.business);
   const businessId = center.businessId;
   const text = body.message;
 
   let conversationId = body.conversationId;
-  if (!conversationId || !getConversation(businessId, conversationId)) {
-    conversationId = createConversation(businessId, body.email).id;
+  if (!conversationId || !await getConversation(businessId, conversationId)) {
+    conversationId = (await createConversation(businessId, body.email)).id;
   }
 
-  const history = listMessages(conversationId).map(({ role, body: messageBody }) => ({
+  const history = (await listMessages(conversationId)).map(({ role, body: messageBody }) => ({
     role,
     body: messageBody,
   }));
-  addMessage(conversationId, "visitor", text);
+  await addMessage(conversationId, "visitor", text);
   // The customer wrote again, so their ticket goes back to open and to the top of the inbox. Before the
   // model runs, so a staff reply or close made while it thinks isn't overwritten afterwards.
-  const existing = getTicketByConversation(conversationId);
-  if (existing) updateTicket(businessId, existing.id, { status: "open" });
+  const existing = await getTicketByConversation(conversationId);
+  if (existing) await updateTicket(businessId, existing.id, { status: "open" });
   const rag = await answerQuestion(text, {
     history,
     sessionId: conversationId,
     helpCenter: center,
     channel: parseChannel(body.channel),
   });
-  const conversation = getConversation(businessId, conversationId);
-  let ticket = getTicketByConversation(conversationId);
+  const conversation = await getConversation(businessId, conversationId);
+  let ticket = await getTicketByConversation(conversationId);
   let reply = rag.answer;
   if (rag.escalated) {
     if (!ticket) {
-      const created = createTicket(
+      const created = await createTicket(
         conversationId,
         ticketEmail(body.email, conversation?.visitor_email ?? null),
       );
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
       reply = `${rag.answer}\n\nTicket ${ticket.id} is in the staff inbox.`;
     }
   }
-  addMessage(
+  await addMessage(
     conversationId,
     "assistant",
     reply,
@@ -150,6 +150,6 @@ export async function POST(request: Request) {
     usedLlm: rag.usedLlm,
     escalated: rag.escalated,
     ticketId: ticket?.id ?? null,
-    messages: serializeMessages(center, conversationId),
+    messages: await serializeMessages(center, conversationId),
   });
 }

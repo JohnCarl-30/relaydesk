@@ -45,17 +45,17 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (getBusiness(businessId)) {
+  if (await getBusiness(businessId)) {
     return NextResponse.json({ error: `The link "${businessId}" is taken.` }, { status: 409 });
   }
-  if (getStaffByEmail(input.email)) {
+  if (await getStaffByEmail(input.email)) {
     return NextResponse.json(
       { error: "That email already has a login. Sign in instead." },
       { status: 409 },
     );
   }
 
-  const staff = signUpBusiness({
+  const staff = await signUpBusiness({
     businessId,
     businessName: input.businessName,
     name: input.name,

@@ -14,10 +14,10 @@ import { VoiceSetting } from "./voice-setting";
 export default async function SetupPage() {
   const staff = await currentStaff();
   if (!staff) redirect("/login");
-  const business = getBusiness(staff.business_id);
+  const business = await getBusiness(staff.business_id);
   if (!business) redirect("/login");
-  const articles = listArticles(business.id).length;
-  const team = listStaff(business.id).length;
+  const articles = (await listArticles(business.id)).length;
+  const team = (await listStaff(business.id)).length;
   const origin = await publicOrigin();
   const live = Boolean(business.live);
 
@@ -100,14 +100,14 @@ export default async function SetupPage() {
           title="Voice"
           description="Visitors can tap the mic and ask out loud. The browser's own voice is free. ElevenLabs sounds more natural and works in every browser, Firefox included, but it is paid by the minute, so there is a monthly cap. When the minutes run out, the widget switches back to the browser's voice."
         >
-          <VoiceSetting status={voiceStatus(business.id)} />
+          <VoiceSetting status={await voiceStatus(business.id)} />
         </Section>
 
         <Section
           title="Work the inbox from an AI assistant"
           description="Connect Claude, Cursor, or any MCP client. It can read tickets, search your articles, assign tickets, and save reply drafts. It can't message customers: drafts wait in this inbox for someone to send them."
         >
-          <McpTokens tokens={listMcpTokens(business.id)} />
+          <McpTokens tokens={await listMcpTokens(business.id)} />
         </Section>
       </div>
     </main>

@@ -6,7 +6,7 @@ import { DEMO_CATEGORY_BLURBS, DEMO_HELP_INTRO, DEMO_WIDGET } from "@/lib/demo";
 
 export default async function HelpIndexPage() {
   await connection();
-  const center = loadHelpCenter(DEMO_WIDGET.business.id);
+  const center = await loadHelpCenter(DEMO_WIDGET.business.id);
   if (!center) notFound();
   return (
     <HelpIndex

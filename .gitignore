@@ -34,7 +34,7 @@ yarn-error.log*
 .env*
 !.env.example
 
-# local sqlite
+# local database (PGlite, or the old SQLite file)
 /data
 
 # vercel

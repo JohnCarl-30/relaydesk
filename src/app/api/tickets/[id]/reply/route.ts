@@ -20,11 +20,11 @@ export async function POST(
   const body = await readBody(request, z.object({ body: Reply }));
   if ("error" in body) return body.error;
   const text = body.data.body;
-  const ticket = replyToTicket(staff.business_id, id, text, staff.name);
+  const ticket = await replyToTicket(staff.business_id, id, text, staff.name);
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
-  const businessName = getBusiness(staff.business_id)?.name ?? staff.business_id;
+  const businessName = (await getBusiness(staff.business_id))?.name ?? staff.business_id;
   after(() => notifyCustomerReply({ businessId: staff.business_id, businessName, ticket, body: text }));
   return NextResponse.json({ ticket });
 }

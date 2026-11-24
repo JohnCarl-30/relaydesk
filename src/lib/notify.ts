@@ -60,7 +60,7 @@ export async function notifyNewTicket(
 ): Promise<boolean> {
   // The demo's staff address is made up, and bounces hurt the sender's reputation.
   if (!config || input.businessId === DEMO_BUSINESS_ID) return false;
-  const staffEmails = listStaff(input.businessId).map((s) => s.email);
+  const staffEmails = (await listStaff(input.businessId)).map((s) => s.email);
   if (!staffEmails.length) return false;
   const { url, init } = newTicketRequest(config, { ...input, staffEmails });
   const res = await fetch(url, { ...init, signal: AbortSignal.timeout(10_000) }).catch((error: unknown) => error as Error);

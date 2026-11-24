@@ -7,8 +7,8 @@ import { InviteForm, PendingInvites, StaffList } from "./team-forms";
 export default async function TeamPage() {
   const staff = await currentStaff();
   if (!staff) redirect("/login");
-  const members = listStaff(staff.business_id);
-  const invites = listPendingInvites(staff.business_id);
+  const members = await listStaff(staff.business_id);
+  const invites = await listPendingInvites(staff.business_id);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">

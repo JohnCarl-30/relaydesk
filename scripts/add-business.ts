@@ -13,14 +13,14 @@ import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { parseJsonArticles } from "../src/lib/article-import";
 import { helpCenterPath } from "../src/lib/business";
-import { createBusiness, createStaff, getBusiness, replaceArticles } from "../src/lib/db";
+import { closeDb, createBusiness, createStaff, getBusiness, replaceArticles } from "../src/lib/db";
 
 /** Reads a JSON array of articles; a missing slug comes from the title. */
 export function readArticles(file: string) {
   return parseJsonArticles(readFileSync(file, "utf8"));
 }
 
-function main() {
+async function main() {
   const { values } = parseArgs({
     options: {
       id: { type: "string" },
@@ -32,21 +32,21 @@ function main() {
   });
   if (!values.id) throw new Error("--id is required");
 
-  let business = getBusiness(values.id);
+  let business = await getBusiness(values.id);
   if (!business) {
     if (!values.name) throw new Error(`no business "${values.id}" yet; pass --name to create it`);
-    business = createBusiness({ id: values.id, name: values.name });
+    business = await createBusiness({ id: values.id, name: values.name });
     console.log(`Created ${business.name} (${business.id}).`);
   }
   if (values.articles) {
     const articles = readArticles(values.articles);
-    replaceArticles(business.id, articles);
+    await replaceArticles(business.id, articles);
     console.log(`Help center now has ${articles.length} articles.`);
   }
   if (values["staff-email"]) {
     const password =
       process.env.RELAYDESK_NEW_STAFF_PASSWORD ?? randomBytes(12).toString("base64url");
-    const staff = createStaff({
+    const staff = await createStaff({
       businessId: business.id,
       email: values["staff-email"],
       name: values["staff-name"] ?? values["staff-email"].split("@")[0],
@@ -59,6 +59,12 @@ function main() {
   console.log(
     `Embed: <script src="https://YOUR-RELAYDESK-HOST/embed.js" data-business="${business.id}" async></script>`,
   );
+  await closeDb();
 }
 
-if (process.argv[1]?.endsWith("add-business.ts")) main();
+if (process.argv[1]?.endsWith("add-business.ts")) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

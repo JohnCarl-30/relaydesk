@@ -7,8 +7,8 @@ What to check and do when something is wrong, and how to host it. Production is 
 | Thing | Where | Control |
 | --- | --- | --- |
 | App | Next.js 16 in Docker, service `relaydesk` | `docker compose up -d --build`; `/api/health` is its health check |
-| Data | SQLite `/data/relaydesk.db` (+ `-wal`, `-shm`) in the `relaydesk-data` volume (`data/relaydesk.db` without Docker) | `RELAYDESK_DB_PATH` |
-| Backups | Service `backup`: daily snapshot to `/data/backups` (last 7), plus an S3-compatible bucket if set | `RELAYDESK_BACKUP_*`; last result in `/data/backups/last.json` |
+| Data | Postgres at `DATABASE_URL` (Neon in production). Without it, PGlite (embedded Postgres) in `/data/pglite` in the `relaydesk-data` volume, or `data/pglite` without Docker | `DATABASE_URL`, `RELAYDESK_DB_PATH` |
+| Backups | Neon keeps every change for the plan's restore window; see [Restore](#restore) | Neon console |
 | Secrets | `.env.docker` on the host, never in git or the image | Copy `.env.example` |
 | Traces | `eval/traces/live.jsonl`, one OpenTelemetry span per line | `RELAYDESK_TRACE_FILE` (a path, or `0` for none) |
 | Model | Optional. Without a key everything still works without a model. | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (default `gpt-4o-mini`) |
@@ -21,7 +21,7 @@ What to check and do when something is wrong, and how to host it. Production is 
 
 ## Health check
 
-The two chat checks write real rows. The second opens a ticket, so close it afterwards, or point `RELAYDESK_DB_PATH` at a scratch file first.
+The two chat checks write real rows. The second opens a ticket, so close it afterwards, or run them against a Neon branch instead of production.
 
 ```bash
 # 1. Site is up: expect 200
@@ -37,7 +37,7 @@ curl -s -X POST "$HOST/api/chat" -H 'content-type: application/json' \
   -d '{"business":"nimbus","message":"How do I connect Nimbus to Salesforce?"}' | jq '{escalated, ticketId}'
 
 # 4. The co-pilot ran on that ticket: expect holding or answer, not error
-sqlite3 data/relaydesk.db \
+psql "$DATABASE_URL" -c \
   "SELECT outcome, detail, created_at FROM agent_runs ORDER BY created_at DESC LIMIT 5;"
 ```
 
@@ -75,11 +75,11 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
 - **Mitigate:** turn it off. Pending drafts stay; reject them from each ticket. Any of these works:
   - **Inbox:** click **AI drafts on** in the header.
   - **API:** `POST /api/copilot` with `{"enabled": false}` (needs a staff session).
-  - **SQL:** `sqlite3 data/relaydesk.db "INSERT INTO business_settings (business_id, key, value) VALUES ('nimbus','copilot','off') ON CONFLICT(business_id, key) DO UPDATE SET value='off';"` (swap in the business id)
+  - **SQL:** `psql "$DATABASE_URL" -c "INSERT INTO business_settings (business_id, key, value) VALUES ('nimbus','copilot','off') ON CONFLICT(business_id, key) DO UPDATE SET value='off';"` (swap in the business id)
 - **Check:**
   ```bash
-  sqlite3 data/relaydesk.db "SELECT outcome, COUNT(*) FROM agent_runs GROUP BY outcome;"
-  sqlite3 data/relaydesk.db "SELECT reject_reason, COUNT(*) FROM agent_drafts WHERE status='rejected' GROUP BY reject_reason;"
+  psql "$DATABASE_URL" -c "SELECT outcome, COUNT(*) FROM agent_runs GROUP BY outcome;"
+  psql "$DATABASE_URL" -c "SELECT reject_reason, COUNT(*) FROM agent_drafts WHERE status='rejected' GROUP BY reject_reason;"
   ```
   Each ticket is limited to 5 runs a day, so a loop shows up as `rate_limited`, not runaway cost.
 
@@ -88,10 +88,10 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
 - **Check:** does their phrase escalate? The phrases live in `VISITOR_ESCALATE` in `src/lib/escalate.ts`. `eval/escalation.ts` should pass, and so should the hand-off rows in `eval/conversations.jsonl` (`payment-person`, `seats-didnt-help`, `invoice-need-human`).
 - **Fix:** add the phrase together with a test of look-alike questions that must not escalate (see `escalate.test.ts`), then add an eval row.
 
-### Database locked, corrupt, or disk full
+### Database down or data lost
 
-- **Back up now**, safe while the app runs: `docker compose run --rm --no-deps backup node scripts/backup.mjs --once`
-- **Restore:** see [Restore a backup](#restore-a-backup).
+- **Check:** `/api/health` fails when the database can't be reached. Neon's status page and the project's console show compute and connection errors.
+- **Restore:** see [Restore](#restore).
 - **Schema changes are additive.** New tables and columns are created when the app opens the database, and older code ignores them. So a code rollback never needs a database rollback. One exception in behavior, not schema: code from before businesses ignores `business_id` and shows every business's tickets in one inbox. Don't roll back past that change once a real business is on the database.
 
 ### Staff login problems or a leaked password
@@ -114,12 +114,12 @@ Order: **stop the damage first, then find the cause.** Write down times as you g
   2. Push with the exact old tip as the lease: `git push --force-with-lease=main:<old-sha> origin main`.
   3. Check `git rev-parse main^{tree}` matches the backup's tree when only messages changed.
 - **Deployed code:** on the host, `git checkout <good-sha> && docker compose up -d --build`. The database needs nothing, because schema changes are additive (see above).
-- **Data:** [Restore a backup](#restore-a-backup).
-- **Before deploying to Vercel:** move data off SQLite first, because a serverless function's filesystem doesn't keep writes. Then Vercel's Instant Rollback becomes the code rollback.
+  Rolling back past the move to Postgres sends the app back to the old SQLite file, without anything written since. Revert forward instead.
+- **Data:** [Restore](#restore).
 
 ## Hosting
 
-One machine running `docker compose`: the app, a `backup` service, and (optionally) a Cloudflare Tunnel for HTTPS. The same files work on any of these:
+One machine running `docker compose`: the app and (optionally) a Cloudflare Tunnel for HTTPS. The same files work on any of these:
 
 | Where | Cost | Good for | Catch |
 | --- | --- | --- | --- |
@@ -152,7 +152,7 @@ No open ports or public IP needed, so it works from home and behind CGNAT.
 
 Dokploy runs this `docker-compose.yml` from `main` and gets the certificate itself, so skip the tunnel.
 
-1. **VPS:** Ubuntu 24.04, 2 GB RAM. The image build compiles better-sqlite3 and runs `next build`, which can run out of memory on 2 GB, so add swap first:
+1. **VPS:** Ubuntu 24.04, 2 GB RAM. The image build runs `next build`, which can run out of memory on 2 GB, so add swap first:
    ```bash
    fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
    echo '/swapfile none swap sw 0 0' >> /etc/fstab
@@ -168,29 +168,28 @@ Dokploy runs this `docker-compose.yml` from `main` and gets the certificate itse
 6. **Domains tab:** the hostname, path `/`, service `relaydesk`, container port `3000`, HTTPS on with Let's Encrypt. Then **Deploy**.
 7. **Check:** `curl -s https://relaydesk.dyeyc.dev/api/health` returns `{"ok":true}`. Then run the [health check](#health-check) with that address as `HOST`.
 
-Data lives in the `relaydesk-data` named volume, which survives redeploys. Once the dashboard has its own domain, close its raw port: `docker service update --publish-rm "published=3000,target=3000,mode=host" dokploy`.
+Set `DATABASE_URL` in the Environment tab so data lives in Neon. Without it, data stays in PGlite in the `relaydesk-data` volume, which survives redeploys but has no backups. Once the dashboard has its own domain, close its raw port: `docker service update --publish-rm "published=3000,target=3000,mode=host" dokploy`.
 
-### Backups
+### Restore
 
-- **When:** daily at `RELAYDESK_BACKUP_AT` (HH:MM UTC, default 18:00, which is 02:00 in Manila). The last 7 snapshots stay in `/data/backups`.
-- **Off the machine:** set the four `RELAYDESK_BACKUP_S3_*` values (Cloudflare R2, Backblaze B2, or any S3-compatible bucket) and add a lifecycle rule on the bucket to delete objects after 30 days. A snapshot only on the same disk doesn't survive losing the disk.
-- **Check:** `docker compose exec backup cat /data/backups/last.json` should show `"ok":true` from the last day. `docker compose logs backup` has a line per run.
-- **Back up now:** `docker compose run --rm --no-deps backup node scripts/backup.mjs --once`
+Neon keeps the history of every change for your plan's restore window. That history is the backup; there is no separate backup service.
 
-### Restore a backup
+1. In the Neon console, open the project and restore the production branch to a time just before the problem. Restoring to a new branch first lets you look before you switch.
+2. If you restored to a new branch, point `DATABASE_URL` at it and redeploy.
+3. Sign in and check the newest tickets are there.
 
-1. `docker compose stop relaydesk`. Restoring under a running app loses what it writes next.
-2. Run one of these:
-   - newest on disk: `docker compose run --rm --no-deps backup node scripts/restore.mjs --latest --yes`
-   - newest in the bucket: `docker compose run --rm --no-deps backup node scripts/restore.mjs --from-s3 --yes`
-   - a specific one: `... restore.mjs --file /data/backups/<name>.db.gz --yes`
+The restore window depends on the Neon plan. If it is shorter than you could go without noticing a problem, take your own copies too, e.g. a scheduled `pg_dump "$DATABASE_URL"` to a bucket.
 
-   Without `--yes` it only prints what it would do. It checks the backup's integrity first and keeps the replaced database as `relaydesk.db.before-restore-<time>`.
-3. `docker compose up -d relaydesk`, then sign in and check the newest tickets are there.
+### Moving from SQLite
 
-### Restore drill
+Before Postgres, data lived in `/data/relaydesk.db` in the `relaydesk-data` volume. To move it:
 
-`scripts/restore-drill.sh` does all of this on real Docker against a throwaway bucket: it makes a business, an article, and a ticket, backs up off the machine, deletes the database and the local snapshots, restores from the bucket, and checks the login, ticket, and help center are back. It uses its own project and port (3420), so a running relaydesk isn't touched. Run it after changing anything about backups, and before trusting a new host.
+1. Create a Neon project and copy its pooled connection string.
+2. Stop the old app so nothing is written during the copy: `docker compose stop relaydesk`.
+3. Copy the database file off the server: `docker compose cp relaydesk:/data/relaydesk.db ./relaydesk.db` (with Dokploy, run it in the app's compose directory on the VPS, then `scp` the file down).
+4. From a checkout of this repo: `DATABASE_URL='<neon url>' npx tsx scripts/sqlite-to-postgres.ts ./relaydesk.db` prints the row counts. Add `--yes` to copy. It replaces everything in that database and checks every table's count afterwards.
+5. Set `DATABASE_URL` in Dokploy's Environment tab and deploy.
+6. Run the [health check](#health-check) and sign in. Keep `relaydesk.db` until you're sure nothing is missing.
 
 ## After an incident
 

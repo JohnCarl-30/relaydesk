@@ -27,14 +27,14 @@ export default async function TicketPage({
   const { id } = await params;
   const staff = await currentStaff();
   if (!staff) redirect("/login");
-  const ticket = getTicket(staff.business_id, id);
-  const center = loadHelpCenter(staff.business_id);
+  const ticket = await getTicket(staff.business_id, id);
+  const center = await loadHelpCenter(staff.business_id);
   if (!ticket || !center) notFound();
   const helpHref = (title: string) =>
     helpCenterPath(center.businessId, slugForTitle(center, title) ?? undefined);
-  const messages = listMessages(ticket.conversation_id);
+  const messages = await listMessages(ticket.conversation_id);
   const name = ticket.email.split("@")[0];
-  const pending = getPendingDraft(ticket.id);
+  const pending = await getPendingDraft(ticket.id);
   const draft: DraftView | null = pending
     ? {
         id: pending.id,
@@ -47,7 +47,7 @@ export default async function TicketPage({
         ),
       }
     : null;
-  const runs = listRuns(ticket.id, 4);
+  const runs = await listRuns(ticket.id, 4);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
@@ -64,7 +64,7 @@ export default async function TicketPage({
             ticketId={ticket.id}
             status={ticket.status}
             assignee={ticket.assignee}
-            staffNames={listStaff(staff.business_id).map((member) => member.name)}
+            staffNames={(await listStaff(staff.business_id)).map((member) => member.name)}
           />
         </header>
 
@@ -144,7 +144,7 @@ export default async function TicketPage({
               ticketId={ticket.id}
               draft={draft}
               needsHumanReason={ticket.needs_human_reason}
-              enabled={copilotEnabled(staff.business_id)}
+              enabled={await copilotEnabled(staff.business_id)}
             />
             <ReplyForm ticketId={ticket.id} email={ticket.email} />
           </>

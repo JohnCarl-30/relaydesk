@@ -9,7 +9,7 @@ import { authenticateMcp } from "@/lib/mcp-auth";
  * this process because the SQLite database is in-process.
  */
 async function handle(request: Request): Promise<Response> {
-  const auth = authenticateMcp(request.headers.get("authorization"));
+  const auth = await authenticateMcp(request.headers.get("authorization"));
   if (auth === "off") return NextResponse.json({ error: "not found" }, { status: 404 });
   if (auth === "unauthorized") {
     return NextResponse.json(
