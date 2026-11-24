@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { Conversation } from "./conversation-set";
 import type { GoldenRow } from "./golden";
 import type { AttackLabelRow, IntentLabelRow, LabelRow } from "./labels";
 
@@ -6,6 +7,7 @@ export const GOLDEN_DATASET = "relaydesk-golden";
 export const ESCALATION_DATASET = "relaydesk-escalation";
 export const INTENT_DATASET = "relaydesk-intent";
 export const ATTACKS_DATASET = "relaydesk-attacks";
+export const CONVERSATIONS_DATASET = "relaydesk-conversations";
 
 /** One row of a CSV, shaped the way it is stored as a Langfuse dataset item. */
 export type DesiredItem = {
@@ -90,6 +92,23 @@ export function attackItems(rows: AttackLabelRow[]): DesiredItem[] {
       metadata: { source: "eval/attack-labels.csv", category: row.category, why: row.why },
     })),
     ATTACKS_DATASET,
+  );
+}
+
+/**
+ * One item per conversation. The input is the visitor's turns in order; the
+ * expected output has one entry per turn, null for turns that only set up context.
+ * The id hashes the conversation id, so editing a turn updates the item in place.
+ */
+export function conversationItems(conversations: Conversation[]): DesiredItem[] {
+  return assertUnique(
+    conversations.map((conversation) => ({
+      id: itemId(CONVERSATIONS_DATASET, conversation.id),
+      input: { turns: conversation.turns.map((turn) => turn.visitor) },
+      expectedOutput: { expect: conversation.turns.map((turn) => turn.expect ?? null) },
+      metadata: { source: "eval/conversations.jsonl", id: conversation.id, category: conversation.category, why: conversation.why },
+    })),
+    CONVERSATIONS_DATASET,
   );
 }
 
